@@ -1,2 +1,2 @@
-# x-cmb4cast
+# xForecast
 Simulation of parametric component separation for Cosmic Microwave Background observations
