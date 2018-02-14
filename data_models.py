@@ -11,10 +11,6 @@ def invN_from_pysm_instrument(pysm_instrument):
     return invN
 
 
-def invN_from_pysm_instrument(pysm_instrument):
-    return invN
-
-
 def A_ev_invN_from_pysm_instrument_analytic_components(pysm_instrument,
                                                        *analytic_components):
     return A_ev, invN
