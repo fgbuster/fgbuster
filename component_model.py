@@ -1,3 +1,15 @@
+""" Components that have an analytic frequency emission law
+
+These classes have to provide the following functionality:
+    - are constructed from an arbitrary analytic expression
+    - provide an efficient evaluator that takes as argument frequencies and
+      parameters
+    - same thing for the gradient wrt the parameters
+
+For frequent components (e.g. power law, gray body) these classe are already
+prepared.
+"""
+
 import numpy as np
 import sympy
 from sympy import lambdify, Symbol
@@ -75,6 +87,8 @@ class Component(object):
 
 
 class ModifiedBlackBody(Component):
+    ref_beta = 19.6
+    ref_temp = 1.6
 
     def __init__(self, nu0, temp=None, beta=None, units='K_CMB'):
         # Prepare the analytic expression
@@ -95,10 +109,16 @@ class ModifiedBlackBody(Component):
         kwargs = {'nu0': nu0}
         if temp is None:
             analytic_expr = analytic_expr.replace('temp', 'param_0')
+            self.ref_param_0 = self.ref_temp
         else:
             kwargs['temp'] = temp
+            self.ref_param_1 = self.ref_temp
         if beta is None:
-            beta_par_tag = 'param_1' if temp is None else 'param_0'
+            if temp is None:
+                beta_par_tag = 'param_1'
+            else:
+                beta_par_tag = 'param_0'
+                self.ref_param_0 = self.ref_beta
             analytic_expr = analytic_expr.replace('beta_d', beta_par_tag)
         else:
             kwargs['beta_d'] = beta
@@ -108,6 +128,7 @@ class ModifiedBlackBody(Component):
 
 
 class PowerLaw(Component):
+    self.ref_beta = 0
 
     def __init__(self, nu0, beta=None, units='K_CMB'):
         # Prepare the analytic expression
@@ -122,6 +143,7 @@ class PowerLaw(Component):
         kwargs = {'nu0': nu0}
         if beta is not None:
             kwargs['param_0'] = beta
+            self.ref_param_0 = self.ref_beta
         
         super(PowerLaw, self).__init__(analytic_expr, **kwargs)
 
@@ -148,6 +170,7 @@ class Dust(ModifiedBlackBody):
     ''' Alias of ModifiedBlackBody
     '''
     pass
+
 
 class Synchrotron(PowerLaw):
     ''' Alias of PowerLaw
