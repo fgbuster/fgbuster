@@ -33,21 +33,22 @@ K_RJ2K_CMB_NU0 = K_RJ2K_CMB + ' / ' + K_RJ2K_CMB.replace('nu', 'nu0')
 class Component(object):
 
     def __init__(self, analytic_expr, **fixed_params):
-        self.__analytic_expr = analytic_expr
-        self.__fixed_params = fixed_params
-        self.__expr = parse_expr(analytic_expr).subs(fixed_params)
-        self.__n_param = len(self.__expr.free_symbols) 
-        if self.__expr.has(Symbol('nu')):
-            self.__n_param -= 1
-        str_symbols = ['nu'] + ['param_%i'%i for i in range(self.__n_param)]
-        self.__symbols = sympy.symbols(str_symbols)
-        self.__lambda = lambdify(self.__symbols, self.__expr, 'numpy')
+        self._analytic_expr = analytic_expr
+        self._fixed_params = fixed_params
+        self._expr = parse_expr(analytic_expr).subs(fixed_params)
+        self._n_param = len(self._expr.free_symbols) 
+        if self._expr.has(Symbol('nu')):
+            self._n_param -= 1
+        str_symbols = ['nu'] + ['param_%i'%i for i in range(self._n_param)]
+        self._symbols = sympy.symbols(str_symbols)
+        self._lambda = lambdify(self._symbols, self._expr, 'numpy')
         lambdify_diff_par_i = lambda i: lambdify(
-            self.__symbols, self.__expr.diff('param_%i'%i), 'numpy')
-        self.__lambda_diff = [lambdify_diff_par_i(i)
-                              for i in range(self.__n_param)]
+            self._symbols, self._expr.diff('param_%i'%i), 'numpy')
+        self._lambda_diff = [lambdify_diff_par_i(i)
+                              for i in range(self._n_param)]
+        self._defaults = []
 
-    def __add_last_dimention_if_not_scalar(self, param):
+    def _add_last_dimention_if_not_scalar(self, param):
         if isinstance(param, np.ndarray) and len(param) > 1:
             return param[..., np.newaxis]
         else:
@@ -58,37 +59,41 @@ class Component(object):
         # Make sure that broadcasting rules will apply correctly when passing
         # the parameters to the lambdified functions: 
         # last axis has to be nu, but that axis is missing in the parameters
-        new_params = map(self.__add_last_dimention_if_not_scalar, params)
-        return self.__lambda(nu, *new_params)
+        new_params = map(self._add_last_dimention_if_not_scalar, params)
+        return self._lambda(nu, *new_params)
 
     def gradient(self, nu, *params):
-        assert len(params) == self.__n_param
+        assert len(params) == self._n_param
         if not params:
             return 0.
         elif len(np.broadcast(*params).shape) <= 1:
             # Parameters are all scalars.
             # This case is frequent and easy, thus leave early
-            return self.__lambda_diff[0](nu, *params)[np.newaxis, ...]
+            return self._lambda_diff[0](nu, *params)[np.newaxis, ...]
 
         # Make sure that broadcasting rules will apply correctly when passing
         # the parameters to the lambdified functions: 
         # last axis has to be nu, but that axis is missing in the parameters
-        new_params = map(self.__add_last_dimention_if_not_scalar, params)
+        new_params = map(self._add_last_dimention_if_not_scalar, params)
 
-        shape = (self.__n_param,) + np.broadcast(*params).shape + (len(nu),)
+        shape = (self._n_param,) + np.broadcast(*params).shape + (len(nu),)
         res = np.zeros(shape)
         for i_p, p in enumerate(new_params):
-            res[i_p] += self.__lambda_diff[i_p](nu, new_params[i_p])
+            res[i_p] += self._lambda_diff[i_p](nu, new_params[i_p])
         return res
 
     @property
     def n_param(self):
-        return self.__n_param
+        return self._n_param
+
+    @property
+    def defaults(self):
+        return self._defaults
 
 
 class ModifiedBlackBody(Component):
-    ref_beta = 19.6
-    ref_temp = 1.6
+    _REF_BETA = 19.6
+    _REF_TEMP = 1.6
 
     def __init__(self, nu0, temp=None, beta=None, units='K_CMB'):
         # Prepare the analytic expression
@@ -126,9 +131,16 @@ class ModifiedBlackBody(Component):
         
         super(ModifiedBlackBody, self).__init__(analytic_expr, **kwargs)
 
+        if temp is None:
+            self.defaults.append(_REF_TEMP)
+
+        if beta is None:
+            self.defaults.append(_REF_BETA)
+
+
 
 class PowerLaw(Component):
-    self.ref_beta = 0
+    _REF_BETA = -3
 
     def __init__(self, nu0, beta=None, units='K_CMB'):
         # Prepare the analytic expression
@@ -146,6 +158,9 @@ class PowerLaw(Component):
             self.ref_param_0 = self.ref_beta
         
         super(PowerLaw, self).__init__(analytic_expr, **kwargs)
+
+        if beta is None:
+            self.defaults.append(_REF_BETA)
 
 
 class CMB(Component):
