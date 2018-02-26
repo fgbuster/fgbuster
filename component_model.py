@@ -55,7 +55,7 @@ class Component(object):
             return param
 
     def eval(self, nu, *params):
-        assert len(params) == self.__n_param
+        assert len(params) == self._n_param
         # Make sure that broadcasting rules will apply correctly when passing
         # the parameters to the lambdified functions: 
         # last axis has to be nu, but that axis is missing in the parameters
@@ -92,8 +92,8 @@ class Component(object):
 
 
 class ModifiedBlackBody(Component):
-    _REF_BETA = 19.6
-    _REF_TEMP = 1.6
+    _REF_BETA = 1.54
+    _REF_TEMP = 20.
 
     def __init__(self, nu0, temp=None, beta=None, units='K_CMB'):
         # Prepare the analytic expression
@@ -111,31 +111,30 @@ class ModifiedBlackBody(Component):
         # Parameters in the analytic expression are
         # - Fixed parameters -> into kwargs
         # - Free parameters -> renamed according to the param_* convention
-        kwargs = {'nu0': nu0}
+        kwargs = {'nu0': nu0, 'h_over_k': H_OVER_K}
+
         if temp is None:
             analytic_expr = analytic_expr.replace('temp', 'param_0')
-            self.ref_param_0 = self.ref_temp
         else:
             kwargs['temp'] = temp
-            self.ref_param_1 = self.ref_temp
+
         if beta is None:
             if temp is None:
                 beta_par_tag = 'param_1'
             else:
                 beta_par_tag = 'param_0'
-                self.ref_param_0 = self.ref_beta
             analytic_expr = analytic_expr.replace('beta_d', beta_par_tag)
         else:
             kwargs['beta_d'] = beta
-        kwargs['h_over_k'] = H_OVER_K
+
         
         super(ModifiedBlackBody, self).__init__(analytic_expr, **kwargs)
 
         if temp is None:
-            self.defaults.append(_REF_TEMP)
+            self.defaults.append(self._REF_TEMP)
 
         if beta is None:
-            self.defaults.append(_REF_BETA)
+            self.defaults.append(self._REF_BETA)
 
 
 
@@ -155,12 +154,11 @@ class PowerLaw(Component):
         kwargs = {'nu0': nu0}
         if beta is not None:
             kwargs['param_0'] = beta
-            self.ref_param_0 = self.ref_beta
         
         super(PowerLaw, self).__init__(analytic_expr, **kwargs)
 
         if beta is None:
-            self.defaults.append(_REF_BETA)
+            self.defaults.append(self._REF_BETA)
 
 
 class CMB(Component):

@@ -3,7 +3,7 @@
 """
 import numpy as np
 
-OPTIMIZE = True
+OPTIMIZE = False
 
 
 def _inv(m):
@@ -54,9 +54,9 @@ def _T(x):
 def logL(A, d, invN=None):
     if invN is None:
         Ad = _mtv(A, d)
-        return - np.sum(Ad * mv(_inv(_mtm(A, A)), Ad))
+        return np.sum(Ad * _mv(_inv(_mtm(A, A)), Ad))
     ANd = _mtmv(A, invN, d)
-    return - np.sum(ANd * mv(_inv(_mtmm(A, invN, A)), ANd))
+    return np.sum(ANd * mv(_inv(_mtmm(A, invN, A)), ANd))
 
 
 def W(A, invN=None):

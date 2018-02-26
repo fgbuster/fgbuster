@@ -52,7 +52,7 @@ def comp_sep(A_ev, d, invN, *minimize_args, **minimize_kargs):
     res = sp.optimize.minimize(fun, *minimize_args, **minimize_kargs)
     A = A_ev(res.x)
     W = algebra.W(A, invN)
-    res.s = W.dot(d)
+    res.s = algebra._mv(W, d)
     res.invAtNA = algebra.invAtNA(A, invN)
     res.Sigma = 2 * algebra._inv(nd.Hessian(fun)(res.x))
     return res

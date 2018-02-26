@@ -3,7 +3,7 @@
 """
 import numpy as np
 import healpy as hp
-from map_separation import multi_comp_sep
+from map_separation import multi_comp_sep, comp_sep
 
 def basic_comp_sep(components, instrument, data, nside=0):
     """ Basic component separation
@@ -35,16 +35,20 @@ def basic_comp_sep(components, instrument, data, nside=0):
     # TODO handle temperature and polarization jointly
 
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape)
-    prewhitened_data = prewhiten_factors * data
     A_ev = _build_A_ev(components, instrument,
                        prewhiten_factors=prewhiten_factors)
     x0 = np.array([x for c in components for x in c.defaults])
-    patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)), data.shape[-1])
+    prewhitened_data = prewhiten_factors * data.T
+    if nside == 0:
+        res = comp_sep(A_ev, prewhitened_data, None, x0)
+    else:
+        patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
+                                hp.npix2nside(data.shape[-1]))
+        res = multi_comp_sep(A_ev, prewhitened_data, None, patch_ids, x0)
 
     # Launch component separation
-    res = multi_comp_sep(A_ev, prewhitened_data.T, None, patch_ids, x0)
-
     res.s = res.s.T
+    return res
 
 
 def _get_prewhiten_factors(instrument, data_shape):
@@ -53,33 +57,43 @@ def _get_prewhiten_factors(instrument, data_shape):
     Parameters
     ----------
     instrument: PySM.Instrument
+    data_shape: tuple
+        It is expected to be `(n_freq, n_stokes, n_pix)`. `n_stokes` is used to
+        define if sens_I or sens_P (or both) should be used to compute the
+        factors.
+        - If `n_stokes` is absent or `n_stokes == 1`, use sens_I.
+        - If `n_stokes == 2`, use sens_P.
+        - If `n_stokes == 3`, the factors will have shape (3, n_freq). Sens_I is
+          used for [0, :], while sens_P is used for [1:, :].
 
     Returns
     -------
-    factor:
-        If `...` is 2, use sens_P to define the weights, sens_I otherwise.
-        If the sensitivity is not defined, returns None.
+    factor: array
+        prewhitening factors
     """
     # TODO handle temperature and polarization jointly
     try:
-        if len(data_shape) > 2 and data_shape[1] == 2:
-            sens = instrument.sens_P
-        else:
-            sens = instrument.sens_I
-    except AttributeError():  # instrument has no sensitivity -> do not prewhite
+        if len(data_shape) < 3 or data_shape[1] == 1:
+            sens = instrument.Sens_I
+        elif data_shape[1] == 2:
+            sens = instrument.Sens_P
+        elif data_shape[1] == 3:
+            sens = np.stack(
+                (instrument.Sens_I, instrument.Sens_P, instrument.Sens_P))
+    except AttributeError:  # instrument has no sensitivity -> do not prewhite
         print 'The sensitivity of the instrument is not specified'
         return None
 
-    return hp.nside2resol(instrument.nside, arcmin=True) / sens
+    return hp.nside2resol(instrument.Nside, arcmin=True) / sens
 
 
 def _build_A_ev(components, instrument, prewhiten_factors=None):
-    A = MixingMatrix(components)
-    A_ev = A.evaluator(instrument, instrument.frequencies)
+    A = MixingMatrix(*components)
+    A_ev = A.evaluator(instrument.Frequencies)
     if prewhiten_factors is None:
         return A_ev
     else:
-        return lambda x: prewhiten_factors * A_ev(x)
+        return lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
 
 
 class MixingMatrix(tuple):
@@ -116,18 +130,18 @@ class MixingMatrix(tuple):
     def comp_of_param(self):
         return self.__comp_of_param
 
-    def evaluate(self, nu, *params):
+    def eval(self, nu, *params):
         shape = np.broadcast(*params).shape + (len(nu), len(self))
         res = np.zeros(shape)
         for i_c, c in enumerate(self):
             i_fp = self.__first_param_of_comp[i_c]
-            res[..., i_c] += c.evaluate(nu, *params[i_fp: i_fp + c.n_param])
+            res[..., i_c] += c.eval(nu, *params[i_fp: i_fp + c.n_param])
         return res
 
     def evaluator(self, nu, shape=(-1,)):
         def f(param_array):
             param_array = np.array(param_array)
-            return self.evaluate(nu, *[p for p in param_array.reshape(shape)])
+            return self.eval(nu, *[p for p in param_array.reshape(shape)])
         return f
 
     def gradient(self, nu, *params):
