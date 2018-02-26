@@ -3,7 +3,7 @@
 """
 import numpy as np
 import healpy as hp
-from map_separation import multi_comp_sep, comp_sep
+from algebra import multi_comp_sep, comp_sep
 
 def basic_comp_sep(components, instrument, data, nside=0):
     """ Basic component separation
