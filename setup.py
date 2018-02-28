@@ -8,8 +8,8 @@ def read(fname):
 setup(
     name = "dustbuster",
     version = "0.0.1",
-    author = "Davide Poletti",
-    author_email = "davide.pole@gmail.com",
+    author = "Davide Poletti, Josquin Errard",
+    author_email = "davide.pole@gmail.com, josquin@apc.in2p3.fr",
     description = ("Handy parametric component separation tools"),
     license = "MIT",
     keywords = "statistics cosmology cmb foregrounds",
