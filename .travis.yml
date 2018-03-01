@@ -1,0 +1,9 @@
+language: python - "2.7"
+
+sudo: required
+
+install: pip install -r requirements.txt
+
+script: travis-sphinx -n build
+
+after_success: travis-sphinx deploy
