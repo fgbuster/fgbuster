@@ -4,6 +4,7 @@
 import numpy as np
 import scipy as sp
 import numdifftools as nd
+import inspect
 
 OPTIMIZE = False
 
@@ -11,6 +12,12 @@ OPTIMIZE = False
 def _inv(m):
     result = np.array(map(np.linalg.inv, m.reshape((-1,)+m.shape[-2:])))
     return result.reshape(m.shape)
+
+
+def _solve(a, b):
+    u, s, v = numpy.linalg.svd(a, full_matrices=False)
+    utb = _mtv(u, b)
+    return _mtv(v, utb / s)
 
 
 def _mv(m, v):
@@ -55,8 +62,12 @@ def _T(x):
 
 def logL(A, d, invN=None):
     if invN is None:
-        Ad = _mtv(A, d)
-        return np.sum(Ad * _mv(_inv(_mtm(A, A)), Ad))
+        try:
+            u, _, _ = np.linalg.svd(A, full_matrices=False)
+        except np.linalg.linalg.LinAlgError:
+            print 'SVD of A failed -> logL = -inf'
+            return - np.inf
+        return np.linalg.norm(_mtv(u, d))**2
     ANd = _mtmv(A, invN, d)
     return np.sum(ANd * mv(_inv(_mtmm(A, invN, A)), ANd))
 
@@ -208,3 +219,22 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
         res.s[mask] = res.patch_res[patch_id].s
 
     return res
+
+
+def verbose_callback(xk):
+    k = _get_from_caller('k') + 1
+    func_calls = _get_from_caller('func_calls')[0]
+    old_fval = _get_from_caller('old_fval')
+    message = 'Iteration %i\tx = %s\t-logL = %f\t-logL evaluations = %i'
+    print message % (k, np.array2string(xk), old_fval, func_calls)
+
+
+def _get_from_caller(name):
+    """ Get the `name` variable from the scope immediately above
+
+    NOTE
+    ----
+    Kludge for retrieving information inside scipy.optimize.minimize
+    """
+    caller = inspect.currentframe().f_back.f_back
+    return caller.f_locals[name]
