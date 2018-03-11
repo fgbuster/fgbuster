@@ -69,11 +69,12 @@ class Component(object):
     def gradient(self, nu, *params):
         assert len(params) == self.n_param
         if not params:
-            return 0.
+            return []
         elif len(np.broadcast(*params).shape) <= 1:
             # Parameters are all scalars.
             # This case is frequent and easy, thus leave early
-            return self._lambda_diff[0](nu, *params)[np.newaxis, ...]
+            return [self._lambda_diff[i_p](nu, *params)
+                    for i_p in range(self._n_param)]
 
         # Make sure that broadcasting rules will apply correctly when passing
         # the parameters to the lambdified functions: 
@@ -84,7 +85,7 @@ class Component(object):
         res = np.zeros(shape)
         for i_p, p in enumerate(new_params):
             res[i_p] += self._lambda_diff[i_p](nu, new_params[i_p])
-        return res
+        return list(res)
 
     @property
     def params(self):
