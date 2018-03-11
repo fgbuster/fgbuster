@@ -5,6 +5,7 @@ import numpy as np
 import scipy as sp
 import numdifftools as nd
 import inspect
+from time import time
 
 OPTIMIZE = False
 
@@ -160,7 +161,8 @@ def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None):
     fisher = np.empty((n_param, n_param))
     if invN is None:
         u, _, _ = np.linalg.svd(A, full_matrices=False)
-        x = [_mtv(u, _mv(A_dB_i, s[..., comp_of_dB])) for A_dB_i in A_dB]
+        x = [_mtv(u, _mv(A_dB_i, s[..., comp_of_dB[i]]))
+             for i, A_dB_i in enumerate(A_dB)]
         for i in xrange(n_param):
             for j in xrange(n_param):
                 fisher[i, j] = np.sum(x[i] * x[j])
@@ -175,16 +177,17 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, A_dB_ev, comp_of_dB):
     Keep in the memory the last SVD of A. If x of the next call coincide with
     the last one, recycle the SVD.
     """
-    x_old = []
-    u_old = []
-    e_old = []
-    v_old = []
+    x_old = [None]
+    u_old = [None]
+    inv_e_old = [None]
+    v_old = [None]
 
     def _update_x_u_e_v(x):
         # If x is different from the last one, update the SVD
-        if not x == x_old[0]:
+        if not np.all(x == x_old[0]):
             A = A_ev(x)
-            u_old[0], e_old[0], v_old[0] = np.linalg.svd(A, full_matrices=False)
+            u_old[0], e_old, v_old[0] = np.linalg.svd(A, full_matrices=False)
+            inv_e_old[0] = 1. / e_old
             x_old[0] = x
 
     def _inv_logL(x):
@@ -197,10 +200,10 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, A_dB_ev, comp_of_dB):
 
         _update_x_u_e_v(x)
         utd = _mtv(u_old[0], d)
-        s = _mtv(v_old[0], utd / e_old[0])
+        s = _mtv(v_old[0], utd * inv_e_old[0])
         Dd = d - _mv(u_old[0], utd)
         for i in xrange(len(diff)):
-            diff[i] = np.sum(_mv(A_dB[i], s[..., comp_of_dB[i]]) * Dd)
+            diff[i] = - np.sum(_mv(A_dB[i], s[..., comp_of_dB[i]]) * Dd)
         return diff
 
     return _inv_logL, _inv_logL_dB
@@ -258,26 +261,58 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, **minimize_karg
     The `...` in the arguments denote any extra set of dimention. They have to
     be compatible among different arguments in the `numpy` broadcasting sense.
     """
+    # Checks input
+    if comp_of_dB is not None: # XXX put this in every routine that uses comp_of_dB?
+        comp_of_dB = [np.array([c]) for c in comp_of_dB if isinstance(c, (int, long))]
+    disp = 'options' in minimize_kargs and 'disp' in minimize_kargs['options']
+
+    # Prepare functions for minmize
     jac = None
-    if A_dB_ev is not None and invN is not None:
-        fun, jac = _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
+    if A_dB_ev is not None and invN is None:
+        fun, jac = _build_bound_inv_logL_and_logL_dB(A_ev, d,
                                                      A_dB_ev, comp_of_dB)
     else:
         fun = lambda x: - logL(A_ev(x), d, invN)
         if A_dB_ev is not None:
             jac = lambda x: - logL_dB(A_ev(x), d, invN, A_dB_ev(x), comp_of_dB)
 
+    # Gather minmize arguments
     if jac is not None:
         minimize_kargs['jac'] = jac
+    if disp and 'callback' not in minimize_kargs:
+        minimize_kargs['callback'] = verbose_callback()
 
+    # Likelihood maximization
     res = sp.optimize.minimize(fun, *minimize_args, **minimize_kargs)
+
+    # Gather results
     A = A_ev(res.x)
-    res.s = _mv(W(A, invN), d)
-    res.invAtNA = invAtNA(A, invN)
-    res.Sigma = 2 * _inv(nd.Hessian(fun)(res.x))
-    print res.Sigma
-    print fisher_logL_dB_dB(A, res.s, A_dB_ev(res.x), comp_of_dB, invN)
+    A_dB = None 
+    if A_dB_ev is not None and invN is None:
+        res.s, res.invAtNA, res.Sigma = _results_shortcut(
+            A, d, A_dB_ev(res.x), comp_of_dB)
+    else:
+        res.s = _mv(W(A), d)
+        res.invAtNA = invAtNA(A, invN)
+        fisher = fisher_logL_dB_dB(A, res.s, A_dB_ev(res.x), comp_of_dB, invN)
+        res.Sigma = np.linalg.inv(fisher)
     return res
+
+
+def _results_shortcut(A, d, A_dB, comp_of_dB):
+    u, e, v = np.linalg.svd(A, full_matrices=False)
+    inv_e = 1 / e
+    utd = _mtv(u, d)
+    s = _mtv(v, utd * inv_e)
+    invAtNA = _mtm(v, inv_e[..., np.newaxis] * v)
+    n_param = len(A_dB)
+    fisher = np.empty((n_param, n_param))
+    x = [_mtv(u, _mv(A_dB_i, s[..., comp_of_dB[i]]))
+         for i, A_dB_i in enumerate(A_dB)]
+    for i in xrange(n_param):
+        for j in xrange(n_param):
+            fisher[i, j] = np.sum(x[i] * x[j])
+    return s, invAtNA, np.linalg.inv(fisher)
 
 
 def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
@@ -296,6 +331,8 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
         The data vector. Shape `(..., n_freq)`.
     invN: ndarray or None
         The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
+    patch_ids: array
+        id of regions 
     minimize_args: list
         Positional arguments to be passed to `scipy.optimize.minimize`.
         At this moment it just contains `x0`, the initial guess for the spectral
@@ -346,19 +383,40 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
     return res
 
 
-def verbose_callback(xk):
-    """ Print info at each minimize iteration
+def verbose_callback():
+    """ Provide a verbose callback function
 
     NOTE
     ----
     Currently, tested for the bfgs method. It can raise `KeyError` for other
     methods.
     """
-    k = _get_from_caller('k') + 1
-    func_calls = _get_from_caller('func_calls')[0]
-    old_fval = _get_from_caller('old_fval')
-    message = 'Iteration %i\tx = %s\t-logL = %f\t-logL evaluations = %i'
-    print message % (k, np.array2string(xk), old_fval, func_calls)
+    start = time()
+    old_old_time = [start]
+    old_old_fval = [None]
+    def callback(xk):
+        k = _get_from_caller('k') + 1
+        func_calls = _get_from_caller('func_calls')[0]
+        old_fval = _get_from_caller('old_fval')
+        old_time = time()
+        try:
+            logL_message = 'Delta(-logL) = %f' % (old_fval - old_old_fval[0])
+        except TypeError:
+            logL_message = 'First -logL = %f' % old_fval
+        message = [
+            'Iter %i' % k,
+            'x = %s' % np.array2string(xk),
+            logL_message,
+            'N Eval = %i' % func_calls,
+            'Iter sec = %.2f' % (old_time - old_old_time[0]),
+            'Cum sec = %.2f' % (old_time - start),
+            ]
+        print '\t'.join(message)
+        old_old_fval[0] = old_fval
+        old_old_time[0] = old_time
+
+    print 'Minimization started'
+    return callback
 
 
 def _get_from_caller(name):
