@@ -36,17 +36,21 @@ class Component(object):
         self._analytic_expr = analytic_expr
         self._fixed_params = fixed_params
         self._expr = parse_expr(analytic_expr).subs(fixed_params)
-        self._n_param = len(self._expr.free_symbols) 
-        if self._expr.has(Symbol('nu')):
-            self._n_param -= 1
-        str_symbols = ['nu'] + ['param_%i'%i for i in range(self._n_param)]
-        self._symbols = sympy.symbols(str_symbols)
-        self._lambda = lambdify(self._symbols, self._expr, 'numpy')
-        lambdify_diff_par_i = lambda i: lambdify(
-            self._symbols, self._expr.diff('param_%i'%i), 'numpy')
-        self._lambda_diff = [lambdify_diff_par_i(i)
-                              for i in range(self._n_param)]
+        self._params = sorted([str(s) for s in self._expr.free_symbols])
         self._defaults = []
+
+        # NOTE: nu is in symbols (at index 0) but it is not in self._params
+        if 'nu' in self._params:
+            self._params.pop(self._params.index('nu'))
+        self._params.insert(0, 'nu')
+        symbols = sympy.symbols(self._params)
+        self._params.pop(0)
+
+        # Create lambda functions
+        self._lambda = lambdify(symbols, self._expr, 'numpy')
+        lambdify_diff_param = lambda param: lambdify(
+            symbols, self._expr.diff(param), 'numpy')
+        self._lambda_diff = [lambdify_diff_param(p) for p in self._params]
 
     def _add_last_dimention_if_not_scalar(self, param):
         if isinstance(param, np.ndarray) and len(param) > 1:
@@ -55,7 +59,7 @@ class Component(object):
             return param
 
     def eval(self, nu, *params):
-        assert len(params) == self._n_param
+        assert len(params) == self.n_param
         # Make sure that broadcasting rules will apply correctly when passing
         # the parameters to the lambdified functions: 
         # last axis has to be nu, but that axis is missing in the parameters
@@ -63,7 +67,7 @@ class Component(object):
         return self._lambda(nu, *new_params)
 
     def gradient(self, nu, *params):
-        assert len(params) == self._n_param
+        assert len(params) == self.n_param
         if not params:
             return 0.
         elif len(np.broadcast(*params).shape) <= 1:
@@ -83,8 +87,14 @@ class Component(object):
         return res
 
     @property
+    def params(self):
+        ''' Name of the parameters (alphabetical order)
+        '''
+        return self._params
+
+    @property
     def n_param(self):
-        return self._n_param
+        return len(self._params)
 
     @property
     def defaults(self):
@@ -95,7 +105,7 @@ class ModifiedBlackBody(Component):
     _REF_BETA = 1.54
     _REF_TEMP = 20.
 
-    def __init__(self, nu0, temp=None, beta=None, units='K_CMB'):
+    def __init__(self, nu0, temp=None, beta_d=None, units='K_CMB'):
         # Prepare the analytic expression
         # Note: beta_d (not beta) avoids collision with sympy beta functions
         analytic_expr = ('expm1(nu0 / temp * h_over_k)'
@@ -111,39 +121,27 @@ class ModifiedBlackBody(Component):
         # Parameters in the analytic expression are
         # - Fixed parameters -> into kwargs
         # - Free parameters -> renamed according to the param_* convention
-        kwargs = {'nu0': nu0, 'h_over_k': H_OVER_K}
-
-        if temp is None:
-            analytic_expr = analytic_expr.replace('temp', 'param_0')
-        else:
-            kwargs['temp'] = temp
-
-        if beta is None:
-            if temp is None:
-                beta_par_tag = 'param_1'
-            else:
-                beta_par_tag = 'param_0'
-            analytic_expr = analytic_expr.replace('beta_d', beta_par_tag)
-        else:
-            kwargs['beta_d'] = beta
-
+        kwargs = {
+            'nu0': nu0, 'beta_d': beta_d, 'temp': temp, 'h_over_k': H_OVER_K
+        }
         
         super(ModifiedBlackBody, self).__init__(analytic_expr, **kwargs)
+
+        if beta_d is None:
+            self.defaults.append(self._REF_BETA)
 
         if temp is None:
             self.defaults.append(self._REF_TEMP)
 
-        if beta is None:
-            self.defaults.append(self._REF_BETA)
 
 
 
 class PowerLaw(Component):
     _REF_BETA = -3
 
-    def __init__(self, nu0, beta=None, units='K_CMB'):
+    def __init__(self, nu0, beta_pl=None, units='K_CMB'):
         # Prepare the analytic expression
-        analytic_expr = ('(nu / nu0)**(param_0)')
+        analytic_expr = ('(nu / nu0)**(beta_pl)')
         if units == 'K_CMB':
             analytic_expr += ' * ' + K_RJ2K_CMB_NU0
         elif units == 'K_RJ':
@@ -151,13 +149,11 @@ class PowerLaw(Component):
         else:
             raise ValueError('Unsupported units: %s'%units)
 
-        kwargs = {'nu0': nu0}
-        if beta is not None:
-            kwargs['param_0'] = beta
+        kwargs = {'nu0': nu0, 'beta_pl': beta_pl}
         
         super(PowerLaw, self).__init__(analytic_expr, **kwargs)
 
-        if beta is None:
+        if beta_pl is None:
             self.defaults.append(self._REF_BETA)
 
 

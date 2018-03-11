@@ -35,8 +35,8 @@ def basic_comp_sep(components, instrument, data, nside=0):
     # TODO handle temperature and polarization jointly
 
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape)
-    A_ev = _build_A_ev(components, instrument,
-                       prewhiten_factors=prewhiten_factors)
+    A_ev, params = _build_A_ev(components, instrument,
+                               prewhiten_factors=prewhiten_factors)
     x0 = np.array([x for c in components for x in c.defaults])
     prewhitened_data = prewhiten_factors * data.T
     if nside == 0:
@@ -47,6 +47,7 @@ def basic_comp_sep(components, instrument, data, nside=0):
         res = multi_comp_sep(A_ev, prewhitened_data, None, patch_ids, x0)
 
     # Launch component separation
+    res.params = params
     res.s = res.s.T
     return res
 
@@ -91,9 +92,10 @@ def _build_A_ev(components, instrument, prewhiten_factors=None):
     A = MixingMatrix(*components)
     A_ev = A.evaluator(instrument.Frequencies)
     if prewhiten_factors is None:
-        return A_ev
+        return A_ev, A.params
     else:
-        return lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
+        pw_A_ev =  lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
+        return pw_A_ev, A.params
 
 
 class MixingMatrix(tuple):
@@ -121,6 +123,12 @@ class MixingMatrix(tuple):
             self.__first_param_of_comp.append(self.n_param)
             self.__comp_of_param += [i_c] * c.n_param
         self.__comp_of_param = np.array(self.__comp_of_param)
+
+    @property
+    def params(self):
+        # TODO: handle components with the same name
+        return ['%s.%s' % (type(c).__name__, p)
+                for c in self for p in c.params]
 
     @property
     def n_param(self):
