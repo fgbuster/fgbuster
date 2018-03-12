@@ -74,14 +74,13 @@ class Component(object):
             # Parameters are all scalars.
             # This case is frequent and easy, thus leave early
             return [self._lambda_diff[i_p](nu, *params)
-                    for i_p in range(self._n_param)]
+                    for i_p in range(self.n_param)]
 
         # Make sure that broadcasting rules will apply correctly when passing
         # the parameters to the lambdified functions: 
         # last axis has to be nu, but that axis is missing in the parameters
         new_params = map(self._add_last_dimention_if_not_scalar, params)
 
-        shape = (self._n_param,) + np.broadcast(*params).shape + (len(nu),)
         res = np.zeros(shape)
         for i_p, p in enumerate(new_params):
             res[i_p] += self._lambda_diff[i_p](nu, new_params[i_p])
@@ -109,8 +108,9 @@ class ModifiedBlackBody(Component):
     def __init__(self, nu0, temp=None, beta_d=None, units='K_CMB'):
         # Prepare the analytic expression
         # Note: beta_d (not beta) avoids collision with sympy beta functions
-        analytic_expr = ('expm1(nu0 / temp * h_over_k)'
-                         '/ expm1(nu / temp * h_over_k)'
+        #TODO: Use expm1 and get Sympy processing it as a symbol
+        analytic_expr = ('(exp(nu0 / temp * h_over_k) -1)'
+                         '/ (exp(nu / temp * h_over_k) - 1)'
                          '* (nu / nu0)**(1 + beta_d)')
         if units == 'K_CMB':
             analytic_expr += ' * ' + K_RJ2K_CMB_NU0
