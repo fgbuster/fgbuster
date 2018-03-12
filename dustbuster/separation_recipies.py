@@ -156,11 +156,11 @@ class MixingMatrix(tuple):
         if not params:
             return None
         shape = (len(params),) + np.broadcast(*params).shape + (len(nu),)
-        res = np.zeros(shape)
+        res = []
         for i_c, c in enumerate(self):
             param_slice = slice(self.__first_param_of_comp[i_c],
                                 self.__first_param_of_comp[i_c] + c.n_param)
-            res[param_slice] += c.gradient(nu, *params[param_slice])
+            res += c.gradient(nu, *params[param_slice])
         return res
 
     def gradient_evaluator(self, nu, shape=(-1,)):
