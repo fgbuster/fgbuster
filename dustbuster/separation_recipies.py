@@ -122,7 +122,6 @@ class MixingMatrix(tuple):
         for i_c, c in enumerate(components):
             self.__first_param_of_comp.append(self.n_param)
             self.__comp_of_param += [i_c] * c.n_param
-        self.__comp_of_param = np.array(self.__comp_of_param)
 
     @property
     def params(self):

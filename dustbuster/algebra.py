@@ -88,7 +88,7 @@ def _svd_sqrt_invN_A(A, invN=None, L=None):
     if L is None and invN is not None:
         L = np.linalg.cholesky(invN)
 
-    if L is None:
+    if L is not None:
         A = _mtm(L, A)
 
     u_e_v = np.linalg.svd(A, full_matrices=False)
@@ -106,7 +106,8 @@ def logL(A, d, invN=None, return_svd=False):
         print 'SVD of A failed -> logL = -inf'
         return - np.inf
 
-    d = _mtv(L, d)
+    if L is not None:
+        d = _mtv(L, d)
     res = _logL_svd(u_e_v, d)
 
     if return_svd:
@@ -132,12 +133,13 @@ def invAtNA(A, invN=None, return_svd=False):
 def _Wd_svd(u_e_v, d):
     u, e, v = u_e_v
     utd = _mtv(u, d)
-    return _mtv(v, utd / e[..., np.newaxis])
+    return _mtv(v, utd / e)
 
 
 def Wd(A, d, invN=None, return_svd=False):
     u_e_v, L = _svd_sqrt_invN_A(A, invN)
-    d = _mtv(L, d)
+    if L is not None:
+        d = _mtv(L, d)
     res = _Wd_svd(u_e_v, d)
     if return_svd:
         return res, (u_e_v, L)
@@ -167,8 +169,10 @@ def W_dB_dB(A, invN=None):
 
 
 def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB=np.s_[:]):
-    s = _Wd_svd(u_e_v, d)
-    Dd = d - _mv(u_e_v[0], s)
+    u, e, v = u_e_v
+    utd = _mtv(u, d)
+    Dd = d - _mv(u, utd)
+    s = _mtv(v, utd / e)
 
     n_param = len(A_dB)
     diff = np.empty(n_param)
@@ -213,8 +217,9 @@ def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[:], return_svd=False):
     A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
 
     u_e_v, L = _svd_sqrt_invN_A(A, invN)
-    A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
-    d = _mtv(L, d)
+    if L is not None:
+        A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
+        d = _mtv(L, d)
     res = _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB)
     if return_svd:
         return res, (u_e_v, L)
@@ -281,7 +286,8 @@ def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
         return res
 
 
-def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN, A_dB_ev, comp_of_dB):
+def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
+                                      A_dB_ev=None, comp_of_dB=None):
     # XXX: Turn this function into a class?
     """ Produce the functions -logL(x) and -logL_dB(x)
 
@@ -302,7 +308,10 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN, A_dB_ev, comp_of_dB):
         if not np.all(x == x_old[0]):
             u_e_v_old[0], L[0] = _svd_sqrt_invN_A(A_ev(x), invN, L[0])
             inv_e_old[0] = 1. / u_e_v_old[0][1]
-            A_dB_old[0] = [_mtm(L, A_dB_i) for A_dB_i in A_dB_ev(x)]
+            if L[0] is None:
+                A_dB_old[0] = A_dB_ev(x)
+            else:
+                A_dB_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in A_dB_ev(x)]
             x_old[0] = x
             if pw_d[0] is None:  # If this is the first call, prewhiten d
                 if L[0] is None:
@@ -314,19 +323,20 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN, A_dB_ev, comp_of_dB):
         _update_old(x)
         return - _logL_svd(u_e_v_old[0], pw_d[0])
 
-    if A_dB_ev is not None:
-        def _inv_logL_dB(x):
-            _update_old(x)
-            return - _logL_dB_svd(u_e_v_old[0], pw_d[0], A_dB_old, comp_of_dB)
-    else:
+    if A_dB_ev is None:
         def _inv_logL_dB(x):
             return sp.optimize.approx_fprime(x, _inv_logL, _EPSILON_LOGL_DB)
+    else:
+        def _inv_logL_dB(x):
+            _update_old(x)
+            return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
+                                  A_dB_old[0], comp_of_dB)
 
     return _inv_logL, _inv_logL_dB, (u_e_v_old, A_dB_old, x_old, pw_d)
 
 
 def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
-             *minimize_args, **minimize_kargs):
+             *minimize_args, **minimize_kwargs):
     """ Perform component separation
 
     Build the (inverse) spectral likelihood and minimize it to estimate the
@@ -381,25 +391,24 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     # Checks input
     A_dB_ev, comp_of_dB = _A_dB_ev_and_comp_of_dB_as_compatible_list(
         A_dB_ev, comp_of_dB, minimize_args[0])
-    disp = 'options' in minimize_kargs and 'disp' in minimize_kargs['options']
+    disp = 'options' in minimize_kwargs and 'disp' in minimize_kwargs['options']
 
     # Prepare functions for minmize
     fun, jac, last_values = _build_bound_inv_logL_and_logL_dB(
         A_ev, d, invN, A_dB_ev, comp_of_dB)
+    minimize_kwargs['jac'] = jac
 
     # Gather minmize arguments
-    if jac is not None:
-        minimize_kargs['jac'] = jac
-    if disp and 'callback' not in minimize_kargs:
-        minimize_kargs['callback'] = verbose_callback()
+    if disp and 'callback' not in minimize_kwargs:
+        minimize_kwargs['callback'] = verbose_callback()
 
     # Likelihood maximization
-    res = sp.optimize.minimize(fun, *minimize_args, **minimize_kargs)
+    res = sp.optimize.minimize(fun, *minimize_args, **minimize_kwargs)
 
     # Gather results
-    u_e_v_last, A_dB_last, pw_d, x_last = last_values
-    if x_last[0] != res.x: # make sure that last_values refer the minimum
-        fun(res.x)
+    u_e_v_last, A_dB_last, x_last, pw_d = last_values
+    if not np.all(x_last[0] == res.x):
+        fun(res.x) #  Make sure that last_values refer to the minimum
 
     res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
@@ -453,7 +462,7 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
     be compatible among different arguments in the `numpy` broadcasting sense.
     """
     # TODO: add the possibility of patch specific x0
-    # TODO: mask input arrays. What about masking where patch_ids < 0
+    # TODO: mask input arrays. What about masking where patch_ids < 0?
     assert np.all(patch_ids >= 0)
     max_id = patch_ids.max()
 
