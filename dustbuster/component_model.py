@@ -156,7 +156,7 @@ class PowerLaw(Component):
             self.defaults.append(self._REF_BETA)
 
 
-class PowerLawWithCurvature(Component):
+class PowerLawCurv(Component):
     _REF_BETA = -3.
     _REF_RUN = 0.
     _REF_NU_PIVOT = 70.
@@ -183,7 +183,6 @@ class PowerLawWithCurvature(Component):
 
         if nu_pivot is None:
             self.defaults.append(self._REF_NU_PIVOT)
-
 
 class CMB(Component):
 
