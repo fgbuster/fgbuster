@@ -246,7 +246,7 @@ def _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB):
 
 
 def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
-    # XXX: It can be expensive. Make the user responsible for these checks?
+    # XXX: It can be expansive. Make the user responsible for these checks?
     if A_dB_ev is None:
         return None, None
     A_dB = A_dB_ev(x)
@@ -406,7 +406,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
             A_dB_ev, comp_of_dB, minimize_args[0])
     disp = 'options' in minimize_kwargs and 'disp' in minimize_kwargs['options']
 
-    # Prepare functions for minmize
+    # Prepare functions for minimize
     fun, jac, last_values = _build_bound_inv_logL_and_logL_dB(
         A_ev, d, invN, A_dB_ev, comp_of_dB)
     minimize_kwargs['jac'] = jac
@@ -461,14 +461,14 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
         A good choice for most cases is
         `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
         on both the solver and your signal to noise: it should ensure that the
-        difference between the best fit -logL and and the minimum is well less
-        then 1, without exagereting (a difference of 1e-4 is useless).
+        difference between the best fit -logL and the minimum is way less
+        than 1, without exagerating (a difference of 1e-4 is useless).
         `disp` also triggers a verbose callback that monitors the convergence.
 
     Returns
     -------
     result : scipy.optimze.OptimizeResult (dict)
-        Result of the spectral likelihood maximisation
+        Result of the spectral likelihood maximization
 	It is the output of `scipy.optimize.minimize`, and thus includes
 	- patch_resx : list
 	    the i-th entry is the result of `comp_sep` on `patch_ids == i`
