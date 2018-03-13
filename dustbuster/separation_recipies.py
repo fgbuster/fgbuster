@@ -37,10 +37,10 @@ def basic_comp_sep(components, instrument, data, nside=0):
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape)
     A_ev, params = _build_A_ev(components, instrument,
                                prewhiten_factors=prewhiten_factors)
-    x0 = np.array([x for c in components for x in c.defaults])
+    x0 = np.array([x for c in components for x in c.defaults]) * 1.01
     prewhitened_data = prewhiten_factors * data.T
     if nside == 0:
-        res = comp_sep(A_ev, prewhitened_data, None, x0)
+        res = comp_sep(A_ev, prewhitened_data, None, None, None, x0)
     else:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
                                 hp.npix2nside(data.shape[-1]))
