@@ -27,6 +27,7 @@ import inspect
 from time import time
 import numpy as np
 import scipy as sp
+import numdifftools
 
 OPTIMIZE = False
 _EPSILON_LOGL_DB = 1e-6
@@ -246,6 +247,8 @@ def _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB):
 
 def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
     # XXX: It can be expensive. Make the user responsible for these checks?
+    if A_dB_ev is None:
+        return None, None
     A_dB = A_dB_ev(x)
     if not isinstance(A_dB, list):
         A_dB_ev = lambda x: [A_dB_ev(x)]
@@ -265,13 +268,13 @@ def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
 
 
 def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
+    u, _, _ = u_e_v
     x = []
     for i in xrange(len(A_dB)):
-        x.append(_mtv(u_e_v[0], _mv(A_dB[i], s[..., comp_of_dB[i]])))
-    x = np.array(x)
+        A_dB_s = _mv(A_dB[i], s[..., comp_of_dB[i]])
+        x.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
 
-    return np.sum(x[..., np.newaxis] * x[..., np.newaxis, :],  # = x x^T
-                  axis=tuple(range(len(x.shape)-1)))
+    return np.array([[np.sum(x_i*x_j) for x_i in x] for x_j in x])
 
 
 def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
@@ -308,10 +311,11 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
         if not np.all(x == x_old[0]):
             u_e_v_old[0], L[0] = _svd_sqrt_invN_A(A_ev(x), invN, L[0])
             inv_e_old[0] = 1. / u_e_v_old[0][1]
-            if L[0] is None:
-                A_dB_old[0] = A_dB_ev(x)
-            else:
-                A_dB_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in A_dB_ev(x)]
+            if A_dB_ev is not None:
+                if L[0] is None:
+                    A_dB_old[0] = A_dB_ev(x)
+                else:
+                    A_dB_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in A_dB_ev(x)]
             x_old[0] = x
             if pw_d[0] is None:  # If this is the first call, prewhiten d
                 if L[0] is None:
@@ -397,8 +401,9 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     be compatible among different arguments in the `numpy` broadcasting sense.
     """
     # Checks input
-    A_dB_ev, comp_of_dB = _A_dB_ev_and_comp_of_dB_as_compatible_list(
-        A_dB_ev, comp_of_dB, minimize_args[0])
+    if A_dB_ev is not None:
+        A_dB_ev, comp_of_dB = _A_dB_ev_and_comp_of_dB_as_compatible_list(
+            A_dB_ev, comp_of_dB, minimize_args[0])
     disp = 'options' in minimize_kwargs and 'disp' in minimize_kwargs['options']
 
     # Prepare functions for minmize
@@ -420,8 +425,11 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
 
     res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
-    fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
-                                    A_dB_last[0], comp_of_dB)
+    if A_dB_ev is None:
+        fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
+    else:
+        fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
+                                        A_dB_last[0], comp_of_dB)
     res.Sigma = np.linalg.inv(fisher)
     return res
 
