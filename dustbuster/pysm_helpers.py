@@ -76,6 +76,7 @@ def _dict_instrument_test(nside):
         'output_units': 'uK_CMB',
         'output_directory': '/dev/null',
         'output_prefix': 'test',
+        'use_smoothing': True,
     }
 
 
@@ -92,6 +93,7 @@ def _dict_instrument_planck_P(nside):
         'output_units': 'uK_CMB',
         'output_directory': '/dev/null',
         'output_prefix': 'planck',
+        'use_smoothing': True,
     }
 
 
@@ -108,4 +110,5 @@ def _dict_instrument_litebird(nside):
         'output_units': 'uK_CMB',
         'output_directory': '/dev/null',
         'output_prefix': 'planck',
+        'use_smoothing': True,
     }
