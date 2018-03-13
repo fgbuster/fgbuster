@@ -173,7 +173,7 @@ class PowerLawCurv(Component):
 
         kwargs = {'nu0': nu0, 'beta_pl': beta_pl, 'running': running, 'nu_pivot': nu_pivot}
         
-        super(PowerLawWithCurvature, self).__init__(analytic_expr, **kwargs)
+        super(PowerLawCurv, self).__init__(analytic_expr, **kwargs)
 
         if beta_pl is None:
             self.defaults.append(self._REF_BETA)
