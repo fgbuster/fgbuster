@@ -47,7 +47,7 @@ def TEB_spectra( IQU_map, IQU_map_2=None, ell_max=0.0, estimator=None, *args, **
             w.compute_coupling_matrix( Q, U, b )
         if not mask_apo:
             if not mask:
-                mask = np.ones(IQU_map.shape[1])
+                mask = np.ones(IQU_map[0].shape[0])
                 mask[np.where(IQU_map[0] == 0)[0]] = 0.
             mask_apo = nmt.mask_apodization(mask, apodization_size, apotype=apotype)
         f2 = nmt.NmtField(mask_apo, [Q,U], purify_e=True, purify_b=True)
@@ -61,8 +61,8 @@ def TEB_spectra( IQU_map, IQU_map_2=None, ell_max=0.0, estimator=None, *args, **
         return cl_decoupled
     else:
         print('Pseudo E/B power spectrum estimation with healpy anafast')
-        if ell_max <= 2*hp.npix2nside(IQU_map.shape[1]):
-        	ell_max = 2*hp.npix2nside(IQU_map.shape[1])
+        if ell_max <= 2*hp.npix2nside(IQU_map[0].shape[0]):
+        	ell_max = 2*hp.npix2nside(IQU_map[0].shape[0])
 
         ClTT, ClEE, ClBB, ClTE, ClTB, ClEB = hp.sphtfunc.anafast( map1=IQU_map,map2=IQU_map_2,\
                                                                       iter=10, lmax=ell_max ) 
