@@ -135,8 +135,6 @@ class ModifiedBlackBody(Component):
             self.defaults.append(self._REF_TEMP)
 
 
-
-
 class PowerLaw(Component):
     _REF_BETA = -3
 
@@ -156,6 +154,35 @@ class PowerLaw(Component):
 
         if beta_pl is None:
             self.defaults.append(self._REF_BETA)
+
+
+class PowerLawWithCurvature(Component):
+    _REF_BETA = -3.
+    _REF_RUN = 0.
+    _REF_NU_PIVOT = 70.
+
+    def __init__(self, nu0, beta_pl=None, running=None, nu_pivot=None, units='K_CMB'):
+        # Prepare the analytic expression
+        analytic_expr = ('(nu / nu0)**(beta_pl + running * log( nu / nu_pivot ))')
+        if units == 'K_CMB':
+            analytic_expr += ' * ' + K_RJ2K_CMB_NU0
+        elif units == 'K_RJ':
+            pass
+        else:
+            raise ValueError('Unsupported units: %s'%units)
+
+        kwargs = {'nu0': nu0, 'beta_pl': beta_pl, 'running': running, 'nu_pivot': nu_pivot}
+        
+        super(PowerLawWithCurvature, self).__init__(analytic_expr, **kwargs)
+
+        if beta_pl is None:
+            self.defaults.append(self._REF_BETA)
+
+        if running is None:
+            self.defaults.append(self._REF_RUN)
+
+        if nu_pivot is None:
+            self.defaults.append(self._REF_NU_PIVOT)
 
 
 class CMB(Component):
