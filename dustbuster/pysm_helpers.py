@@ -68,6 +68,7 @@ def _dict_instrument_test(nside):
         'frequencies': np.arange(50., 700, 50.),
         'sens_I': np.ones(13),
         'sens_P': np.ones(13),
+        'beams': np.ones(13),
         'nside': nside,
         'add_noise': True,
         'noise_seed': 1234,
@@ -83,6 +84,7 @@ def _dict_instrument_planck_P(nside):
         'frequencies': np.array([30.0, 44.0, 70.0, 100.0, 143.0, 217.0, 353.0]),
         'sens_I': np.array([7.5, 7.5, 4.8, 1.3, 1.1, 1.6, 6.9]) * 40.0, # XXX
         'sens_P': np.array([7.5, 7.5, 4.8, 1.3, 1.1, 1.6, 6.9]) * 40.0,
+        'beams': np.array([33.16, 28.09, 13.08, 9.66, 7.27, 5.01, 4.86]),
         'nside': nside,
         'add_noise': True,
         'noise_seed': 1234,
@@ -98,6 +100,7 @@ def _dict_instrument_litebird(nside):
 	'frequencies': np.array([40.0, 50.0, 60.0, 68.4, 78.0, 88.5, 100.0, 118.9, 140.0, 166.0, 195.0, 234.9, 280.0, 337.4, 402.1]),
         'sens_I': np.array([42.4,  25.8,  20.1,  15.6, 12.5, 10.1,  11.8, 9.5, 7.6,   6.7, 5.1,   6.3, 10.1,  10.1,  19.1]) / 1.41,
         'sens_P': np.array([42.4,  25.8,  20.1,  15.6, 12.5, 10.1,  11.8, 9.5, 7.6,   6.7, 5.1,   6.3, 10.1,  10.1,  19.1]),
+        'beams': np.array([60, 56, 48, 43, 39, 35, 29, 25, 23, 21, 20, 19, 24, 20, 17]),
         'nside': nside,
         'add_noise': True,
         'noise_seed': 1234,
