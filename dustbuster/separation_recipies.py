@@ -159,7 +159,8 @@ class MixingMatrix(tuple):
         for i_c, c in enumerate(self):
             param_slice = slice(self.__first_param_of_comp[i_c],
                                 self.__first_param_of_comp[i_c] + c.n_param)
-            res += c.gradient(nu, *params[param_slice])
+            res += [g.reshape(-1, 1) 
+                    for g in c.gradient(nu, *params[param_slice])]
         return res
 
     def gradient_evaluator(self, nu, shape=(-1,)):

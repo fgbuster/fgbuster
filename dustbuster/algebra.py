@@ -365,23 +365,31 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
         Positional arguments to be passed to `scipy.optimize.minimize`.
         At this moment it just contains `x0`, the initial guess for the spectral
         parameters
-    minimize_kargs: dict
+    minimize_kwargs: dict
         Keyword arguments to be passed to `scipy.optimize.minimize`.
-        Notably, it contains the minimization `method`.
+        A good choice for most cases is
+        `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
+        on both the solver and your signal to noise: it should ensure that the
+        difference between the best fit -logL and and the minimum is well less
+        then 1, without exagereting (a difference of 1e-4 is useless).
+        `disp` also triggers a verbose callback that monitors the convergence.
 
     Returns
     -------
     result : scipy.optimze.OptimizeResult (dict)
         Result of the spectral likelihood maximisation
-	It is the output of `scipy.optimize.minimize`, and thus includes
-	- x : (array)
-	    Maximum likelihood spectral parameter,
-        with the addition of some extra information
-	- s : (ndarray)
-	    Separated components. Shape `(..., n_comp)`
-	- invAtNA : (ndarray)
-	    Covariance of the separated components.
-            Shape `(..., n_comp, n_comp)`
+        It is the output of `scipy.optimize.minimize`, plus some extra.
+        It includes
+        - x : (array)
+            Maximum likelihood spectral parameters
+        - Sigma : (ndarray)
+            Covariance of the spectral parameters,
+            with the addition of some extra information
+        - s : (ndarray)
+            Separated components. Shape `(..., n_comp)`
+        - invAtNA : (ndarray)
+            Covariance of the separated components.
+                Shape `(..., n_comp, n_comp)`
 
     Note
     ----
@@ -435,14 +443,19 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
     invN: ndarray or None
         The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
     patch_ids: array
-        id of regions
+        id of regions.
     minimize_args: list
         Positional arguments to be passed to `scipy.optimize.minimize`.
         At this moment it just contains `x0`, the initial guess for the spectral
         parameters.
-    minimize_kargs: dict
+    minimize_kwargs: dict
         Keyword arguments to be passed to `scipy.optimize.minimize`.
-        Notably, it contains the minimization `method`.
+        A good choice for most cases is
+        `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
+        on both the solver and your signal to noise: it should ensure that the
+        difference between the best fit -logL and and the minimum is well less
+        then 1, without exagereting (a difference of 1e-4 is useless).
+        `disp` also triggers a verbose callback that monitors the convergence.
 
     Returns
     -------
