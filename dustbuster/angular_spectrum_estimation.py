@@ -16,14 +16,14 @@ def TEB_spectra( IQU_map, IQU_map_2=None, ell_max=0.0, estimator=None, *args, **
 
     Parameters
     ----------
-    IQU_map: tuple
-             contains the input I, Q and U maps to be Fourier transformed
-    IQU_map_2: tuple
-               contains a possible second set of input I, Q and U maps to consider
-               in the evaluation of cross-spectra
-    ell_max: int
-             maximum multipole to consider. By default, we consider the Nyquist limit
-             i.e. ell_max = 2*nside of the input maps
+    IQU_map:  float, array-like shape (Npix,) or (3, Npix)
+              Either an array representing a map, or a sequence of 3 arrays
+              representing I, Q, U maps
+    IQU_map_2: float, array-like shape (Npix,) or (3, Npix)
+              Either an array representing a map, or a sequence of 3 arrays
+              representing I, Q, U maps
+    ell_max: int, scalar, optional
+             Maximum l of the power spectrum (default: 3*nside-1)
     estimator: string
                choice of the power spectrum estimator, among 'anafast' (default) and NaMaster 
                the user can provide the necessary *args and **kwargs for each method 
@@ -90,10 +90,18 @@ def TEB_spectra( IQU_map, IQU_map_2=None, ell_max=0.0, estimator=None, *args, **
         # print(qsub)
 
     else:
-        if ell_max <= 2*hp.npix2nside(IQU_map[0].shape[0]):
-        	ell_max = 2*hp.npix2nside(IQU_map[0].shape[0])
 
-        ClTT, ClEE, ClBB, ClTE, ClTB, ClEB = hp.sphtfunc.anafast( map1=IQU_map,map2=IQU_map_2,\
-                                                                      iter=10, lmax=ell_max ) 
+        if isinstance(IQU_map, tuple):
+            print >> sys.stderr, "anafast requires input map to be an array, not a tuple"
 
-        return ClTT[2:], ClEE[2:], ClBB[2:], ClTE[2:], ClTB[2:], ClEB[2:]
+        if IQU_map.ndim > 1:
+            nside_input_map = hp.npix2nside(IQU_map[0].shape[0])
+        else:
+            nside_input_map = hp.npix2nside(len(IQU_map))
+
+        if ell_max <= 3*nside_input_map-1:
+        	ell_max = 3*nside_input_map-1
+
+        Cl = hp.sphtfunc.anafast( map1=IQU_map,map2=IQU_map_2, iter=10, lmax=ell_max ) 
+
+        return Cl
