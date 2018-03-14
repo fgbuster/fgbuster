@@ -30,7 +30,7 @@ def basic_comp_sep(components, instrument, data, nside=0):
     Returns
     -------
     result : scipy.optimze.OptimizeResult (dict)
-        see `milti_comp_sep`
+        see `multi_comp_sep`
     """
     # TODO handle temperature and polarization jointly
 
