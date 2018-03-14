@@ -8,18 +8,18 @@ class TestModifiedBlackBody(unittest.TestCase):
     def setUp(self):
         self.freqs = np.array([50, 100, 300])
         self.temp = 19.6
-        self.beta = 1.7
+        self.beta_d = 1.7
         self.dust_t_b = Dust(150.)
-        self.dust_b = Dust(150., self.temp)
-        self.dust_t = Dust(150., beta=self.beta)
-        self.dust = Dust(150., self.temp, self.beta)
+        self.dust_b = Dust(150., temp=self.temp)
+        self.dust_t = Dust(150., beta_d=self.beta_d)
+        self.dust = Dust(150., temp=self.temp, beta_d=self.beta_d)
     
     def test_init_and_evaluation_parameters(self):
-        x = self.dust_t_b.eval(self.freqs, self.temp, self.beta)
+        x = self.dust_t_b.eval(self.freqs, self.beta_d, self.temp)
         np.testing.assert_array_almost_equal(
             x, self.dust_t.eval(self.freqs, self.temp))
         np.testing.assert_array_almost_equal(
-            x, self.dust_b.eval(self.freqs, self.beta))
+            x, self.dust_b.eval(self.freqs, self.beta_d))
         np.testing.assert_array_almost_equal(
             x, self.dust.eval(self.freqs))
 
