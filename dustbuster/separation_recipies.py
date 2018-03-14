@@ -10,16 +10,19 @@ def basic_comp_sep(components, instrument, data, nside=0):
 
     Parameters
     ----------
-    components: list
-        List of the `Components` in the data model
+    components: list or tuple of lists
+        Two input format are allowed
+         - List `Components` of the mixing matrix
+         - Tuple with two lists of `Components`, the first for temperature and
+           the second for polarization
     instrument: PySM.Instrument
         Instrument object used to define the mixing matrix and the
         frequency-dependent noise weight.
         It is required to have:
-        - frequencies
+         - frequencies
         however, also the following are taken into account, if provided
-        - sens_I or sens_P (define the frequency inverse noise)
-        - bandpass (the mixing matrix is integrated over the bandpass)
+         - sens_I or sens_P (define the frequency inverse noise)
+         - bandpass (the mixing matrix is integrated over the bandpass)
     data: array
         Data vector to be separated. Shape (n_freq, ..., n_pix)
         If `...` is 2, use sens_P to define the weights, sens_I otherwise.
@@ -30,10 +33,8 @@ def basic_comp_sep(components, instrument, data, nside=0):
     Returns
     -------
     result : scipy.optimze.OptimizeResult (dict)
-        see `multi_comp_sep`
+        see `milti_comp_sep`
     """
-    # TODO handle temperature and polarization jointly
-
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape)
     A_ev, A_dB_ev, comp_of_param, params = _build_A_evaluators(
         components, instrument, prewhiten_factors=prewhiten_factors)
@@ -89,17 +90,33 @@ def _get_prewhiten_factors(instrument, data_shape):
     return hp.nside2resol(instrument.Nside, arcmin=True) / sens
 
 
-def _build_A_evaluators(components, instrument, prewhiten_factors=None):
-    A = MixingMatrix(*components)
-    A_ev = A.evaluator(instrument.Frequencies)
-    A_dB_ev = A.gradient_evaluator(instrument.Frequencies)
-    if prewhiten_factors is None:
-        return A_ev, A_dB_ev, A.comp_of_param, A.params
+def _build_A_A_dB_ev(components, instrument, prewhiten_factors=None):
+    if hp.is_seq_of_seq(components):
+        A_ev_T, A_dB_ev_T, comp_of_dB_T, params_T = _build_A_A_dB_ev(
+            components[0], instrument)
+        A_ev_P, A_dB_ev_P, comp_of_dB_P, params_P = _build_A_A_dB_ev(
+            components[1], instrument)
+
+        def A_ev(x):
+            A_T = A_ev_T(x[:len(params_T)])
+            A_P = A_ev_P(x[len(params_T):])
+            return np.stack((A_T, A_P, A_P))
+
+        def A_dB_ev(x):
+            A_dB_T = A_dB_ev_T(x[:len(params_T)])
+            A_dB_P = A_dB_ev_P(x[len(params_T):])
+            return A_dB_T + A_dB_P
+
+
     else:
-        pw_A_ev =  lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
-        pw_A_dB_ev =  lambda x: [prewhiten_factors[..., np.newaxis] * A_dB_i
-                                 for A_dB_i in A_dB_ev(x)]
-        return pw_A_ev, pw_A_dB_ev, A.comp_of_param, A.params
+        A = MixingMatrix(*components)
+        A_ev = A.evaluator(instrument.Frequencies)
+        A_dB_ev, comp_of_dB = A.gradient_evaluator(instrument.Frequencies)
+    if prewhiten_factors is not None:
+        A_ev =  lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
+        A_dB_ev =  lambda x: [prewhiten_factors[..., np.newaxis] * A_dB_i
+                              for A_dB_i in A_dB_ev(x)]
+    return A_ev, A_dB_ev, comp_of_dB, params
 
 
 class MixingMatrix(tuple):
@@ -138,8 +155,8 @@ class MixingMatrix(tuple):
         return len(self.__comp_of_param)
 
     @property
-    def comp_of_param(self):
-        return self.__comp_of_param
+    def comp_of_dB(self):
+        return [np.s_[..., c] for c in self.__comp_of_param]
 
     def eval(self, nu, *params):
         shape = np.broadcast(*params).shape + (len(nu), len(self))
