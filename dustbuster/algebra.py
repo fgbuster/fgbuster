@@ -119,7 +119,7 @@ def logL(A, d, invN=None, return_svd=False):
 
 def _invAtNA_svd(u_e_v):
     _, e, v = u_e_v
-    return _mtm(v, v / e[..., np.newaxis])
+    return _mtm(v, v / e[..., np.newaxis]**2)
 
 
 def invAtNA(A, invN=None, return_svd=False):
@@ -129,6 +129,11 @@ def invAtNA(A, invN=None, return_svd=False):
         return res, (u_e_v, L)
     else:
         return res
+
+
+def _As_svd(u_e_v, s):
+    u, e, v = u_e_v
+    return _mv(u, e * _mv(v, s))
 
 
 def _Wd_svd(u_e_v, d):
@@ -149,12 +154,16 @@ def Wd(A, d, invN=None, return_svd=False):
 
 
 def _W_svd(u_e_v):
-    return _mm(_invAtNA_svd(u_e_v), _T(u_e_v[0]))
+    u, e, v = u_e_v
+    return _mtm(v, _T(u) / e[..., np.newaxis])
 
 
 def W(A, invN=None, return_svd=False):
     u_e_v, L = _svd_sqrt_invN_A(A, invN)
-    res = _mm(_W_svd(u_e_v), _T(L))
+    if L is None:
+        res = _W_svd(u_e_v)
+    else:
+        res = _mm(_W_svd(u_e_v), _T(L))
     if return_svd:
         return res, (u_e_v, L)
     else:
@@ -425,11 +434,18 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
 
     res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
+    res.chi = pw_d[0] - _As_svd(u_e_v_last[0], res.s)
     if A_dB_ev is None:
         fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
     else:
         fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
                                         A_dB_last[0], comp_of_dB)
+        As_dB = (_mv(A_dB_i, res.s[..., comp_of_dB_i])
+                for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
+        res.chi_dB = []
+        for As_dB_i in As_dB:
+            res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
+                              / np.linalg.norm(As_dB_i, axis=-1))
     res.Sigma = np.linalg.inv(fisher)
     return res
 
