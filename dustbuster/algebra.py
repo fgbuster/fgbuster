@@ -1,24 +1,41 @@
 """ Recurrent algebraic functions in component separation
 
 """
-import numpy as np
-import scipy as sp
-import numdifftools as nd
+
+# Note for developpers
+# --------------------
+# The functions in this file conform to the following convetions
+# 1) Matrices are ndarrays. The last two dimensions are respectively the
+#    codomain and the domain, the other dimensions identify the block on the
+#    diagonal. For example, an M-by-N matrix that is block-diagonal, with K
+#    diagonal blocks, is represented as an ndarray with shape (K, M/K, N/K).
+# 2) Matrices can have multiple indices for the diagonal blocks. For
+#    instance, if in the previous example K = JxL, the shape of the ndarray is
+#    (J, L, M/K, N/K).
+# 3) Suppose that the blocks are equal for the same index in J and different
+#    index in L, the matrix can be passed as a (K, 1, M/K, M/K) ndarray, without
+#    repeating equal blocks.
+# 4) Vectors are just like matrices, without the domain dimension
+# 5) Many functions come in pairs foo(A, invN, ...) and _foo_svd(u_e_v, ...)
+#    In _foo_svd does what foo is supposed to, but:
+#     - instead of providing A you provide its SVD, u_e_v
+#     - the domain of input and outputs matrices and vectors is prewhitend with
+#       sqrt(invN)
+#     - toto can return the SVD, which can then be reused in _bar_svd(...)
+
 import inspect
 from time import time
+import numpy as np
+import scipy as sp
+import numdifftools
 
 OPTIMIZE = False
+_EPSILON_LOGL_DB = 1e-6
 
 
 def _inv(m):
     result = np.array(map(np.linalg.inv, m.reshape((-1,)+m.shape[-2:])))
     return result.reshape(m.shape)
-
-
-def _solve(a, b):
-    u, e, v = np.linalg.svd(a, full_matrices=False)
-    utb = _mtv(u, b)
-    return _mtv(v, utb / e)
 
 
 def _mv(m, v):
@@ -61,38 +78,96 @@ def _T(x):
     except ValueError:
         return x
 
-def logL(A, d, invN=None):
-    if invN is None:
-        try:
-            u, _, _ = np.linalg.svd(A, full_matrices=False)
-        except np.linalg.linalg.LinAlgError:
-            print 'SVD of A failed -> logL = -inf'
-            return - np.inf
-        return 0.5 * np.linalg.norm(_mtv(u, d))**2
-    ANd = _mtmv(A, invN, d)
-    return 0.5 * np.sum(ANd * _mv(_inv(_mtmm(A, invN, A)), ANd))
+def _svd_sqrt_invN_A(A, invN=None, L=None):
+    """ SVD of A and Cholesky factor of invN
+
+    Prewhiten `A` according to `invN` (if either `invN` of `L` is provided) and
+    return both its SVD and the Cholesky factor of `invN`.
+    If you provide the Cholesky factor L, invN is ignored.
+    """
+
+    if L is None and invN is not None:
+        L = np.linalg.cholesky(invN)
+
+    if L is not None:
+        A = _mtm(L, A)
+
+    u_e_v = np.linalg.svd(A, full_matrices=False)
+    return u_e_v, L
 
 
-def invAtNA(A, invN=None):
-    if invN is None:
-        return _inv(_mtm(A, A))
-    return _inv(_mtmm(A, invN, A))
+def _logL_svd(u_e_v, d):
+    return 0.5 * np.linalg.norm(_mtv(u_e_v[0], d))**2
 
 
-def Wd(A, d, invN=None):
-    if invN is None:
-        Ad = _mtv(A, d)
+def logL(A, d, invN=None, return_svd=False):
+    try:
+        u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    except np.linalg.linalg.LinAlgError:
+        print 'SVD of A failed -> logL = -inf'
+        return - np.inf
+
+    if L is not None:
+        d = _mtv(L, d)
+    res = _logL_svd(u_e_v, d)
+
+    if return_svd:
+        return res, (u_e_v, L)
     else:
-        Ad = _mtmv(A, invN, d)
-    return _mv(invAtNA(A, invN), Ad)
+        return res
 
 
-def W(A, invN=None):
-    invAA = invAtNA(A, invN)
-    if invN is None:
-        return _mm(invAA, _T(A))
+def _invAtNA_svd(u_e_v):
+    _, e, v = u_e_v
+    return _mtm(v, v / e[..., np.newaxis]**2)
+
+
+def invAtNA(A, invN=None, return_svd=False):
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    res = _invAtNA_svd(u_e_v)
+    if return_svd:
+        return res, (u_e_v, L)
     else:
-        return _mmm(invAA, _T(A), invN)
+        return res
+
+
+def _As_svd(u_e_v, s):
+    u, e, v = u_e_v
+    return _mv(u, e * _mv(v, s))
+
+
+def _Wd_svd(u_e_v, d):
+    u, e, v = u_e_v
+    utd = _mtv(u, d)
+    return _mtv(v, utd / e)
+
+
+def Wd(A, d, invN=None, return_svd=False):
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        d = _mtv(L, d)
+    res = _Wd_svd(u_e_v, d)
+    if return_svd:
+        return res, (u_e_v, L)
+    else:
+        return res
+
+
+def _W_svd(u_e_v):
+    u, e, v = u_e_v
+    return _mtm(v, _T(u) / e[..., np.newaxis])
+
+
+def W(A, invN=None, return_svd=False):
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is None:
+        res = _W_svd(u_e_v)
+    else:
+        res = _mm(_W_svd(u_e_v), _T(L))
+    if return_svd:
+        return res, (u_e_v, L)
+    else:
+        return res
 
 
 def W_dB(A, A_dB, comp_of_dB, invN=None):
@@ -103,7 +178,21 @@ def W_dB_dB(A, invN=None):
     raise NotImplementedError
 
 
-def logL_dB(A, d, A_dB, invN=None, comp_of_dB=np.s_[:]):
+def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB=np.s_[:]):
+    u, e, v = u_e_v
+    utd = _mtv(u, d)
+    Dd = d - _mv(u, utd)
+    s = _mtv(v, utd / e)
+
+    n_param = len(A_dB)
+    diff = np.empty(n_param)
+    for i in xrange(n_param):
+        diff[i] = np.sum(_mv(A_dB[i], s[..., comp_of_dB[i]]) * Dd)
+
+    return diff
+
+
+def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[:], return_svd=False):
     """ Derivative of the log likelihood
 
     Parameters
@@ -135,6 +224,20 @@ def logL_dB(A, d, A_dB, invN=None, comp_of_dB=np.s_[:]):
     They have to be compatible among different arguments in the `numpy`
     broadcasting sense.
     """
+    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
+
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
+        d = _mtv(L, d)
+    res = _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB)
+    if return_svd:
+        return res, (u_e_v, L)
+    else:
+        return res
+
+
+def _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB):
     if not isinstance(A_dB, list):
         A_dB = [A_dB]
 
@@ -143,73 +246,110 @@ def logL_dB(A, d, A_dB, invN=None, comp_of_dB=np.s_[:]):
     else:
         comp_of_dB = [comp_of_dB] * len(A_dB)
 
-    s = Wd(A, d, invN)
-    Ds = d - _mv(A, s)
-    if invN is not None:
-        Ds = _mv(invN, Ds)
+    # The following ensures that s[..., comp_of_dB[i]] still has the last
+    # dimention: if comp_of_dB[i] is an integer the dimention is lost.
+    comp_of_dB = [np.array([c])
+                  for c in comp_of_dB if isinstance(c, (int, long))]
 
-    n_param = len(A_dB)
-    diff = np.empty(n_param)
-    for i in xrange(n_param):
-        diff[i] = np.sum(_mv(A_dB[i], s[..., comp_of_dB[i]]) * Ds)
-
-    return diff
+    return A_dB, comp_of_dB
 
 
-def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None):
-    n_param = len(A_dB)
-    fisher = np.empty((n_param, n_param))
-    if invN is None:
-        u, _, _ = np.linalg.svd(A, full_matrices=False)
-        x = [_mtv(u, _mv(A_dB_i, s[..., comp_of_dB[i]]))
-             for i, A_dB_i in enumerate(A_dB)]
-        for i in xrange(n_param):
-            for j in xrange(n_param):
-                fisher[i, j] = np.sum(x[i] * x[j])
+def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
+    # XXX: It can be expansive. Make the user responsible for these checks?
+    if A_dB_ev is None:
+        return None, None
+    A_dB = A_dB_ev(x)
+    if not isinstance(A_dB, list):
+        A_dB_ev = lambda x: [A_dB_ev(x)]
+        A_dB = [A_dB]
+
+    if isinstance(comp_of_dB, list):
+        assert len(A_dB) == len(comp_of_dB)
     else:
-        raise NotImplementedError
-    return fisher
+        comp_of_dB = [comp_of_dB] * len(A_dB)
+
+    # The following ensures that s[..., comp_of_dB[i]] still has the last
+    # dimention: if comp_of_dB[i] is an integer the dimention is lost.
+    comp_of_dB = [np.array([c])
+                  for c in comp_of_dB if isinstance(c, (int, long))]
+
+    return A_dB_ev, comp_of_dB
 
 
-def _build_bound_inv_logL_and_logL_dB(A_ev, d, A_dB_ev, comp_of_dB):
+def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
+    u, _, _ = u_e_v
+    x = []
+    for i in xrange(len(A_dB)):
+        A_dB_s = _mv(A_dB[i], s[..., comp_of_dB[i]])
+        x.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
+
+    return np.array([[np.sum(x_i*x_j) for x_i in x] for x_j in x])
+
+
+def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
+    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
+    res = _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB)
+    if return_svd:
+        return res, (u_e_v, L)
+    else:
+        return res
+
+
+def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
+                                      A_dB_ev=None, comp_of_dB=None):
+    # XXX: Turn this function into a class?
     """ Produce the functions -logL(x) and -logL_dB(x)
 
-    Keep in the memory the last SVD of A. If x of the next call coincide with
-    the last one, recycle the SVD.
+    Keep in the memory the the quantities computed for the last value of x.
+    If x of the next call coincide with the last one, recycle the pre-computed
+    quantities. It gives ~2x speedup if you often compute both -logL and
+    -logL_dB for the same x.
     """
+    L = [None]
     x_old = [None]
-    u_old = [None]
+    u_e_v_old = [None]
+    A_dB_old = [None]
     inv_e_old = [None]
-    v_old = [None]
+    pw_d = [None]
 
-    def _update_x_u_e_v(x):
+    def _update_old(x):
         # If x is different from the last one, update the SVD
         if not np.all(x == x_old[0]):
-            A = A_ev(x)
-            u_old[0], e_old, v_old[0] = np.linalg.svd(A, full_matrices=False)
-            inv_e_old[0] = 1. / e_old
+            u_e_v_old[0], L[0] = _svd_sqrt_invN_A(A_ev(x), invN, L[0])
+            inv_e_old[0] = 1. / u_e_v_old[0][1]
+            if A_dB_ev is not None:
+                if L[0] is None:
+                    A_dB_old[0] = A_dB_ev(x)
+                else:
+                    A_dB_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in A_dB_ev(x)]
             x_old[0] = x
+            if pw_d[0] is None:  # If this is the first call, prewhiten d
+                if L[0] is None:
+                    pw_d[0] = d
+                else:
+                    pw_d[0] = _mtv(L[0], d)
 
     def _inv_logL(x):
-        _update_x_u_e_v(x)
-        return - 0.5 * np.linalg.norm(_mtv(u_old[0], d))**2
+        _update_old(x)
+        return - _logL_svd(u_e_v_old[0], pw_d[0])
 
-    def _inv_logL_dB(x):
-        A_dB = A_dB_ev(x)
-        diff = np.empty(len(A_dB))
+    if A_dB_ev is None:
+        def _inv_logL_dB(x):
+            return sp.optimize.approx_fprime(x, _inv_logL, _EPSILON_LOGL_DB)
+    else:
+        def _inv_logL_dB(x):
+            _update_old(x)
+            return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
+                                  A_dB_old[0], comp_of_dB)
 
-        _update_x_u_e_v(x)
-        utd = _mtv(u_old[0], d)
-        s = _mtv(v_old[0], utd * inv_e_old[0])
-        Dd = d - _mv(u_old[0], utd)
-        for i in xrange(len(diff)):
-            diff[i] = - np.sum(_mv(A_dB[i], s[..., comp_of_dB[i]]) * Dd)
-        return diff
-
-    return _inv_logL, _inv_logL_dB
+    return _inv_logL, _inv_logL_dB, (u_e_v_old, A_dB_old, x_old, pw_d)
 
 
-def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, **minimize_kargs):
+def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
+             *minimize_args, **minimize_kwargs):
     """ Perform component separation
 
     Build the (inverse) spectral likelihood and minimize it to estimate the
@@ -238,23 +378,31 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, **minimize_karg
         Positional arguments to be passed to `scipy.optimize.minimize`.
         At this moment it just contains `x0`, the initial guess for the spectral
         parameters
-    minimize_kargs: dict
+    minimize_kwargs: dict
         Keyword arguments to be passed to `scipy.optimize.minimize`.
-        Notably, it contains the minimization `method`.
+        A good choice for most cases is
+        `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
+        on both the solver and your signal to noise: it should ensure that the
+        difference between the best fit -logL and and the minimum is well less
+        then 1, without exagereting (a difference of 1e-4 is useless).
+        `disp` also triggers a verbose callback that monitors the convergence.
 
     Returns
     -------
     result : scipy.optimze.OptimizeResult (dict)
         Result of the spectral likelihood maximisation
-	It is the output of `scipy.optimize.minimize`, and thus includes
-	- x : (array)
-	    Maximum likelihood spectral parameter,
-        with the addition of some extra information
-	- s : (ndarray)
-	    Separated components. Shape `(..., n_comp)`
-	- invAtNA : (ndarray)
-	    Covariance of the separated components.
-            Shape `(..., n_comp, n_comp)`
+        It is the output of `scipy.optimize.minimize`, plus some extra.
+        It includes
+        - x : (array)
+            Maximum likelihood spectral parameters
+        - Sigma : (ndarray)
+            Covariance of the spectral parameters,
+            with the addition of some extra information
+        - s : (ndarray)
+            Separated components. Shape `(..., n_comp)`
+        - invAtNA : (ndarray)
+            Covariance of the separated components.
+                Shape `(..., n_comp, n_comp)`
 
     Note
     ----
@@ -262,57 +410,44 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, **minimize_karg
     be compatible among different arguments in the `numpy` broadcasting sense.
     """
     # Checks input
-    if comp_of_dB is not None: # XXX put this in every routine that uses comp_of_dB?
-        comp_of_dB = [np.array([c]) for c in comp_of_dB if isinstance(c, (int, long))]
-    disp = 'options' in minimize_kargs and 'disp' in minimize_kargs['options']
+    if A_dB_ev is not None:
+        A_dB_ev, comp_of_dB = _A_dB_ev_and_comp_of_dB_as_compatible_list(
+            A_dB_ev, comp_of_dB, minimize_args[0])
+    disp = 'options' in minimize_kwargs and 'disp' in minimize_kwargs['options']
 
-    # Prepare functions for minmize
-    jac = None
-    if A_dB_ev is not None and invN is None:
-        fun, jac = _build_bound_inv_logL_and_logL_dB(A_ev, d,
-                                                     A_dB_ev, comp_of_dB)
-    else:
-        fun = lambda x: - logL(A_ev(x), d, invN)
-        if A_dB_ev is not None:
-            jac = lambda x: - logL_dB(A_ev(x), d, invN, A_dB_ev(x), comp_of_dB)
+    # Prepare functions for minimize
+    fun, jac, last_values = _build_bound_inv_logL_and_logL_dB(
+        A_ev, d, invN, A_dB_ev, comp_of_dB)
+    minimize_kwargs['jac'] = jac
 
     # Gather minmize arguments
-    if jac is not None:
-        minimize_kargs['jac'] = jac
-    if disp and 'callback' not in minimize_kargs:
-        minimize_kargs['callback'] = verbose_callback()
+    if disp and 'callback' not in minimize_kwargs:
+        minimize_kwargs['callback'] = verbose_callback()
 
     # Likelihood maximization
-    res = sp.optimize.minimize(fun, *minimize_args, **minimize_kargs)
+    res = sp.optimize.minimize(fun, *minimize_args, **minimize_kwargs)
 
     # Gather results
-    A = A_ev(res.x)
-    A_dB = None 
-    if A_dB_ev is not None and invN is None:
-        res.s, res.invAtNA, res.Sigma = _results_shortcut(
-            A, d, A_dB_ev(res.x), comp_of_dB)
+    u_e_v_last, A_dB_last, x_last, pw_d = last_values
+    if not np.all(x_last[0] == res.x):
+        fun(res.x) #  Make sure that last_values refer to the minimum
+
+    res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
+    res.invAtNA = _invAtNA_svd(u_e_v_last[0])
+    res.chi = pw_d[0] - _As_svd(u_e_v_last[0], res.s)
+    if A_dB_ev is None:
+        fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
     else:
-        res.s = _mv(W(A), d)
-        res.invAtNA = invAtNA(A, invN)
-        fisher = fisher_logL_dB_dB(A, res.s, A_dB_ev(res.x), comp_of_dB, invN)
-        res.Sigma = np.linalg.inv(fisher)
+        fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
+                                        A_dB_last[0], comp_of_dB)
+        As_dB = (_mv(A_dB_i, res.s[..., comp_of_dB_i])
+                for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
+        res.chi_dB = []
+        for As_dB_i in As_dB:
+            res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
+                              / np.linalg.norm(As_dB_i, axis=-1))
+    res.Sigma = np.linalg.inv(fisher)
     return res
-
-
-def _results_shortcut(A, d, A_dB, comp_of_dB):
-    u, e, v = np.linalg.svd(A, full_matrices=False)
-    inv_e = 1 / e
-    utd = _mtv(u, d)
-    s = _mtv(v, utd * inv_e)
-    invAtNA = _mtm(v, inv_e[..., np.newaxis] * v)
-    n_param = len(A_dB)
-    fisher = np.empty((n_param, n_param))
-    x = [_mtv(u, _mv(A_dB_i, s[..., comp_of_dB[i]]))
-         for i, A_dB_i in enumerate(A_dB)]
-    for i in xrange(n_param):
-        for j in xrange(n_param):
-            fisher[i, j] = np.sum(x[i] * x[j])
-    return s, invAtNA, np.linalg.inv(fisher)
 
 
 def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
@@ -332,19 +467,24 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
     invN: ndarray or None
         The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
     patch_ids: array
-        id of regions 
+        id of regions.
     minimize_args: list
         Positional arguments to be passed to `scipy.optimize.minimize`.
         At this moment it just contains `x0`, the initial guess for the spectral
         parameters.
-    minimize_kargs: dict
+    minimize_kwargs: dict
         Keyword arguments to be passed to `scipy.optimize.minimize`.
-        Notably, it contains the minimization `method`.
+        A good choice for most cases is
+        `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
+        on both the solver and your signal to noise: it should ensure that the
+        difference between the best fit -logL and the minimum is way less
+        than 1, without exagerating (a difference of 1e-4 is useless).
+        `disp` also triggers a verbose callback that monitors the convergence.
 
     Returns
     -------
     result : scipy.optimze.OptimizeResult (dict)
-        Result of the spectral likelihood maximisation
+        Result of the spectral likelihood maximization
 	It is the output of `scipy.optimize.minimize`, and thus includes
 	- patch_resx : list
 	    the i-th entry is the result of `comp_sep` on `patch_ids == i`
@@ -358,7 +498,8 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
     The `...` in the arguments denote any extra set of dimention. They have to
     be compatible among different arguments in the `numpy` broadcasting sense.
     """
-    # TODO add the possibility of patch specific x0
+    # TODO: add the possibility of patch specific x0
+    # TODO: mask input arrays. What about masking where patch_ids < 0?
     assert np.all(patch_ids >= 0)
     max_id = patch_ids.max()
 
@@ -424,7 +565,7 @@ def _get_from_caller(name):
 
     NOTE
     ----
-    Kludge for retrieving information inside scipy.optimize.minimize
+    Kludge for retrieving information from inside scipy.optimize.minimize
     """
     caller = inspect.currentframe().f_back.f_back
     return caller.f_locals[name]
