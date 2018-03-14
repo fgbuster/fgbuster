@@ -12,7 +12,7 @@ import healpy as hp
 import sys
 
 def TEB_spectra( IQU_map, IQU_map_2=None, ell_max=0.0, estimator=None, *args, **kwargs ):
-    """ Get a pre-defined PySM sky
+    """ Estimate the angular power spectra of given sky maps
 
     Parameters
     ----------
