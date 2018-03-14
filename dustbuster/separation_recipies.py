@@ -35,12 +35,13 @@ def basic_comp_sep(components, instrument, data, nside=0):
     # TODO handle temperature and polarization jointly
 
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape)
-    A_ev, params = _build_A_ev(components, instrument,
-                               prewhiten_factors=prewhiten_factors)
-    x0 = np.array([x for c in components for x in c.defaults]) * 1.01
+    A_ev, A_dB_ev, comp_of_param, params = _build_A_evaluators(
+        components, instrument, prewhiten_factors=prewhiten_factors)
+    x0 = np.array([x for c in components for x in c.defaults])
     prewhitened_data = prewhiten_factors * data.T
     if nside == 0:
-        res = comp_sep(A_ev, prewhitened_data, None, None, None, x0)
+        res = comp_sep(A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, x0,
+                       options=dict(disp=True))
     else:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
                                 hp.npix2nside(data.shape[-1]))
@@ -88,14 +89,17 @@ def _get_prewhiten_factors(instrument, data_shape):
     return hp.nside2resol(instrument.Nside, arcmin=True) / sens
 
 
-def _build_A_ev(components, instrument, prewhiten_factors=None):
+def _build_A_evaluators(components, instrument, prewhiten_factors=None):
     A = MixingMatrix(*components)
     A_ev = A.evaluator(instrument.Frequencies)
+    A_dB_ev = A.gradient_evaluator(instrument.Frequencies)
     if prewhiten_factors is None:
-        return A_ev, A.params
+        return A_ev, A_dB_ev, A.comp_of_param, A.params
     else:
         pw_A_ev =  lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
-        return pw_A_ev, A.params
+        pw_A_dB_ev =  lambda x: [prewhiten_factors[..., np.newaxis] * A_dB_i
+                                 for A_dB_i in A_dB_ev(x)]
+        return pw_A_ev, pw_A_dB_ev, A.comp_of_param, A.params
 
 
 class MixingMatrix(tuple):
