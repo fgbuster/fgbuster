@@ -3,7 +3,7 @@
 """
 import numpy as np
 import healpy as hp
-from algebra import multi_comp_sep, comp_sep
+from .algebra import multi_comp_sep, comp_sep
 
 def basic_comp_sep(components, instrument, data, nside=0):
     """ Basic component separation
@@ -36,9 +36,8 @@ def basic_comp_sep(components, instrument, data, nside=0):
         see `milti_comp_sep`
     """
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape)
-    A_ev, A_dB_ev, comp_of_param, params = _build_A_evaluators(
+    A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluators(
         components, instrument, prewhiten_factors=prewhiten_factors)
-    x0 = np.array([x for c in components for x in c.defaults])
     prewhitened_data = prewhiten_factors * data.T
     if nside == 0:
         res = comp_sep(A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, x0,
@@ -74,7 +73,6 @@ def _get_prewhiten_factors(instrument, data_shape):
     factor: array
         prewhitening factors
     """
-    # TODO handle temperature and polarization jointly
     try:
         if len(data_shape) < 3 or data_shape[1] == 1:
             sens = instrument.Sens_I
@@ -90,33 +88,61 @@ def _get_prewhiten_factors(instrument, data_shape):
     return hp.nside2resol(instrument.Nside, arcmin=True) / sens
 
 
-def _build_A_A_dB_ev(components, instrument, prewhiten_factors=None):
-    if hp.is_seq_of_seq(components):
-        A_ev_T, A_dB_ev_T, comp_of_dB_T, params_T = _build_A_A_dB_ev(
-            components[0], instrument)
-        A_ev_P, A_dB_ev_P, comp_of_dB_P, params_P = _build_A_A_dB_ev(
-            components[1], instrument)
-
-        def A_ev(x):
-            A_T = A_ev_T(x[:len(params_T)])
-            A_P = A_ev_P(x[len(params_T):])
-            return np.stack((A_T, A_P, A_P))
-
-        def A_dB_ev(x):
-            A_dB_T = A_dB_ev_T(x[:len(params_T)])
-            A_dB_P = A_dB_ev_P(x[len(params_T):])
-            return A_dB_T + A_dB_P
+def _A_evaluators(components, instrument, prewhiten_factors=None):
+    if hp.cookbook.is_seq_of_seq(components):
+        return _T_P_A_evaluators(components, instrument, prewhiten_factors)
+    return _single_A_evaluators(components, instrument, prewhiten_factors)
 
 
+def _T_P_A_evaluators(components, instrument, prewhiten_factors=None):
+    A_ev_T, A_dB_ev_T, comp_of_dB_T, x0_T, params_T = _A_evaluators(
+        components[0], instrument)
+    A_ev_P, A_dB_ev_P, comp_of_dB_P, x0_P, params_P = _A_evaluators(
+        components[1], instrument)
+
+    def A_ev(x):
+        A_T = A_ev_T(x[:len(params_T)])
+        A_P = A_ev_P(x[len(params_T):])
+        return np.stack((A_T, A_P, A_P))
+
+    def A_dB_ev(x):
+        A_dB_T = A_dB_ev_T(x[:len(params_T)])
+        A_dB_P = A_dB_ev_P(x[len(params_T):])
+        return A_dB_T + A_dB_P
+
+    comp_of_dB = [(el,) + (0,) + (c,) for el, c in comp_of_dB_T]
+    comp_of_dB += [(el, slice(1, 3, None), c) for el, c in comp_of_dB_P]
+    x0 = np.hstack((x0_T, x0_P))
+    params = ['T.%s' % p for p in params_T] + ['P.%s' % p for p in params_P]
+    if prewhiten_factors is None:
+        return A_ev, A_dB_ev, comp_of_dB, x0, params
+
+    pw_A_ev = lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
+    if len(prewhiten_factors.shape) < 2 or prewhiten_factors.shape[-2] < 2:
+        # prewhiten_factors is not stokes-dependent
+        pwf_dB = [prewhiten_factors] * len(params_T)
     else:
-        A = MixingMatrix(*components)
-        A_ev = A.evaluator(instrument.Frequencies)
-        A_dB_ev, comp_of_dB = A.gradient_evaluator(instrument.Frequencies)
-    if prewhiten_factors is not None:
-        A_ev =  lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
-        A_dB_ev =  lambda x: [prewhiten_factors[..., np.newaxis] * A_dB_i
-                              for A_dB_i in A_dB_ev(x)]
-    return A_ev, A_dB_ev, comp_of_dB, params
+        pwf_dB = [prewhiten_factors[..., 0, :, np.newaxis]] * len(params_T)
+        pwf_dB += [prewhiten_factors[..., 1:, :, np.newaxis]] * len(params_P)
+    pw_A_dB_ev = lambda x: [pwf_dB_i * A_dB_i
+                            for pwf_dB_i, A_dB_i in zip(pwf_dB, A_dB_ev(x))]
+    return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
+
+
+def _single_A_evaluators(components, instrument, prewhiten_factors=None):
+    A = MixingMatrix(*components)
+    A_ev = A.evaluator(instrument.Frequencies)
+    A_dB_ev = A.gradient_evaluator(instrument.Frequencies)
+    comp_of_dB = A.comp_of_dB
+    x0 = np.array([x for c in components for x in c.defaults])
+    params = A.params
+    if prewhiten_factors is None:
+        return A_ev, A_dB_ev, comp_of_dB, x0, params
+
+    pw_A_ev = lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
+    pw_A_dB_ev = lambda x: [prewhiten_factors[..., np.newaxis] * A_dB_i
+                            for A_dB_i in A_dB_ev(x)]
+    return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
 
 
 class MixingMatrix(tuple):
@@ -175,12 +201,11 @@ class MixingMatrix(tuple):
     def gradient(self, nu, *params):
         if not params:
             return None
-        shape = (len(params),) + np.broadcast(*params).shape + (len(nu),)
         res = []
         for i_c, c in enumerate(self):
             param_slice = slice(self.__first_param_of_comp[i_c],
                                 self.__first_param_of_comp[i_c] + c.n_param)
-            res += [g.reshape(-1, 1) 
+            res += [g.reshape(-1, 1)
                     for g in c.gradient(nu, *params[param_slice])]
         return res
 

@@ -113,8 +113,7 @@ def logL(A, d, invN=None, return_svd=False):
 
     if return_svd:
         return res, (u_e_v, L)
-    else:
-        return res
+    return res
 
 
 def _invAtNA_svd(u_e_v):
@@ -127,8 +126,7 @@ def invAtNA(A, invN=None, return_svd=False):
     res = _invAtNA_svd(u_e_v)
     if return_svd:
         return res, (u_e_v, L)
-    else:
-        return res
+    return res
 
 
 def _As_svd(u_e_v, s):
@@ -149,8 +147,7 @@ def Wd(A, d, invN=None, return_svd=False):
     res = _Wd_svd(u_e_v, d)
     if return_svd:
         return res, (u_e_v, L)
-    else:
-        return res
+    return res
 
 
 def _W_svd(u_e_v):
@@ -166,19 +163,10 @@ def W(A, invN=None, return_svd=False):
         res = _mm(_W_svd(u_e_v), _T(L))
     if return_svd:
         return res, (u_e_v, L)
-    else:
-        return res
+    return res
 
 
-def W_dB(A, A_dB, comp_of_dB, invN=None):
-    raise NotImplementedError
-
-
-def W_dB_dB(A, invN=None):
-    raise NotImplementedError
-
-
-def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB=np.s_[:]):
+def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     u, e, v = u_e_v
     utd = _mtv(u, d)
     Dd = d - _mv(u, utd)
@@ -187,12 +175,14 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB=np.s_[:]):
     n_param = len(A_dB)
     diff = np.empty(n_param)
     for i in xrange(n_param):
-        diff[i] = np.sum(_mv(A_dB[i], s[..., comp_of_dB[i]]) * Dd)
+        freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
+        diff[i] = np.sum(_mv(A_dB[i], s[comp_of_dB[i]])
+                         * Dd[freq_of_dB])
 
     return diff
 
 
-def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[:], return_svd=False):
+def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
     """ Derivative of the log likelihood
 
     Parameters
@@ -206,11 +196,11 @@ def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[:], return_svd=False):
     A_dB : ndarray or list of ndarray
         The derivative of the mixing matrix. If list, each entry is the
         derivative with respect to a different parameter.
-    comp_of_dB: index or list of indices
+    comp_of_dB: IndexExpression or list of IndexExpression
         It allows to provide in `A_dB` only the non-zero columns `A`.
-        `A_dB` is assumed to be the derivative of `A[..., comp_of_dB]`.
+        `A_dB` is assumed to be the derivative of `A[comp_of_dB]`.
         If a list is provided, also `A_dB` has to be a list and
-        `A_dB[i]` is assumed to be the derivative of `A[..., comp_of_dB[i]]`.
+        `A_dB[i]` is assumed to be the derivative of `A[comp_of_dB[i]]`.
 
     Returns
     -------
@@ -233,8 +223,7 @@ def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[:], return_svd=False):
     res = _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB)
     if return_svd:
         return res, (u_e_v, L)
-    else:
-        return res
+    return res
 
 
 def _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB):
@@ -246,12 +235,22 @@ def _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB):
     else:
         comp_of_dB = [comp_of_dB] * len(A_dB)
 
-    # The following ensures that s[..., comp_of_dB[i]] still has the last
-    # dimention: if comp_of_dB[i] is an integer the dimention is lost.
-    comp_of_dB = [np.array([c])
-                  for c in comp_of_dB if isinstance(c, (int, long))]
+    # The following ensures that s[comp_of_dB[i]] still has all the axes
+    comp_of_dB = [_turn_into_slice_if_integer(c) for c in comp_of_dB]
 
     return A_dB, comp_of_dB
+
+
+def _turn_into_slice_if_integer(index_expression):
+    # When you index an array with an integer you lose one dimension.
+    # To avoid this we turn the integer into a slice
+    res = []
+    for i in index_expression:
+        if isinstance(i, (int, long)):
+            res.append(slice(i, i+1, None))
+        else:
+            res.append(i)
+    return tuple(res)
 
 
 def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
@@ -268,10 +267,8 @@ def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
     else:
         comp_of_dB = [comp_of_dB] * len(A_dB)
 
-    # The following ensures that s[..., comp_of_dB[i]] still has the last
-    # dimention: if comp_of_dB[i] is an integer the dimention is lost.
-    comp_of_dB = [np.array([c])
-                  for c in comp_of_dB if isinstance(c, (int, long))]
+    # The following ensures that s[comp_of_dB[i]] still has all the axes
+    comp_of_dB = [_turn_into_slice_if_integer(c) for c in comp_of_dB]
 
     return A_dB_ev, comp_of_dB
 
@@ -280,8 +277,13 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
     u, _, _ = u_e_v
     x = []
     for i in xrange(len(A_dB)):
-        A_dB_s = _mv(A_dB[i], s[..., comp_of_dB[i]])
-        x.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
+        D_A_dB_s = np.zeros(s.shape[:-1] + u.shape[-2:-1])  # Full shape
+        comp_freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
+        comp_freq_of_dB += comp_of_dB[i][-1:]
+        A_dB_s = _mv(A_dB[i], s[comp_of_dB[i]])  # Compressed shape
+        D_A_dB_s[comp_freq_of_dB[:-1]] = (
+            A_dB_s - _mv(u[comp_freq_of_dB], _mtv(u[comp_freq_of_dB], A_dB_s)))
+        x.append(D_A_dB_s)
 
     return np.array([[np.sum(x_i*x_j) for x_i in x] for x_j in x])
 
@@ -294,8 +296,7 @@ def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
     res = _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB)
     if return_svd:
         return res, (u_e_v, L)
-    else:
-        return res
+    return res
 
 
 def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
@@ -370,10 +371,10 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
         The evaluator of the derivative of the mixing matrix.
         It returns a list, each entry is the derivative with respect to a
         different parameter.
-    comp_of_dB: list of indices
+    comp_of_dB: list of IndexExpression
         It allows to provide as output of `A_dB_ev` only the non-zero columns
         `A`. `A_dB_ev(x)[i]` is assumed to be the derivative of
-        `A[..., comp_of_dB[i]]`.
+        `A[comp_of_dB[i]]`.
     minimize_args: list
         Positional arguments to be passed to `scipy.optimize.minimize`.
         At this moment it just contains `x0`, the initial guess for the spectral
@@ -440,11 +441,12 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     else:
         fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
                                         A_dB_last[0], comp_of_dB)
-        As_dB = (_mv(A_dB_i, res.s[..., comp_of_dB_i])
-                for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
+        As_dB = (_mv(A_dB_i, res.s[comp_of_dB_i])
+                 for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
         res.chi_dB = []
-        for As_dB_i in As_dB:
-            res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
+        for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
+            freq_of_dB = comp_of_dB_i[:-1] + (slice(None),)
+            res.chi_dB.append(np.sum(res.chi[freq_of_dB] * As_dB_i, -1)
                               / np.linalg.norm(As_dB_i, axis=-1))
     res.Sigma = np.linalg.inv(fisher)
     return res
