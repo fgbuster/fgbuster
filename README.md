@@ -1,17 +1,24 @@
-# xForecast
-Simulation of parametric component separation for Cosmic Microwave Background observations
+# DustBuster
+Parametric component separation for Cosmic Microwave Background observations
 
-## Requirements
-- Map based component separation functionality (pixel domain, but user can define fancy domains)
-- Forcasting a la Errard et al 2011
-- Forecasting a la Stompor et al 2016
-- Take arbitrary models for the reconstruction
-- Handy construction of models from analytic expressions
-- No hard coded units: the user provides consistent inputs
-- Allow 1/f noise
-- Allow noise correlated between frequencies (dense weights? diagonalize?)
-- Multiple independent patches
-- Power spectrum likelihood
-- CosmoMC plugin for arbitrary cosmological parameters?
-- delensing
-- visualization library
+## Install
+The code is quickly evolving. Install it with
+
+```bash
+git clone git@github.com:dpole/xForecast.git
+cd xForecast
+[sudo] python setup.py develop [--user]
+```
+
+so that you can keep up with the latest changes simply with `git pull`.
+
+You can now access the routines from anyware with
+
+```python
+import dustbuster
+```
+
+## Usage
+The library provides utilities for several case of use.
+The `example` folder will contain notebooks that illustrate them.
+Curreintly it contains an example of map-based component separation.
