@@ -22,3 +22,14 @@ import dustbuster
 The library provides utilities for several case of use.
 The `example` folder will contain notebooks that illustrate them.
 Currently, it contains an example of map-based component separation.
+
+## Note
+If you have access to this repo it means that you are either a developer
+or a test user. In the latter case, please do not hesitate to
+ - make suggestion
+ - report bugs
+ - propose new features
+and keep in mind that
+ - API may change
+ - what routines do may change
+We do our best to keep docstrings up to date
