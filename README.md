@@ -12,7 +12,7 @@ cd xForecast
 
 so that you can keep up with the latest changes simply with `git pull`.
 
-You can now access the routines from anyware with
+You can now access the routines from anywhere with
 
 ```python
 import dustbuster
@@ -21,4 +21,4 @@ import dustbuster
 ## Usage
 The library provides utilities for several case of use.
 The `example` folder will contain notebooks that illustrate them.
-Curreintly it contains an example of map-based component separation.
+Currently, it contains an example of map-based component separation.
