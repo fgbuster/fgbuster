@@ -29,7 +29,9 @@ or a test user. In the latter case, please do not hesitate to
  - make suggestion
  - report bugs
  - propose new features
+
 and keep in mind that
  - API may change
  - what routines do may change
+
 We do our best to keep docstrings up to date
