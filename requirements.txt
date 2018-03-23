@@ -1,5 +1,8 @@
 sphinx
+numdifftools
 travis-sphinx
 healpy
 scipy
+numpy
 sympy
+git+git://github.com/bthorne93/PySM_public.git#egg=pysm
