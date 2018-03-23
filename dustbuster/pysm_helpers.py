@@ -33,7 +33,7 @@ def get_sky(nside, tag='c1d0s0'):
     return pysm.Sky(sky_config)
 
 
-def get_instrument(nside, tag):
+def get_instrument(nside, tag, units='K_CMB'):
     """ Get pre-defined PySM Instrument
 
     Parameters
@@ -49,7 +49,7 @@ def get_instrument(nside, tag):
     """
     module = sys.modules[__name__]
     try:
-        instrument = getattr(module, '_dict_instrument_'+tag)(nside)
+        instrument = getattr(module, '_dict_instrument_'+tag)(nside, units)
     except AttributeError:
         raise ValueError('Instrument %s not available. Chose between: %s.'
                          % (tag, ', '.join(_get_available_instruments())))
@@ -63,7 +63,7 @@ def _get_available_instruments():
     return [fun.replace(prefix, '') for fun in dir(module) if has_prefix(fun)]
 
 
-def _dict_instrument_test(nside):
+def _dict_instrument_test(nside, units='uK_CMB'):
     return {
         'frequencies': np.arange(50., 700, 50.),
         'sens_I': np.ones(13),
@@ -73,14 +73,14 @@ def _dict_instrument_test(nside):
         'add_noise': True,
         'noise_seed': 1234,
         'use_bandpass': False,
-        'output_units': 'uK_CMB',
+        'output_units': units,
         'output_directory': '/dev/null',
         'output_prefix': 'test',
         'use_smoothing': True,
     }
 
 
-def _dict_instrument_planck_P(nside):
+def _dict_instrument_planck_P(nside, units='uK_CMB'):
     return {
         'frequencies': np.array([30.0, 44.0, 70.0, 100.0, 143.0, 217.0, 353.0]),
         'sens_I': np.array([7.5, 7.5, 4.8, 1.3, 1.1, 1.6, 6.9]) * 40.0, # XXX
@@ -90,14 +90,14 @@ def _dict_instrument_planck_P(nside):
         'add_noise': True,
         'noise_seed': 1234,
         'use_bandpass': False,
-        'output_units': 'uK_CMB',
+        'output_units': units,
         'output_directory': '/dev/null',
         'output_prefix': 'planck',
         'use_smoothing': True,
     }
 
 
-def _dict_instrument_litebird(nside):
+def _dict_instrument_litebird(nside, units='uK_CMB'):
     return {
 	'frequencies': np.array([40.0, 50.0, 60.0, 68.4, 78.0, 88.5, 100.0, 118.9, 140.0, 166.0, 195.0, 234.9, 280.0, 337.4, 402.1]),
         'sens_I': np.array([42.4,  25.8,  20.1,  15.6, 12.5, 10.1,  11.8, 9.5, 7.6,   6.7, 5.1,   6.3, 10.1,  10.1,  19.1]) / 1.41,
@@ -107,7 +107,7 @@ def _dict_instrument_litebird(nside):
         'add_noise': True,
         'noise_seed': 1234,
         'use_bandpass': False,
-        'output_units': 'uK_CMB',
+        'output_units': units,
         'output_directory': '/dev/null',
         'output_prefix': 'planck',
         'use_smoothing': True,

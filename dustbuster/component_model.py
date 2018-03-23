@@ -10,12 +10,15 @@ For frequent components (e.g. power law, gray body) these classe are already
 prepared.
 """
 
+import os.path as op
 import numpy as np
 import sympy
-from sympy import lambdify, Symbol
+from sympy import lambdify
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.utilities.autowrap import ufuncify
+import scipy
 from scipy import constants
+import pysm
 from astropy.cosmology import Planck15
 
 H_OVER_K = constants.h * 1e9 / constants.k
@@ -54,14 +57,20 @@ class Component(object):
 
     def _add_last_dimention_if_not_scalar(self, param):
         if isinstance(param, np.ndarray) and len(param) > 1:
+            # Lambdified expressions always output an ndarray with shape
+            # (param_dim_1, ..., param_dim_n, n_freq). However, parameters and
+            # frequencies are both symbols with (no special meaning). In order
+            # to impose the shape of the output we append a dimesion to the
+            # parameters and let the broadcasting inside the lambdified
+            # expressions do the rest
             return param[..., np.newaxis]
-        else:
-            return param
+        # param is an scalar value, no special treatment is required
+        return param
 
     def eval(self, nu, *params):
         assert len(params) == self.n_param
         # Make sure that broadcasting rules will apply correctly when passing
-        # the parameters to the lambdified functions: 
+        # the parameters to the lambdified functions:
         # last axis has to be nu, but that axis is missing in the parameters
         new_params = map(self._add_last_dimention_if_not_scalar, params)
         return self._lambda(nu, *new_params)
@@ -77,14 +86,14 @@ class Component(object):
                     for i_p in range(self.n_param)]
 
         # Make sure that broadcasting rules will apply correctly when passing
-        # the parameters to the lambdified functions: 
+        # the parameters to the lambdified functions:
         # last axis has to be nu, but that axis is missing in the parameters
         new_params = map(self._add_last_dimention_if_not_scalar, params)
 
-        res = np.zeros(shape)
+        res = []
         for i_p, p in enumerate(new_params):
-            res[i_p] += self._lambda_diff[i_p](nu, new_params[i_p])
-        return list(res)
+            res.append(self._lambda_diff[i_p](nu, p))
+        return res
 
     @property
     def params(self):
@@ -125,7 +134,7 @@ class ModifiedBlackBody(Component):
         kwargs = {
             'nu0': nu0, 'beta_d': beta_d, 'temp': temp, 'h_over_k': H_OVER_K
         }
-        
+
         super(ModifiedBlackBody, self).__init__(analytic_expr, **kwargs)
 
         if beta_d is None:
@@ -149,7 +158,7 @@ class PowerLaw(Component):
             raise ValueError('Unsupported units: %s'%units)
 
         kwargs = {'nu0': nu0, 'beta_pl': beta_pl}
-        
+
         super(PowerLaw, self).__init__(analytic_expr, **kwargs)
 
         if beta_pl is None:
@@ -172,7 +181,7 @@ class PowerLawCurv(Component):
             raise ValueError('Unsupported units: %s'%units)
 
         kwargs = {'nu0': nu0, 'beta_pl': beta_pl, 'running': running, 'nu_pivot': nu_pivot}
-        
+
         super(PowerLawCurv, self).__init__(analytic_expr, **kwargs)
 
         if beta_pl is None:
@@ -183,6 +192,7 @@ class PowerLawCurv(Component):
 
         if nu_pivot is None:
             self.defaults.append(self._REF_NU_PIVOT)
+
 
 class CMB(Component):
 
@@ -199,7 +209,78 @@ class CMB(Component):
         super(CMB, self).__init__(analytic_expr)
 
         if units == 'K_CMB':
-            self.evaluate = lambda nu: np.ones_like(nu)
+            self.eval = lambda nu: np.ones_like(nu)
+
+
+class FreeFree(Component):
+    _REF_EM = 15.
+    _REF_TE = 7000.
+
+    def __init__(self, EM=None, Te=None, units='K_CMB'):
+        # Prepare the analytic expression. Planck15 X, Table 4
+        # NOTE: PySM uses power a power law instead
+        T4 = 'Te * 1e-4'
+        gff = 'log(exp(5.960 - (sqrt(3) / pi) * log(nu * (T4)**(-3 / 2))) + exp(1))'
+        tau = '0.05468 * Te**(- 3 / 2) / nu**2 * EM * (gff)'
+        analytic_expr = '1e6 * Te * (1 - exp(-(tau)))'
+        analytic_expr = analytic_expr.replace('tau', tau)
+        analytic_expr = analytic_expr.replace('gff', gff)
+        analytic_expr = analytic_expr.replace('T4', T4)
+        if units == 'K_CMB':
+            analytic_expr += ' * ' + K_RJ2K_CMB
+        elif units == 'K_RJ':
+            pass
+        else:
+            raise ValueError('Unsupported units: %s'%units)
+
+        kwargs = dict(EM=EM, Te=Te, tau=tau, gff=gff, T4=T4)
+
+        super(FreeFree, self).__init__(analytic_expr, **kwargs)
+
+        if EM is None:
+            self.defaults.append(self._REF_EM)
+
+        if Te is None:
+            self.defaults.append(self._REF_TE)
+
+
+class AME(Component):
+    _REF_NU_PEAK = 30.
+    _NU_PEAK_0 = 30.
+
+    def __init__(self, nu_0, nu_peak=None, units='K_CMB'):
+        # analytic_expr contains just the analytic part of the emission law
+        analytic_expr = 'nu**(-2)'
+        if units == 'K_CMB':
+            analytic_expr += '*' + K_RJ2K_CMB
+        elif units == 'K_RJ':
+            pass
+        else:
+            raise ValueError('Unsupported units: %s'%units)
+
+        super(AME, self).__init__(analytic_expr)
+
+        emissivity_file = op.join(op.dirname(pysm.__file__),
+                                  'template/emissivity.txt')
+        emissivity = np.loadtxt(emissivity_file, unpack=True)
+        self._interp = scipy.interpolate.interp1d(
+            emissivity[0], emissivity[1],
+            bounds_error=False, fill_value=0, assume_sorted=True, copy=False)
+
+        if nu_peak is None:
+            self.defaults.append(self._REF_NU_PEAK)
+            self._params.append('nu_peak')
+            self.eval = lambda nu, p: (
+                self._interp_eval(nu, p) / self._interp_eval(nu_0, p))
+            self.gradient = lambda nu, p: [
+                (self.eval(nu, p*1.01) - self.eval(nu, p*0.99)) / (p*0.02)]
+        else:
+            self.eval = lambda nu: (self._interp_eval(nu, nu_peak)
+                                    / self._interp_eval(nu_0, nu_peak))
+            self.gradient = lambda nu: []
+
+    def _interp_eval(self, nu, nu_peak):
+        return self._lambda(nu) * self._interp(nu * (self._NU_PEAK_0 / nu_peak))
 
 
 class Dust(ModifiedBlackBody):
