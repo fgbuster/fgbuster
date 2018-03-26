@@ -34,6 +34,7 @@ def get_sky(nside, tag='c1d0s0'):
 
 
 def get_instrument(nside, tag, units='uK_CMB'):
+
     """ Get pre-defined PySM Instrument
 
     Parameters

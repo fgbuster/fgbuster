@@ -1,9 +1,13 @@
-language: python - "2.7"
+language: python
 
-sudo: required
+python:
+  - 2.7
 
-install: pip install -r requirements.txt
+install:
+  - pip install .
+  - pip install -r requirements.txt
 
-script: travis-sphinx -n build
-
-after_success: travis-sphinx deploy
+script:
+  - python setup.py test          
+#  travis-sphinx -n build
+#after_success: travis-sphinx deploy
