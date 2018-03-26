@@ -3,7 +3,6 @@
 import sys
 import numpy as np
 import pysm
-import inspect
 
 def get_sky(nside, tag='c1d0s0'):
     """ Get a pre-defined PySM sky
@@ -101,8 +100,8 @@ def _dict_instrument_planck_P(nside, units='uK_CMB'):
 def _dict_instrument_litebird(nside, units='uK_CMB'):
     return {
 	'frequencies': np.array([40.0, 50.0, 60.0, 68.4, 78.0, 88.5, 100.0, 118.9, 140.0, 166.0, 195.0, 234.9, 280.0, 337.4, 402.1]),
-        'sens_I': np.array([42.4,  25.8,  20.1,  15.6, 12.5, 10.1,  11.8, 9.5, 7.6,   6.7, 5.1,   6.3, 10.1,  10.1,  19.1]) / 1.41,
-        'sens_P': np.array([42.4,  25.8,  20.1,  15.6, 12.5, 10.1,  11.8, 9.5, 7.6,   6.7, 5.1,   6.3, 10.1,  10.1,  19.1]),
+        'sens_I': np.array([42.4, 25.8, 20.1, 15.6, 12.5, 10.1, 11.8, 9.5, 7.6,  6.7, 5.1,  6.3, 10.1, 10.1, 19.1]) / 1.41,
+        'sens_P': np.array([42.4, 25.8, 20.1, 15.6, 12.5, 10.1, 11.8, 9.5, 7.6,  6.7, 5.1,  6.3, 10.1, 10.1, 19.1]),
         'beams': np.array([60, 56, 48, 43, 39, 35, 29, 25, 23, 21, 20, 19, 24, 20, 17]),
         'nside': nside,
         'add_noise': True,
@@ -111,5 +110,5 @@ def _dict_instrument_litebird(nside, units='uK_CMB'):
         'output_units': units,
         'output_directory': '/dev/null',
         'output_prefix': 'planck',
-        'use_smoothing': True,
+        'use_smoothing': False,
     }
