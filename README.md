@@ -15,7 +15,7 @@ so that you can keep up with the latest changes simply with `git pull`.
 You can now access the routines from anywhere with
 
 ```python
-import dustbuster
+import fgbuster
 ```
 
 ## Usage
