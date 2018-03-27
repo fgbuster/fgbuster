@@ -1,4 +1,4 @@
-# DustBuster
+# ForeGroundBuster
 Parametric component separation for Cosmic Microwave Background observations
 
 ## Install
