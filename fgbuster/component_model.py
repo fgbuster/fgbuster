@@ -18,8 +18,8 @@ from sympy.parsing.sympy_parser import parse_expr
 from sympy.utilities.autowrap import ufuncify
 import scipy
 from scipy import constants
-import pysm
 from astropy.cosmology import Planck15
+import pysm
 
 H_OVER_K = constants.h * 1e9 / constants.k
 
@@ -109,6 +109,11 @@ class Component(object):
     def defaults(self):
         return self._defaults
 
+    @defaults.setter
+    def defaults(self, new_defaults):
+        assert len(self._defaults) == len(new_defaults)
+        self._defaults = new_defaults
+
 
 class ModifiedBlackBody(Component):
     _REF_BETA = 1.54
@@ -138,10 +143,10 @@ class ModifiedBlackBody(Component):
         super(ModifiedBlackBody, self).__init__(analytic_expr, **kwargs)
 
         if beta_d is None:
-            self.defaults.append(self._REF_BETA)
+            self._defaults.append(self._REF_BETA)
 
         if temp is None:
-            self.defaults.append(self._REF_TEMP)
+            self._defaults.append(self._REF_TEMP)
 
 
 class PowerLaw(Component):
@@ -162,7 +167,7 @@ class PowerLaw(Component):
         super(PowerLaw, self).__init__(analytic_expr, **kwargs)
 
         if beta_pl is None:
-            self.defaults.append(self._REF_BETA)
+            self._defaults.append(self._REF_BETA)
 
 
 class PowerLawCurv(Component):
@@ -185,13 +190,13 @@ class PowerLawCurv(Component):
         super(PowerLawCurv, self).__init__(analytic_expr, **kwargs)
 
         if beta_pl is None:
-            self.defaults.append(self._REF_BETA)
+            self._defaults.append(self._REF_BETA)
 
         if running is None:
-            self.defaults.append(self._REF_RUN)
+            self._defaults.append(self._REF_RUN)
 
         if nu_pivot is None:
-            self.defaults.append(self._REF_NU_PIVOT)
+            self._defaults.append(self._REF_NU_PIVOT)
 
 
 class CMB(Component):
@@ -238,10 +243,10 @@ class FreeFree(Component):
         super(FreeFree, self).__init__(analytic_expr, **kwargs)
 
         if EM is None:
-            self.defaults.append(self._REF_EM)
+            self._defaults.append(self._REF_EM)
 
         if Te is None:
-            self.defaults.append(self._REF_TE)
+            self._defaults.append(self._REF_TE)
 
 
 class AME(Component):
@@ -268,7 +273,7 @@ class AME(Component):
             bounds_error=False, fill_value=0, assume_sorted=True, copy=False)
 
         if nu_peak is None:
-            self.defaults.append(self._REF_NU_PEAK)
+            self._defaults.append(self._REF_NU_PEAK)
             self._params.append('nu_peak')
             self.eval = lambda nu, p: (
                 self._interp_eval(nu, p) / self._interp_eval(nu_0, p))
