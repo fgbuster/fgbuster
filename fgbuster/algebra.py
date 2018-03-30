@@ -205,21 +205,39 @@ def W_dB(A, A_dB, comp_of_dB, invN=None):
         res.append(res_a+res_b)
     return res
 
-def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
-    u, e, v = u_e_v
-    utd = _mtv(u, d)
-    Dd = d - _mv(u, utd)
-    s = _mtv(v, utd / e)
 
-    n_param = len(A_dB)
-    diff = np.empty(n_param)
-    for i in xrange(n_param):
-        freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
-        diff[i] = np.sum(_mv(A_dB[i], s[comp_of_dB[i]])
-                         * Dd[freq_of_dB])
+def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
+   """ Second Derivative of W
+    which could be particularly useful for the computation of 
+    *statistical* residuals through the second order development 
+    of the map-making equation
 
-    return diff
+    Parameters
+    ----------
+    A : ndarray
+        Mixing matrix. Shape `(..., n_freq, n_comp)`
+    invN: ndarray or None
+        The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
+    A_dB : ndarray or list of ndarray
+        The derivative of the mixing matrix. If list, each entry is the
+        derivative with respect to a different parameter.
+   A_dBdB : ndarray or list of ndarray
+        The second derivative of the mixing matrix. If list, each entry is the
+        derivative with respect to a different parameter.
+    comp_of_dB: index or list of indices
+        It allows to provide in `A_dB` only the non-zero columns `A`.
+        `A_dB` is assumed to be the derivative of `A[..., comp_of_dB]`.
+        If a list is provided, also `A_dB` has to be a list and
+        `A_dB[i]` is assumed to be the derivative of `A[..., comp_of_dB[i]]`.
 
+    Returns
+    -------
+    res : array
+        Second Derivative of W. If `A_dB` is a list, `res[i]`
+        is co
+    """
+    raise NotImplementedError
+    
 
 def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
     """ Derivative of the log likelihood
