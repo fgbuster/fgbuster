@@ -5,8 +5,8 @@ Parametric component separation for Cosmic Microwave Background observations
 The code is quickly evolving. Install it with
 
 ```bash
-git clone git@github.com:dpole/xForecast.git
-cd xForecast
+git clone git@github.com:fgbuster/fgbuster.git
+cd fgbuster
 [sudo] python setup.py develop [--user]
 ```
 
