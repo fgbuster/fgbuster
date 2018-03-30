@@ -166,7 +166,6 @@ def W(A, invN=None, return_svd=False):
     return res
 
 
-<<<<<<< HEAD
 def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
     u, e, v = u_e_v
     res = []
@@ -184,16 +183,11 @@ def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
 def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
     """ Derivative of W
 
-=======
-def W_dB(A, A_dB, comp_of_dB, invN=None):
-   """ Derivative of W
->>>>>>> 8c942f86c9a965329a9bec50cf625e7b4402dd27
     which could be particularly useful for the computation of residuals
     through the first order development of the map-making equation
 
     Parameters
     ----------
-<<<<<<< HEAD
     A: ndarray
         Mixing matrix. Shape `(..., n_freq, n_comp)`
     invN: ndarray or None
@@ -232,8 +226,6 @@ def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
 
     Parameters
     ----------
-=======
->>>>>>> 8c942f86c9a965329a9bec50cf625e7b4402dd27
     A : ndarray
         Mixing matrix. Shape `(..., n_freq, n_comp)`
     invN: ndarray or None
@@ -241,12 +233,9 @@ def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
     A_dB : ndarray or list of ndarray
         The derivative of the mixing matrix. If list, each entry is the
         derivative with respect to a different parameter.
-<<<<<<< HEAD
-   A_dBdB : ndarray or list of ndarray
+    A_dBdB : ndarray or list of ndarray
         The second derivative of the mixing matrix. If list, each entry is the
         derivative with respect to a different parameter.
-=======
->>>>>>> 8c942f86c9a965329a9bec50cf625e7b4402dd27
     comp_of_dB: index or list of indices
         It allows to provide in `A_dB` only the non-zero columns `A`.
         `A_dB` is assumed to be the derivative of `A[..., comp_of_dB]`.
@@ -256,7 +245,6 @@ def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
     Returns
     -------
     res : array
-<<<<<<< HEAD
         Second Derivative of W. If `A_dB` is a list, `res[i]`
         is co
     """
@@ -268,13 +256,6 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     utd = _mtv(u, d)
     Dd = d - _mv(u, utd)
     s = _mtv(v, utd / e)
-=======
-        Derivative of W. If `A_dB` is a list, `res[i]`
-        is computed from `A_dB[i]`.
-    """
-    AtNAinv = invAtNA(A, invN=invN)
-    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
->>>>>>> 8c942f86c9a965329a9bec50cf625e7b4402dd27
 
     n_param = len(A_dB)
     res = []
@@ -285,39 +266,6 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
         res_b = _mm(AtNAinv, _mtm(A_dB[i], invN))
         res.append(res_a+res_b)
     return res
-
-
-def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
-    """ Second Derivative of W
-    which could be particularly useful for the computation of 
-    *statistical* residuals through the second order development 
-    of the map-making equation
-
-    Parameters
-    ----------
-    A : ndarray
-        Mixing matrix. Shape `(..., n_freq, n_comp)`
-    invN: ndarray or None
-        The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
-    A_dB : ndarray or list of ndarray
-        The derivative of the mixing matrix. If list, each entry is the
-        derivative with respect to a different parameter.
-   A_dBdB : ndarray or list of ndarray
-        The second derivative of the mixing matrix. If list, each entry is the
-        derivative with respect to a different parameter.
-    comp_of_dB: index or list of indices
-        It allows to provide in `A_dB` only the non-zero columns `A`.
-        `A_dB` is assumed to be the derivative of `A[..., comp_of_dB]`.
-        If a list is provided, also `A_dB` has to be a list and
-        `A_dB[i]` is assumed to be the derivative of `A[..., comp_of_dB[i]]`.
-
-    Returns
-    -------
-    res : array
-        Second Derivative of W. If `A_dB` is a list, `res[i]`
-        is co
-    """
-    raise NotImplementedError
 
 
 def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
