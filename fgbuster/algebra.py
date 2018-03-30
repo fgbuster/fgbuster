@@ -207,7 +207,7 @@ def W_dB(A, A_dB, comp_of_dB, invN=None):
 
 
 def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
-   """ Second Derivative of W
+    """ Second Derivative of W
     which could be particularly useful for the computation of 
     *statistical* residuals through the second order development 
     of the map-making equation
@@ -237,7 +237,7 @@ def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
         is co
     """
     raise NotImplementedError
-    
+
 
 def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
     """ Derivative of the log likelihood
