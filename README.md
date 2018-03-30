@@ -31,7 +31,6 @@ or a test user. In the latter case, please do not hesitate to
  - propose new features
 
 and keep in mind that
- - we will soon move from the old `xForecast` repo to final repo and organization (you will be notified)
  - API may change
  - what routines do may change
 
