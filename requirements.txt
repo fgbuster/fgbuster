@@ -5,4 +5,5 @@ healpy
 scipy
 numpy
 sympy
+six
 git+git://github.com/bthorne93/PySM_public.git#egg=pysm

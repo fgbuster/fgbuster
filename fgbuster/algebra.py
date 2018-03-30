@@ -25,6 +25,7 @@
 
 import inspect
 from time import time
+import six
 import numpy as np
 import scipy as sp
 import numdifftools
@@ -104,7 +105,7 @@ def logL(A, d, invN=None, return_svd=False):
     try:
         u_e_v, L = _svd_sqrt_invN_A(A, invN)
     except np.linalg.linalg.LinAlgError:
-        print 'SVD of A failed -> logL = -inf'
+        print('SVD of A failed -> logL = -inf')
         return - np.inf
 
     if L is not None:
@@ -174,7 +175,7 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
 
     n_param = len(A_dB)
     diff = np.empty(n_param)
-    for i in xrange(n_param):
+    for i in range(n_param):
         freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
         diff[i] = np.sum(_mv(A_dB[i], s[comp_of_dB[i]])
                          * Dd[freq_of_dB])
@@ -246,7 +247,7 @@ def _turn_into_slice_if_integer(index_expression):
     # To avoid this we turn the integer into a slice
     res = []
     for i in index_expression:
-        if isinstance(i, (int, long)):
+        if isinstance(i, six.integer_types):
             res.append(slice(i, i+1, None))
         else:
             res.append(i)
@@ -276,7 +277,7 @@ def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
 def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
     u, _, _ = u_e_v
     x = []
-    for i in xrange(len(A_dB)):
+    for i in range(len(A_dB)):
         D_A_dB_s = np.zeros(s.shape[:-1] + u.shape[-2:-1])  # Full shape
         comp_freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
         comp_freq_of_dB += comp_of_dB[i][-1:]
@@ -513,13 +514,13 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
 
     # Separation
     res = sp.optimize.OptimizeResult()
-    res.patch_res = [patch_comp_sep(patch_id) for patch_id in xrange(max_id)]
+    res.patch_res = [patch_comp_sep(patch_id) for patch_id in range(max_id)]
 
     # Collect results
     n_comp = res.patch_res[0].s.shape[-1]
     res.s = np.full((d.shape[:-1]+(n_comp,)), np.NaN) # NaN for testing
 
-    for patch_id in xrange(max_id):
+    for patch_id in range(max_id):
         mask = patch_ids == patch_id
         res.s[mask] = res.patch_res[patch_id].s
 
@@ -554,11 +555,11 @@ def verbose_callback():
             'Iter sec = %.2f' % (old_time - old_old_time[0]),
             'Cum sec = %.2f' % (old_time - start),
             ]
-        print '\t'.join(message)
+        print('\t'.join(message))
         old_old_fval[0] = old_fval
         old_old_time[0] = old_time
 
-    print 'Minimization started'
+    print('Minimization started')
     return callback
 
 
