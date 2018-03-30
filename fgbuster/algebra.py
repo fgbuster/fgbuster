@@ -166,6 +166,45 @@ def W(A, invN=None, return_svd=False):
     return res
 
 
+def W_dB(A, A_dB, comp_of_dB, invN=None):
+   """ Derivative of W
+    which could be particularly useful for the computation of residuals
+    through the first order development of the map-making equation
+
+    Parameters
+    ----------
+    A : ndarray
+        Mixing matrix. Shape `(..., n_freq, n_comp)`
+    invN: ndarray or None
+        The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
+    A_dB : ndarray or list of ndarray
+        The derivative of the mixing matrix. If list, each entry is the
+        derivative with respect to a different parameter.
+    comp_of_dB: index or list of indices
+        It allows to provide in `A_dB` only the non-zero columns `A`.
+        `A_dB` is assumed to be the derivative of `A[..., comp_of_dB]`.
+        If a list is provided, also `A_dB` has to be a list and
+        `A_dB[i]` is assumed to be the derivative of `A[..., comp_of_dB[i]]`.
+
+    Returns
+    -------
+    res : array
+        Derivative of W. If `A_dB` is a list, `res[i]`
+        is computed from `A_dB[i]`.
+    """
+    AtNAinv = invAtNA(A, invN=invN)
+    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
+
+    n_param = len(A_dB)
+    res = []
+    for i in xrange(n_param):
+        dAtNAinv_ = -_mm(_T(_mm(A_dB[i],AtNAinv)),  _mm(invN, A))
+        dAtNAinv = dAtNAinv_ + _T(dAtNAinv_)
+        res_a = _mm(dAtNAinv, _mtm(A,invN))
+        res_b = _mm(AtNAinv, _mtm(A_dB[i], invN))
+        res.append(res_a+res_b)
+    return res
+
 def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     u, e, v = u_e_v
     utd = _mtv(u, d)
