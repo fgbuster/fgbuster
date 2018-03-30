@@ -65,6 +65,11 @@ def xForecast(A_ev, invN, data, s_cmb_true, estimator=''):
 
     ###############################################################################
     # 4. Estimate the statistical and systematic foregrounds residuals 
+    W_maxL = W( A_maxL )
+    W_dB_maxL = W_dB( )
+    W_dBdB_maxL = W_dB_dB( )
+    V_maxL = res.Sigma.dot( W_dBdB_maxL )
+    
     '''
     w_loc = AtNAinv_fit['matrix'].dot( A_fit['matrix'].T ).dot( Ninv_p['matrix'] )
     -----------
