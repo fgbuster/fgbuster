@@ -166,14 +166,29 @@ def W(A, invN=None, return_svd=False):
     return res
 
 
-def W_dB(A, A_dB, comp_of_dB, invN=None):
-   """ Derivative of W
+def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
+    u, e, v = u_e_v
+    res = []
+    for comp_of_dB_i, A_dB_i in zip(A_dB, comp_of_dB):
+        # res = v^t e^-2 v A_dB (1 - u u^t) - v^t e^-1 u^t A_dB v^t e^-1 u^t
+        inve_v = v / e[..., np.newaxis]
+        slice_inve_v = _T(_T(inve_v)[comp_of_dB_i+slice(None)])
+        res_i = _mm(_mtm(inve_v, slice_inve_v), _T(A_dB_i))
+        res_i -= _mmm(res, u, _T(u))
+        res_i -= _mmm(_mmm(_T(inve_v), _T(u), A_dB_i), _T(slice_inve_v), _T(u))
+        res.append(res_i)
+    return res
+
+
+def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
+    """ Derivative of W
+
     which could be particularly useful for the computation of residuals
     through the first order development of the map-making equation
 
     Parameters
     ----------
-    A : ndarray
+    A: ndarray
         Mixing matrix. Shape `(..., n_freq, n_comp)`
     invN: ndarray or None
         The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
@@ -182,9 +197,9 @@ def W_dB(A, A_dB, comp_of_dB, invN=None):
         derivative with respect to a different parameter.
     comp_of_dB: index or list of indices
         It allows to provide in `A_dB` only the non-zero columns `A`.
-        `A_dB` is assumed to be the derivative of `A[..., comp_of_dB]`.
+        `A_dB` is assumed to be the derivative of `A[comp_of_dB]`.
         If a list is provided, also `A_dB` has to be a list and
-        `A_dB[i]` is assumed to be the derivative of `A[..., comp_of_dB[i]]`.
+        `A_dB[i]` is assumed to be the derivative of `A[comp_of_dB[i]]`.
 
     Returns
     -------
@@ -192,17 +207,14 @@ def W_dB(A, A_dB, comp_of_dB, invN=None):
         Derivative of W. If `A_dB` is a list, `res[i]`
         is computed from `A_dB[i]`.
     """
-    AtNAinv = invAtNA(A, invN=invN)
     A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
 
-    n_param = len(A_dB)
-    res = []
-    for i in xrange(n_param):
-        dAtNAinv_ = -_mm(_T(_mm(A_dB[i],AtNAinv)),  _mm(invN, A))
-        dAtNAinv = dAtNAinv_ + _T(dAtNAinv_)
-        res_a = _mm(dAtNAinv, _mtm(A,invN))
-        res_b = _mm(AtNAinv, _mtm(A_dB[i], invN))
-        res.append(res_a+res_b)
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
+    res = _W_dB_svd(u_e_v, A_dB, comp_of_dB)
+    if return_svd:
+        return res, (u_e_v, L)
     return res
 
 
@@ -239,12 +251,28 @@ def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
     raise NotImplementedError
 
 
+def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
+    u, e, v = u_e_v
+    utd = _mtv(u, d)
+    Dd = d - _mv(u, utd)
+    s = _mtv(v, utd / e)
+
+    n_param = len(A_dB)
+    diff = np.empty(n_param)
+    for i in xrange(n_param):
+        freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
+        diff[i] = np.sum(_mv(A_dB[i], s[comp_of_dB[i]])
+                         * Dd[freq_of_dB])
+
+    return diff
+
+
 def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
     """ Derivative of the log likelihood
 
     Parameters
     ----------
-    A : ndarray
+    A: ndarray
         Mixing matrix. Shape `(..., n_freq, n_comp)`
     d: ndarray
         The data vector. Shape `(..., n_freq)`.
