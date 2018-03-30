@@ -5,8 +5,8 @@ Parametric component separation for Cosmic Microwave Background observations
 The code is quickly evolving. Install it with
 
 ```bash
-git clone git@github.com:dpole/xForecast.git
-cd xForecast
+git clone git@github.com:fgbuster/fgbuster.git
+cd fgbuster
 [sudo] python setup.py develop [--user]
 ```
 
@@ -31,7 +31,6 @@ or a test user. In the latter case, please do not hesitate to
  - propose new features
 
 and keep in mind that
- - we will soon move from the old `xForecast` repo to final repo and organization (you will be notified)
  - API may change
  - what routines do may change
 
