@@ -172,7 +172,7 @@ def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
     for comp_of_dB_i, A_dB_i in zip(A_dB, comp_of_dB):
         # res = v^t e^-2 v A_dB (1 - u u^t) - v^t e^-1 u^t A_dB v^t e^-1 u^t
         inve_v = v / e[..., np.newaxis]
-        slice_inve_v = _T(_T(inve_v)[comp_of_dB_i+slice(None)])
+        slice_inve_v = _T(_T(inve_v)[comp_of_dB_i+(slice(None),)])
         res_i = _mm(_mtm(inve_v, slice_inve_v), _T(A_dB_i))
         res_i -= _mmm(res, u, _T(u))
         res_i -= _mmm(_mmm(_T(inve_v), _T(u), A_dB_i), _T(slice_inve_v), _T(u))
@@ -258,14 +258,12 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     s = _mtv(v, utd / e)
 
     n_param = len(A_dB)
-    res = []
-    for i in xrange(n_param):
-        dAtNAinv_ = -_mm(_T(_mm(A_dB[i],AtNAinv)),  _mm(invN, A))
-        dAtNAinv = dAtNAinv_ + _T(dAtNAinv_)
-        res_a = _mm(dAtNAinv, _mtm(A,invN))
-        res_b = _mm(AtNAinv, _mtm(A_dB[i], invN))
-        res.append(res_a+res_b)
-    return res
+    diff = np.empty(n_param)
+    for i in range(n_param):
+        freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
+        diff[i] = np.sum(_mv(A_dB[i], s[comp_of_dB[i]])
+                         * Dd[freq_of_dB])
+    return diff
 
 
 def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
