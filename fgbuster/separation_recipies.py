@@ -82,7 +82,7 @@ def _get_prewhiten_factors(instrument, data_shape):
             sens = np.stack(
                 (instrument.Sens_I, instrument.Sens_P, instrument.Sens_P))
     except AttributeError:  # instrument has no sensitivity -> do not prewhite
-        print 'The sensitivity of the instrument is not specified'
+        print('The sensitivity of the instrument is not specified')
         return None
 
     return hp.nside2resol(instrument.Nside, arcmin=True) / sens
@@ -163,7 +163,6 @@ class MixingMatrix(tuple):
         return tuple.__new__(cls, components)
 
     def __init__(self, *components):
-        super(MixingMatrix, self).__init__(*components)
         self.__first_param_of_comp = []
         self.__comp_of_param = []
         for i_c, c in enumerate(components):
