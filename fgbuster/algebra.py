@@ -181,62 +181,6 @@ def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
     return res
 
 
-def W_dB_dB(u_e_v, A_dB, A_dBdB, comp_of_dB):
-    u, e, v = u_e_v
-    n_dB = len(A_dB)
-    
-    # Move to the components basis such that A' = u and (A'^t A') = 1
-    inve_v = v / e[..., np.newaxis]
-    comp_of_dB_v = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
-                    for comp_of_dB_i in comp_of_dB]
-    A_dB = [_mm(A_dB[i], _T(inve_v[comp_of_dB_v[i]])) 
-            for i in range(n_dB)]
-    A_dBdB = [[_mm(A_dBdB[i][j], _T(inve_v[comp_of_dB_v[i]]))
-               for i in range(n_dB)] for j in range(n_dB)]
-    # NOTE: now A_dB and A_dBdB contain all the components
-
-    # Compute the derivatives of M = (A^t A)^(-1)
-    M_dB = [None] * n_dB
-    for i in range(n_dB):
-        M_dB[i] = - _mtm(A_dB[i], u))
-        M_dB[i] += _T(M_dB[i])
-
-    M_dBdB = [[None] * n_dB] * n_dB
-    for i in range(n_dB):
-        for j in range(i, n_dB):
-            term = (- _mmm(M_dB[j], _T(A_dB[i]), u)
-                    - _mm(A_dBdB[i][j], u)
-                    - _mm(A_dB[i], A_dB[j])
-                    - _mmm(_T(A_dB[i]), u, M_dB[j]))
-            M_dBdB[i][j] = term + _T(term)
-            M_dBdB[j][i] = M_dBdB[i][j]
-
-    W_dBdB = [[None] * n_dB] * n_dB
-    for i in range(n_dB):
-        for j in range(i, n_dB):
-            W_dB_dB[i][j] = (_mm(M_dBdB[i][j], _T(u)) 
-                             + _mm(M_dB[i], _T(A_dB[j]))
-                             + _mm(M_dB[j], _T(A_dB[i]))
-                             + _T(A_dBdB[i][j]))
-            W_dBdB[j][i] = W_dBdB[i][j]
-
-    # Move back to the original basis
-    W_dBdB = [[_mm(_T(v * e[..., np.newaxis]), W_dBdB[i][j])
-               for i in range(n_dB)] for j in range(n_dB)]
-
-
-    for comp_of_dB_i, A_dB_i in zip(comp_of_dB, A_dB):
-        # res = v^t e^-2 v A_dB (1 - u u^t) - v^t e^-1 u^t A_dB v^t e^-1 u^t
-        inve_v = v / e[..., np.newaxis]
-        slice_inve_v = _T(_T(inve_v)[comp_of_dB_i+(slice(None),)])
-        res_i = _mm(_mtm(inve_v, slice_inve_v), _T(A_dB_i))
-        res_i -= _mmm(res_i, u, _T(u))
-        res_i -= _mmm(_mmm(_T(inve_v), _T(u), A_dB_i), _T(slice_inve_v), _T(u))
-        res.append(res_i)
-    return res
-
-
-
 def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
     """ Derivative of W
 
@@ -270,16 +214,62 @@ def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
     if L is not None:
         A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
     res = _W_dB_svd(u_e_v, A_dB, comp_of_dB)
+
+    if L is not None:
+        res = _mm(res, _T(L))
     if return_svd:
         return res, (u_e_v, L)
     return res
 
 
-def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
+def _W_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
+    u, e, v = u_e_v
+    n_dB = len(A_dB)
+
+    # Apply diag(e^(-1)) * v to the domain of the components
+    # In this basis A' = u and (A'^t A') = 1
+    inve_v = v / e[..., np.newaxis]
+    comp_of_dB_v = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
+                    for comp_of_dB_i in comp_of_dB]
+    A_dB = [_mm(A_dB[i], _T(inve_v[comp_of_dB_v[i]]))
+            for i in range(n_dB)]
+    A_dBdB = [[_mm(A_dBdB[i][j], _T(inve_v[comp_of_dB_v[i]]))
+               for i in range(n_dB)] for j in range(n_dB)]
+
+    # Now A_dB and A_dBdB contain all the components and thus can be
+    # written as arrays in which the first two dimensions denote the indices of
+    # the first and second derivatives
+    A_dBdB = np.array(A_dBdB)
+    A_dBj = np.array(A_dB)
+    A_dBi = A_dBi[:, np.newaxis, ...]
+
+    # Compute the derivatives of M = (A^t A)^(-1)
+    M_dBj = - _mtm(A_dBj, u)
+    M_dBj += _T(M_dBj)
+    M_dBi = M_dBj[:, np.newaxis, ...]
+
+    M_dBdB = (- _mmm(M_dBj, _T(A_dBi), u)
+              - _mtm(A_dBdB, u)
+              - _mtm(A_dBi, A_dBj)
+              - _mmm(_T(A_dBi), u, M_dBj))
+    M_dBdB += _T(M_dBdB)
+
+    W_dBdB = (_mm(M_dBdB, _T(u))
+              + _mm(M_dBi, _T(A_dBj))
+              + _mm(M_dBj, _T(A_dBi))
+              + _T(A_dBdB))
+
+    # Move back to the original basis
+    W_dBdB = _mm(_T(v * e[..., np.newaxis]), W_dBdB)
+
+    return W_dBdB
+
+
+def W_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
     """ Second Derivative of W
 
-    which could be particularly useful for the computation of 
-    *statistical* residuals through the second order development 
+    which could be particularly useful for the computation of
+    *statistical* residuals through the second order development
     of the map-making equation
 
     Parameters
@@ -321,6 +311,9 @@ def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
                    for A_dBdB_ij in A_dBdB_i] for A_dBdB_i in A_dBdB]
 
     res = _W_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB)
+
+    if L is not None:
+        res = _mm(res, _T(L))
     if return_svd:
         return res, (u_e_v, L)
     return res
