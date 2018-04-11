@@ -21,7 +21,8 @@
 #     - instead of providing A you provide its SVD, u_e_v
 #     - the domain of input and outputs matrices and vectors is prewhitend with
 #       sqrt(invN)
-#     - toto can return the SVD, which can then be reused in _bar_svd(...)
+#     - _foo_svd doen't perform all the checks that foo is required to do
+#     - foo can return the SVD, which can then be reused in _bar_svd(...)
 
 import inspect
 from time import time
@@ -169,12 +170,12 @@ def W(A, invN=None, return_svd=False):
 def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
     u, e, v = u_e_v
     res = []
-    for comp_of_dB_i, A_dB_i in zip(A_dB, comp_of_dB):
+    for comp_of_dB_i, A_dB_i in zip(comp_of_dB, A_dB):
         # res = v^t e^-2 v A_dB (1 - u u^t) - v^t e^-1 u^t A_dB v^t e^-1 u^t
         inve_v = v / e[..., np.newaxis]
         slice_inve_v = _T(_T(inve_v)[comp_of_dB_i+(slice(None),)])
         res_i = _mm(_mtm(inve_v, slice_inve_v), _T(A_dB_i))
-        res_i -= _mmm(res, u, _T(u))
+        res_i -= _mmm(res_i, u, _T(u))
         res_i -= _mmm(_mmm(_T(inve_v), _T(u), A_dB_i), _T(slice_inve_v), _T(u))
         res.append(res_i)
     return res
@@ -213,15 +214,62 @@ def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
     if L is not None:
         A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
     res = _W_dB_svd(u_e_v, A_dB, comp_of_dB)
+
+    if L is not None:
+        res = _mm(res, _T(L))
     if return_svd:
         return res, (u_e_v, L)
     return res
 
 
-def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
+def _W_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
+    u, e, v = u_e_v
+    n_dB = len(A_dB)
+
+    # Apply diag(e^(-1)) * v to the domain of the components
+    # In this basis A' = u and (A'^t A') = 1
+    inve_v = v / e[..., np.newaxis]
+    comp_of_dB_v = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
+                    for comp_of_dB_i in comp_of_dB]
+    A_dB = [_mm(A_dB[i], _T(inve_v[comp_of_dB_v[i]]))
+            for i in range(n_dB)]
+    A_dBdB = [[_mm(A_dBdB[i][j], _T(inve_v[comp_of_dB_v[i]]))
+               for i in range(n_dB)] for j in range(n_dB)]
+
+    # Now A_dB and A_dBdB contain all the components and thus can be
+    # written as arrays in which the first two dimensions denote the indices of
+    # the first and second derivatives
+    A_dBdB = np.array(A_dBdB)
+    A_dBj = np.array(A_dB)
+    A_dBi = A_dBi[:, np.newaxis, ...]
+
+    # Compute the derivatives of M = (A^t A)^(-1)
+    M_dBj = - _mtm(A_dBj, u)
+    M_dBj += _T(M_dBj)
+    M_dBi = M_dBj[:, np.newaxis, ...]
+
+    M_dBdB = (- _mmm(M_dBj, _T(A_dBi), u)
+              - _mtm(A_dBdB, u)
+              - _mtm(A_dBi, A_dBj)
+              - _mmm(_T(A_dBi), u, M_dBj))
+    M_dBdB += _T(M_dBdB)
+
+    W_dBdB = (_mm(M_dBdB, _T(u))
+              + _mm(M_dBi, _T(A_dBj))
+              + _mm(M_dBj, _T(A_dBi))
+              + _T(A_dBdB))
+
+    # Move back to the original basis
+    W_dBdB = _mm(_T(v * e[..., np.newaxis]), W_dBdB)
+
+    return W_dBdB
+
+
+def W_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
     """ Second Derivative of W
-    which could be particularly useful for the computation of 
-    *statistical* residuals through the second order development 
+
+    which could be particularly useful for the computation of
+    *statistical* residuals through the second order development
     of the map-making equation
 
     Parameters
@@ -233,14 +281,15 @@ def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
     A_dB : ndarray or list of ndarray
         The derivative of the mixing matrix. If list, each entry is the
         derivative with respect to a different parameter.
-    A_dBdB : ndarray or list of ndarray
+    A_dBdB : ndarray or list of list of ndarray
         The second derivative of the mixing matrix. If list, each entry is the
-        derivative with respect to a different parameter.
+        derivative of A_dB with respect to a different parameter.
     comp_of_dB: index or list of indices
         It allows to provide in `A_dB` only the non-zero columns `A`.
-        `A_dB` is assumed to be the derivative of `A[..., comp_of_dB]`.
-        If a list is provided, also `A_dB` has to be a list and
-        `A_dB[i]` is assumed to be the derivative of `A[..., comp_of_dB[i]]`.
+        `A_dB` is assumed to be the derivative of `A[comp_of_dB]`.
+        If a list is provided, also `A_dB` and `A_dBdB` have to be a lists,
+        `A_dB[i]` and `A_dBdB[i][j]` (for any j) are assumed to be the
+        derivatives of `A[comp_of_dB[i]]`.
 
     Returns
     -------
@@ -248,7 +297,26 @@ def W_dB_dB(A, A_dB, A_dBdB, comp_of_dB, invN=None):
         Second Derivative of W. If `A_dB` is a list, `res[i]`
         is co
     """
-    raise NotImplementedError
+    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
+    if not isinstance(A_dBdB, list):
+        A_dBdB = [[A_dBdB]]
+    assert len(A_dBdB) == len(A_dB)
+    for A_dBdB_i in A_dBdB:
+        assert len(A_dBdB_i) == len(A_dB)
+
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
+        A_dBdB = [[_mtm(L, A_dBdB_ij)
+                   for A_dBdB_ij in A_dBdB_i] for A_dBdB_i in A_dBdB]
+
+    res = _W_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB)
+
+    if L is not None:
+        res = _mm(res, _T(L))
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
 
 
 def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
