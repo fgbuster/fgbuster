@@ -34,7 +34,7 @@ class TestAlgebraRandom(unittest.TestCase):
 class TestAlgebraPhysical(unittest.TestCase):
 
     def setUp(self):
-        self.NUM_DIF_DX = 1e-5
+        self.DX = 1e-5  # NOTE: this is a bit fine-tuned
         np.random.seed(0)
         self.n_freq = 6
         self.nu = np.logspace(1, 2.5, self.n_freq)
@@ -56,22 +56,72 @@ class TestAlgebraPhysical(unittest.TestCase):
         W_params = W(self.A, self.invN)
         for i in range(len(self.params)):
             diff_params = [p for p in self.params]
-            diff_params[i] = self.NUM_DIF_DX + diff_params[i]
+            diff_params[i] = self.DX + diff_params[i]
             diff_A = self.mm.eval(self.nu, *diff_params)
             diff_W = W(diff_A, self.invN)
-            W_dB_numerical = (diff_W - W_params) / self.NUM_DIF_DX
-            aac(W_dB_numerical, W_dB_analytic[i], rtol=self.NUM_DIF_DX*100)
+            W_dB_numerical = (diff_W - W_params) / self.DX
+            aac(W_dB_numerical, W_dB_analytic[i], rtol=self.DX*100)
 
     def test_W_dB(self):
         W_dB_analytic = W_dB(self.A, self.A_dB, self.mm.comp_of_dB)
         W_params = W(self.A)
         for i in range(len(self.params)):
             diff_params = [p for p in self.params]
-            diff_params[i] = self.NUM_DIF_DX + diff_params[i]
+            diff_params[i] = self.DX + diff_params[i]
             diff_A = self.mm.eval(self.nu, *diff_params)
             diff_W = W(diff_A)
-            W_dB_numerical = (diff_W - W_params) / self.NUM_DIF_DX
-            aac(W_dB_numerical, W_dB_analytic[i], rtol=self.NUM_DIF_DX*100)
+            W_dB_numerical = (diff_W - W_params) / self.DX
+            aac(W_dB_numerical, W_dB_analytic[i], rtol=self.DX*100)
+
+    def test_W_dBdB(self):
+        W_dBdB_analytic = W_dBdB(
+            self.A, self.A_dB, self.A_dBdB, self.mm.comp_of_dB)
+        def get_W_displaced(i, j):
+            def W_displaced(i_step, j_step):
+                diff_params = [p for p in self.params]
+                diff_params[i] = i_step * self.DX + diff_params[i]
+                diff_params[j] = j_step * self.DX + diff_params[j]
+                diff_A = self.mm.eval(self.nu, *diff_params)
+                return W(diff_A)
+            return W_displaced
+
+        for i in range(len(self.params)):
+            for j in range(len(self.params)):
+                Wdx = get_W_displaced(i, j)
+                if i == j:
+                    W_dBdB_numerical = (
+                        (2*Wdx(0, 0) - Wdx(+1, 0) - Wdx(-1, 0)) / self.DX**2)
+                else:
+                    W_dBdB_numerical = (
+                        (Wdx(1, 1) - Wdx(+1, -1) - Wdx(-1, 1) + Wdx(-1, -1))
+                        / (4 * self.DX**2))
+                # NOTE: this is just an order of magnitude check
+                aac(W_dBdB_numerical, W_dBdB_analytic[i][j], rtol=10)
+
+    def test_W_dBdB_invN(self):
+        W_dBdB_analytic = W_dBdB(
+            self.A, self.A_dB, self.A_dBdB, self.mm.comp_of_dB, self.invN)
+        def get_W_displaced(i, j):
+            def W_displaced(i_step, j_step):
+                diff_params = [p for p in self.params]
+                diff_params[i] = i_step * self.DX + diff_params[i]
+                diff_params[j] = j_step * self.DX + diff_params[j]
+                diff_A = self.mm.eval(self.nu, *diff_params)
+                return W(diff_A, self.invN)
+            return W_displaced
+
+        for i in range(len(self.params)):
+            for j in range(len(self.params)):
+                Wdx = get_W_displaced(i, j)
+                if i == j:
+                    W_dBdB_numerical = (
+                        (2*Wdx(0, 0) - Wdx(+1, 0) - Wdx(-1, 0)) / self.DX**2)
+                else:
+                    W_dBdB_numerical = (
+                        (Wdx(1, 1) - Wdx(+1, -1) - Wdx(-1, 1) + Wdx(-1, -1))
+                        / (4 * self.DX**2))
+                # NOTE: this is just an order of magnitude check
+                aac(W_dBdB_numerical, W_dBdB_analytic[i][j], rtol=10)
 
 
 if __name__ == '__main__':

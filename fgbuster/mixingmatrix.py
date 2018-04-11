@@ -70,7 +70,8 @@ class MixingMatrix(tuple):
     def diff_diff(self, nu, *params):
         if not params:
             return None
-        res = [[0 for i in range(self.n_param)] for i in range(self.n_param)]
+        res = [[np.zeros((1,1))
+                for i in range(self.n_param)] for i in range(self.n_param)]
         for i_c, c in enumerate(self):
             param_slice = slice(self.__first_param_of_comp[i_c],
                                 self.__first_param_of_comp[i_c] + c.n_param)
@@ -78,5 +79,6 @@ class MixingMatrix(tuple):
             i_start = param_slice.start
             for i in range(i_start, param_slice.stop):
                 for j in range(param_slice.start, param_slice.stop):
-                    res[i][j] = comp_diff_diff[i - i_start][j - i_start]
+                    res[i][j] = (
+                        comp_diff_diff[i - i_start][j - i_start].reshape(-1, 1))
         return res

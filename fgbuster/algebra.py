@@ -226,41 +226,45 @@ def _W_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
     u, e, v = u_e_v
     n_dB = len(A_dB)
 
+    # Expand A_dB and A_dBdB to full shape
+    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
+                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
+    A_dB_full = np.zeros((n_dB,)+u.shape)
+    A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
+    for i in range(n_dB):
+        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+        for j in range(n_dB):
+            A_dBdB_full[(i, j)+comp_of_dB_A[i]] = A_dBdB[i][j]
+
     # Apply diag(e^(-1)) * v to the domain of the components
     # In this basis A' = u and (A'^t A') = 1
     inve_v = v / e[..., np.newaxis]
-    comp_of_dB_v = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
-                    for comp_of_dB_i in comp_of_dB]
-    A_dB = [_mm(A_dB[i], _T(inve_v[comp_of_dB_v[i]]))
-            for i in range(n_dB)]
-    A_dBdB = [[_mm(A_dBdB[i][j], _T(inve_v[comp_of_dB_v[i]]))
-               for i in range(n_dB)] for j in range(n_dB)]
+    A_dB = _mm(A_dB_full, _T(inve_v))
+    A_dBdB = _mm(A_dBdB_full, _T(inve_v))
 
-    # Now A_dB and A_dBdB contain all the components and thus can be
-    # written as arrays in which the first two dimensions denote the indices of
-    # the first and second derivatives
-    A_dBdB = np.array(A_dBdB)
-    A_dBj = np.array(A_dB)
-    A_dBi = A_dBi[:, np.newaxis, ...]
+    # Aliases that improve readability
+    A = u
+    A_dBj = A_dB
+    A_dBi = A_dBj[:, np.newaxis, ...]
 
     # Compute the derivatives of M = (A^t A)^(-1)
-    M_dBj = - _mtm(A_dBj, u)
+    M_dBj = - _mtm(A_dBj, A)
     M_dBj += _T(M_dBj)
     M_dBi = M_dBj[:, np.newaxis, ...]
 
-    M_dBdB = (- _mmm(M_dBj, _T(A_dBi), u)
-              - _mtm(A_dBdB, u)
+    M_dBdB = (- _mmm(M_dBj, _T(A_dBi), A)
+              - _mtm(A_dBdB, A)
               - _mtm(A_dBi, A_dBj)
-              - _mmm(_T(A_dBi), u, M_dBj))
+              - _mmm(_T(A_dBi), A, M_dBj))
     M_dBdB += _T(M_dBdB)
 
-    W_dBdB = (_mm(M_dBdB, _T(u))
+    W_dBdB = (_mm(M_dBdB, _T(A))
               + _mm(M_dBi, _T(A_dBj))
               + _mm(M_dBj, _T(A_dBi))
               + _T(A_dBdB))
 
     # Move back to the original basis
-    W_dBdB = _mm(_T(v * e[..., np.newaxis]), W_dBdB)
+    W_dBdB = _mtm(v * e[..., np.newaxis], W_dBdB)
 
     return W_dBdB
 
