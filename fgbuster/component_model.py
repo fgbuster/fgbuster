@@ -54,6 +54,12 @@ class Component(object):
         lambdify_diff_param = lambda param: lambdify(
             symbols, self._expr.diff(param), 'numpy')
         self._lambda_diff = [lambdify_diff_param(p) for p in self._params]
+        lambdify_diff_diff_params = lambda param1, param2: lambdify(
+            symbols, self._expr.diff(param1, param2), 'numpy')
+        self._lambda_diff_diff = []
+        for p1 in self._params:
+            self._lambda_diff_diff.append(
+                [lambdify_diff_diff_params(p1, p2) for p2 in self._params])
 
     def _add_last_dimention_if_not_scalar(self, param):
         if isinstance(param, np.ndarray) and len(param) > 1:
@@ -75,7 +81,7 @@ class Component(object):
         new_params = map(self._add_last_dimention_if_not_scalar, params)
         return self._lambda(nu, *new_params)
 
-    def gradient(self, nu, *params):
+    def diff(self, nu, *params):
         assert len(params) == self.n_param
         if not params:
             return []
@@ -91,8 +97,30 @@ class Component(object):
         new_params = map(self._add_last_dimention_if_not_scalar, params)
 
         res = []
-        for i_p, p in enumerate(new_params):
-            res.append(self._lambda_diff[i_p](nu, p))
+        for i_p in range(self.n_param):
+            res.append(self._lambda_diff[i_p](nu, *new_params))
+        return res
+
+    def diff_diff(self, nu, *params):
+        assert len(params) == self.n_param
+        if not params:
+            return []
+        elif len(np.broadcast(*params).shape) <= 1:
+            # Parameters are all scalars.
+            # This case is frequent and easy, thus leave early
+            return [[self._lambda_diff_diff[i_p][j_p](nu, *params)
+                     for i_p in range(self.n_param)]
+                    for j_p in range(self.n_param)]
+
+        # Make sure that broadcasting rules will apply correctly when passing
+        # the parameters to the lambdified functions:
+        # last axis has to be nu, but that axis is missing in the parameters
+        new_params = map(self._add_last_dimention_if_not_scalar, params)
+
+        res = []
+        for i_p in range(self.n_param):
+            res.append([self._lambda_diff[i_p][j_p](nu, *new_params)
+                        for j_p in range(self.n_param)])
         return res
 
     @property
@@ -277,12 +305,12 @@ class AME(Component):
             self._params.append('nu_peak')
             self.eval = lambda nu, p: (
                 self._interp_eval(nu, p) / self._interp_eval(nu_0, p))
-            self.gradient = lambda nu, p: [
+            self.diff = lambda nu, p: [
                 (self.eval(nu, p*1.01) - self.eval(nu, p*0.99)) / (p*0.02)]
         else:
             self.eval = lambda nu: (self._interp_eval(nu, nu_peak)
                                     / self._interp_eval(nu_0, nu_peak))
-            self.gradient = lambda nu: []
+            self.diff = lambda nu: []
 
     def _interp_eval(self, nu, nu_peak):
         return self._lambda(nu) * self._interp(nu * (self._NU_PEAK_0 / nu_peak))

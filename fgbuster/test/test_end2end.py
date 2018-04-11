@@ -14,7 +14,7 @@ class TestEnd2End(unittest.TestCase):
         NSIDE = 32
         MODEL = 'c1d0s0f1'
         INSTRUMENT = 'litebird'
-        X0_FACTOR = 1.01
+        X0_FACTOR = 0.99
         sky = get_sky(NSIDE, MODEL)
         self.instrument = get_instrument(NSIDE, INSTRUMENT)
         self.freq_maps = self.instrument.observe(sky, write_outputs=False)[0]
@@ -32,14 +32,14 @@ class TestEnd2End(unittest.TestCase):
     def test_basic_comp_sep_T(self):
         res_T = basic_comp_sep(self.components, self.instrument,
                                self.freq_maps[:, :1, :])
-        aac(res_T.x, np.array(self.input), rtol=6)
+        aac(res_T.x, np.array(self.input), rtol=1e-5)
         aaae(res_T.chi, 0, decimal=2)
 
 
     def test_basic_comp_sep_P(self):
         res_P = basic_comp_sep(self.components[:-1], self.instrument,
                                self.freq_maps[:, 1:, :])
-        aac(res_P.x, np.array(self.input[:-1]), rtol=6)
+        aac(res_P.x, np.array(self.input[:-1]), rtol=1e-5)
         aaae(res_P.chi, 0, decimal=2)
 
 
