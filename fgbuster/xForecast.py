@@ -61,8 +61,19 @@ def xForecast(A_ev, invN, data, s_cmb_true, estimator=''):
 
     ###############################################################################
     # 3. Compute spectra of the input foregrounds maps
-    Cl_fgs = ase.TEB_spectra( data, estimator=estimator )
-
+    N_freqs = data.shape[0]
+    for f_1 in range(N_freqs):
+        for f_2 in range(N_freqs):
+            if f_2 >= f_1:
+                # we only take the BB spectra, for ell >= 2
+                # this form should be able to handle binned spectra as well
+                Cl_loc = ase.TEB_spectra( data[f_1,:,:], IQU_map_2=data[f_2,:,:], estimator=estimator )[2]
+                if f_1 == 0 and f_2 == 0:
+                    Cl_fgs = np.zeros((N_freqs, N_freqs, len(Cl_loc)))
+                Cl_fgs[f_1,f_2,:] = Cl_loc*1.0
+            else:
+                # symmetrization of the Cl_fgs matrix
+                Cl_fgs[f_1,f_2,:] = Cl_fgs[f_2,f_1,:]
     ###############################################################################
     # 4. Estimate the statistical and systematic foregrounds residuals 
     W_maxL = W( A_maxL )
