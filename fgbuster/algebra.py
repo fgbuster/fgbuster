@@ -608,7 +608,8 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     return res
 
 
-def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
+def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
+                   *minimize_args, **minimize_kargs):
     """ Perform component separation
 
     Run an independent `comp_sep` for entries identified by `patch_ids`
@@ -624,6 +625,14 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
         The data vector. Shape `(..., n_freq)`.
     invN: ndarray or None
         The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
+    A_dB_ev : function
+        The evaluator of the derivative of the mixing matrix.
+        It returns a list, each entry is the derivative with respect to a
+        different parameter.
+    comp_of_dB: list of IndexExpression
+        It allows to provide as output of `A_dB_ev` only the non-zero columns
+        `A`. `A_dB_ev(x)[i]` is assumed to be the derivative of
+        `A[comp_of_dB[i]]`.
     patch_ids: array
         id of regions.
     minimize_args: list
@@ -662,20 +671,33 @@ def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
     max_id = patch_ids.max()
 
     def patch_comp_sep(patch_id):
-        mask = patch_ids == patch_id
-        patch_A_ev = A_ev[patch_id] if isinstance(A_ev, list) else A_ev
-        return comp_sep(patch_A_ev, d[mask], invN,
+        if isinstance(A_ev, list):
+            patch_A_ev = A_ev[patch_id]
+            if A_dB_ev is None:
+                patch_A_dB_ev = None
+                patch_comp_of_dB = None
+            else:
+                patch_A_dB_ev = A_dB_ev[patch_id]
+                patch_comp_of_dB = comp_of_dB[patch_id]
+        else:
+            patch_A_ev = A_ev
+            patch_A_dB_ev = A_dB_ev
+            patch_comp_of_dB = comp_of_dB
+
+        patch_d = d[patch_ids == patch_id]
+        return comp_sep(patch_A_ev, patch_d, invN,
+                        patch_A_dB_ev, patch_comp_of_dB,
                         *minimize_args, **minimize_kargs)
 
     # Separation
     res = sp.optimize.OptimizeResult()
-    res.patch_res = [patch_comp_sep(patch_id) for patch_id in xrange(max_id)]
+    res.patch_res = [patch_comp_sep(patch_id) for patch_id in range(max_id+1)]
 
     # Collect results
     n_comp = res.patch_res[0].s.shape[-1]
     res.s = np.full((d.shape[:-1]+(n_comp,)), np.NaN) # NaN for testing
 
-    for patch_id in xrange(max_id):
+    for patch_id in range(max_id+1):
         mask = patch_ids == patch_id
         res.s[mask] = res.patch_res[patch_id].s
 

@@ -46,7 +46,9 @@ def basic_comp_sep(components, instrument, data, nside=0):
     else:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
                                 hp.npix2nside(data.shape[-1]))
-        res = multi_comp_sep(A_ev, prewhitened_data, None, patch_ids, x0)
+        res = multi_comp_sep(
+            A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, patch_ids,
+            x0, options=dict(disp=True))
 
     # Launch component separation
     res.params = params
