@@ -3,13 +3,13 @@
 
 import cosmological_analysis as ca
 import angular_spectrum_estimation as ase
-from algebra import multi_comp_sep, comp_sep
+from algebra import multi_comp_sep, comp_sep, W_dBdB, W_dB, _mm, _mtmm
 import separation_recipies as sr
 import numpy as np
 import pylab as pl
 import healpy as hp
 
-def xForecast(A_ev, invN, data, s_cmb_true, estimator=''):
+def xForecast(components, instrument, invN, d_fgs, s_cmb, Cl_fid, estimator=''):
    """ Run xForecast or CMB4cast using the provided
        instrumental specifications and input foregrounds 
        maps 
@@ -21,12 +21,12 @@ def xForecast(A_ev, invN, data, s_cmb_true, estimator=''):
         argument and returns the mixing matrix, a ndarray with shape
         `(..., n_freq, n_comp)`
         If list, the i-th entry is the evaluator of the i-th patch.
-    data: ndarray
-        The data vector. Shape `(..., n_freq)`.
+    d_fgs: ndarray
+        The data vector. Shape `(n_freq, n_stokes, n_pix)`.
     invN: ndarray or None
         The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
-    s_cmb_true: input pure CMB map to estimate foregrounds residuals
-        in the recovered CMB map
+    s_cmb: input pure CMB map to estimate foregrounds residuals
+        in the recovered CMB map, with format (n_stokes, n_pix)
     estimator: power spectrum estimator to be chosen among ...... 
 	Cl_theory: theoretical angular power spectrum for likelihood
 
@@ -34,134 +34,129 @@ def xForecast(A_ev, invN, data, s_cmb_true, estimator=''):
     -------
     xFres:  
     """
-
+    ###############################################################################
     # 0. Prepare noise-free "data sets"
-    prewhiten_factors = sr._get_prewhiten_factors(instrument, data.shape)
-    A_ev, A_dB_ev, comp_of_param, params = sr._build_A_evaluators(
-        components, instrument, prewhiten_factors=prewhiten_factors)
-    x0 = np.array([x for c in components for x in c.defaults])
-    prewhitened_data = prewhiten_factors * data.T
+    d_obs = d_fgs.T + CMB().evaluate(instrument.Frequencies)*s_cmb[...,np.newaxis]
     
     ###############################################################################
     # 1. Component separation using the noise-free data sets
     # grab the max-L spectra parameters with the associated error bars
+    #  < S_spec > = −tr [(N^-1 − P)(dˆpdˆtp + Np)]
+    # P = N^-1 - N^-1 A (AtNinvA) A^t N^-1
+    A_ev, A_dB_ev, comp_of_param, params = sr._build_A_evaluators(
+        components, instrument)
+    x0 = np.array([x for c in components for x in c.defaults])
+    
     if nside == 0:
-        res = comp_sep(A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, x0,
+        res = comp_sep(A_ev, d_obs, invN, A_dB_ev, comp_of_param, x0,
                        options=dict(disp=True))
     else:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
-                                hp.npix2nside(data.shape[-1]))
-        res = multi_comp_sep(A_ev, prewhitened_data, None, patch_ids, x0)
+                                hp.npix2nside(d_obs.shape[-1]))
+        res = multi_comp_sep(A_ev, d_obs, invN, patch_ids, x0)
     res.params = params
     res.s = res.s.T
+    A_maxL = A_ev( res.params )
+    A_dB_maxL = A_dB_ev( res.params )
+    # build mixing matrix object and call diff_diff()
+    A_dBdB_maxL =
 
     ###############################################################################
     # 2. Estimate noise after component separation
-    Cl_noise = sr.Cl_noise_builder( instrument, res )
+    ### TO DO
+    Cl_noise = sr.Cl_noise_builder( instrument, A_maxL )
 
     ###############################################################################
     # 3. Compute spectra of the input foregrounds maps
+    ### TO DO: which size for Cl_fgs??? N_spec != 1 ? 
     N_freqs = data.shape[0]
     for f_1 in range(N_freqs):
         for f_2 in range(N_freqs):
             if f_2 >= f_1:
                 # we only take the BB spectra, for ell >= 2
                 # this form should be able to handle binned spectra as well
-                Cl_loc = ase.TEB_spectra( data[f_1,:,:], IQU_map_2=data[f_2,:,:], estimator=estimator )[2]
+                Cl_loc, ell = ase.TEB_spectra( d_fgs[f_1,:,:], IQU_map_2=d_fgs[f_2,:,:], estimator=estimator )[2]
                 if f_1 == 0 and f_2 == 0:
-                    Cl_fgs = np.zeros((N_freqs, N_freqs, len(Cl_loc)))
+                    Cl_fgs = np.zeros((N_spec, N_freqs, N_freqs, len(Cl_loc)))
                 Cl_fgs[f_1,f_2,:] = Cl_loc*1.0
             else:
                 # symmetrization of the Cl_fgs matrix
                 Cl_fgs[f_1,f_2,:] = Cl_fgs[f_2,f_1,:]
+    assert len(Cl_fid) == len(ell)
+
     ###############################################################################
     # 4. Estimate the statistical and systematic foregrounds residuals 
-    W_maxL = W( A_maxL )
-    W_dB_maxL = W_dB( )
-    W_dBdB_maxL = W_dB_dB( )
-    V_maxL = res.Sigma.dot( W_dBdB_maxL )
+
+    ### find ind_cmb, the dimension of the CMB component
+    ### TO DO: add this list to the MixingMatrix class
+    ind_cmb = [type(c).__name__ for c in MixingMatrix].index('CMB')
+    W_maxL = W(A_maxL, invN=invN)[...,ind_cmb,:]
+    W_dB_maxL = W_dB(A_maxL, A_dB_maxL, comp_of_param, invN=invN)[...,ind_cmb,:]
+    W_dBdB_maxL = W_dBdB(A_maxL, A_dB_maxL, A_dBdB_maxL, comp_of_param, invN=invN)[...,ind_cmb,:]
     
-    '''
-    w_loc = AtNAinv_fit['matrix'].dot( A_fit['matrix'].T ).dot( Ninv_p['matrix'] )
-    -----------
-    AtNAinv_fit = AtNAinv_builder( A_fit, Ninv_p )
-    dAtNAinv_fit = - AtNAinv_fit['matrix'].dot( dAdB_fit[drv_loc]['matrix'].T.dot( Ninv_p['matrix'] ).dot( A_fit['matrix'] ) +\
-                  A_fit['matrix'].T.dot( Ninv_p['matrix'] ).dot( dAdB_fit[drv_loc]['matrix'] )).dot( AtNAinv_fit['matrix'] )
-    dW_loc = dAtNAinv_fit.dot( A_fit['matrix'].T ).dot( Ninv_p['matrix'] ) +\
-              AtNAinv_fit['matrix'].dot( dAdB_fit[drv_loc]['matrix'].T ).dot( Ninv_p['matrix'] )
-    -----------
-    dAtNAinv_fit_sq_i = - AtNAinv_fit['matrix'].dot( dAdB_fit[drv[i]]['matrix'].T.dot(Ninv_p['matrix']).dot(A_fit['matrix']) +\
-                        A_fit['matrix'].T.dot(Ninv_p['matrix']).dot( dAdB_fit[drv[i]]['matrix']) ).dot( AtNAinv_fit['matrix'] )		
-    # derivative of (ATNA)^-1 wrt. beta_j
-    dAtNAinv_fit_sq_j = - AtNAinv_fit['matrix'].dot( dAdB_fit[drv[j]]['matrix'].T.dot(Ninv_p['matrix']).dot(A_fit['matrix']) +\
-                         A_fit['matrix'].T.dot(Ninv_p['matrix']).dot( dAdB_fit[drv[j]]['matrix']) ).dot( AtNAinv_fit['matrix'] )
-    # derivative of (ATNA)^-1 wrt. beta_i, beta_j
-    ddAtNAinv_fit_sq = - dAtNAinv_fit_sq_j.dot( dAdB_fit[drv[i]]['matrix'].T.dot( Ninv_p['matrix'] ).dot( A_fit['matrix'] ) +\
-                     A_fit['matrix'].T.dot(Ninv_p['matrix']).dot(dAdB_fit[drv[i]]['matrix'])  ).dot( AtNAinv_fit['matrix'] ) -\
-                     AtNAinv_fit['matrix'].dot( dAdBdB_fit[drv[j]][drv[i]]['matrix'].T.dot(Ninv_p['matrix']).dot(A_fit['matrix']) + \
-                     dAdB_fit[drv[i]]['matrix'].T.dot(Ninv_p['matrix']).dot(dAdB_fit[drv[j]]['matrix'])+\
-                     dAdB_fit[drv[j]]['matrix'].T.dot(Ninv_p['matrix']).dot(dAdB_fit[drv[i]]['matrix'])+\
-                     A_fit['matrix'].T.dot(Ninv_p['matrix']).dot(dAdBdB_fit[drv[j]][drv[i]]['matrix'])).dot( AtNAinv_fit['matrix'] ) -\
-                     AtNAinv_fit['matrix'].dot( dAdB_fit[drv[i]]['matrix'].T.dot( Ninv_p['matrix'] ).dot( A_fit['matrix'] ) +\
-                     A_fit['matrix'].T.dot(Ninv_p['matrix']).dot(dAdB_fit[drv[i]]['matrix'])).dot(dAtNAinv_fit_sq_j)
-    # entire derivative
-    d2Wdbdb_loc =  ddAtNAinv_fit_sq.dot( A_fit['matrix'].T ).dot(Ninv_p['matrix']) + \
-                 2*dAtNAinv_fit_sq_i.dot( dAdB_fit[drv[j]]['matrix'].T ).dot( Ninv_p['matrix'] ) +\
-                 AtNAinv_fit['matrix'].dot( dAdBdB_fit[drv[j]][drv[i]]['matrix'].T ).dot( Ninv_p['matrix'] )
-    -----------
-    vk['matrix'][:,p] += d2LdBdBinv_loc['matrix'][k1,k2]*d2Wdbdb['matrix'][k1,k2,:,p]
-    -----------
-    Cl_yy[ell_ind] = wk['matrix'].T.dot(Fl_fgs['matrix'][:,:,ell_ind]).dot(wk['matrix']) 
-    Cl_YY[ch1, ch2, ell_ind] = dW_kb['matrix'][ch1,:].T.dot(Fl_fgs['matrix'][:,:,ell_ind]).dot(dW_kb['matrix'][ch2,:]) 
-    Cl_yz[ell_ind] = wk['matrix'].T.dot(Fl_fgs['matrix'][:,:,ell_ind]).dot(vk['matrix']) 
-    Cl_Yy[ch,ell_ind] = dW_kb['matrix'][ch,:].T.dot(Fl_fgs['matrix'][:,:,ell_ind]).dot( wk['matrix'] ) 
-    Cl_Yz[ch,ell_ind] = dW_kb['matrix'][ch,:].T.dot(Fl_fgs['matrix'][:,:,ell_ind]).dot( vk['matrix'] ) 
-    Cl_zY[ch,ell_ind] = vk['matrix'].T.dot(Fl_fgs['matrix'][:,:,ell_ind]).dot(  dW_kb['matrix'][ch,:] ) 
-    Cl_zy[ell_ind] = vk['matrix'].T.dot(Fl_fgs['matrix'][:,:,ell_ind]).dot(wk['matrix']) 
-    Cl_yY[ch,ell_ind] =  wk['matrix'].T.dot(Fl_fgs['matrix'][:,:,ell_ind]).dot( dW_kb['matrix'][ch,:] )
-    -----------
-    first_terms = Cls['yy'][ell_ind] + Cls['yz'][ell_ind] + Cls['zy'][ell_ind]
-    Cl_res_bias[ell_ind] = np.abs(first_terms)
-    trace_term = np.trace( d2LdBdBinv_loc['matrix'].dot(Cls['YY'][:,:, ell_ind]) )
-    Cl_res_stat[ell_ind] = np.abs(trace_term)
-    Cl_res_var[ell_ind]  = np.abs(2*Cls['yY'][:,ell_ind].T.dot( d2LdBdBinv_loc['matrix'][:,:].dot(Cls['Yy'][:,ell_ind]) ) \
-                          + 2*Cl_res_stat[ell_ind] ** 2)
-    '''
+    ### check if arrow is necessary 
+    V_maxL = np.einsum('ij,ij...->...', res.Sigma, W_dBdB_maxL )
     
+    # elementary quantities defined in Stompor, Errard, Poletti (2016)
+    Cl_xF = {}
+    Cl_xF['yy'] = _mtmm(W_maxL, Cl_fgs, W_maxL)
+    Cl_xF['YY'] = _mtmm(W_dB_maxL, Cl_fgs, W_maxL)
+    Cl_xF['yz'] = _mtmm(W_maxL, Cl_fgs, V_maxL)
+    Cl_xF['Yy'] = _mtmm(W_dB_maxL, Cl_fgs, W_maxL)
+    Cl_xF['Yz'] = _mtmm(W_dB_maxL, Cl_fgs, V_maxL)
+    Cl_xF['zY'] = _mtmm(V_maxL, Cl_fgs, W_dB_maxL)
+    Cl_xF['zy'] = _mtmm(V_maxL, Cl_fgs, W_maxL)
+    Cl_xF['yY'] = _mtmm(W_maxL , Cl_fgs, W_dB_maxL)
+    # bias and statistical foregrounds residuals
+    Cl_xF['bias'] = Cl_xF['yy'] + Cl_xF['yz'] + Cl_xF['zy']
+    YSY =  _mm(res.Sigma, Cl_xF['YY'])
+    Cl_xF['stat'] = np.trace( YSY )
+    Cl_xF['var'] = 2*(_mtmm(Cl_xF['yY'], res.Sigma, Cl_xF['Yy'] ) + Cl_xF['stat']** 2)
 
     ###############################################################################
     # 5. Plug into the cosmological likelihood
+    assert Cl_fid.shape == Cl_xF['yy']
+    ## 5.1. data 
+    E = np.diag(Cl_fid['BB'] + YSY + Cl_xF['yy'] + Cl_xF['zy'] + Cl_xF['yz'])
+    ## 5.2. modeling
+    def cosmo_likelihood( r_ ):
+        Cl_BB_model = Cl_fid['BlBl']*A_L + Cl_fid['BuBu']*r_/r_fid + Cl_noise
+
+        U_inv = _mm(res.Sigma_inv, np.sum((2*ell+1)*Cl_xF['YY']/Cl_BB_model))
+        U = np.linalg.inv( U_inv ) 
+        
+        term_0 = (2*ell+1)*(1.0 - (1.0/Cl_BB_model)*np.trace(_mm(U, Cl_xF['YY'])))
+        term_1 = ((2*ell+1)/Cl_BB_model)*np.trace(_mm(res.Sigma,Cl_xF['YY']))
+        trCinvC_1 = np.sum( Cl_fid['BB']/Cl_BB_model*term_0 + term_1 )
+        
+        trCinvC_2 = 0.0
+        for i in range(len(ell)):
+            for j in range(len(ell)):
+                trCinvC_2 += ((2*ell[i]+1)/Cl_BB_model[i])*((2*ell_v[j]+1)/Cl_BB_model[j])*\
+                       np.trace(_mm(_mm(U, Cl_xF['YY'][:,:,j]), _mm(res.Sigma, Cl_xF['YY'][:,:,i])))
+       
+        trCinvEC_1 = np.sum( ((2*ell+1)/Cl_BB_model)*(Cl_xF['yy'] + Cl_xF['zy'] + Cl_xF['yz']) )
+       
+        trCinvEC_2 = 0.0
+        for i in range(len(ell)):
+            for j in range(len(ell)):
+                trCinvEC_2 += ((2*ell[i]+1)/Cl_BB_model[i])*((2*ell_v[j]+1)/Cl_BB_model[j])*\
+                       np.trace( U.dot(Cl_xF['YY'][:,:,j].dot(res.Sigma.dot(Cl_xF['YY'][:,:,i]))))
+
+        trCE = trCinvC_1 - trCinvC_2 + trCinvEC_1 - trCinvEC_2
+        D = np.diag( Cl )
+        logL = fsky*( trCE + logdetC ) 
+        
+    ### TODO 
+    ###  minimization, gridding, sigma(r)
+    ### r_fit = ....
+
+    def sigma_r_computation_from_logL(r_loc):
+        THRESHOLD = 1.00
+        # THRESHOLD = 2.30 when two parameters
+        delta = np.abs( cosmo_likelihood(r_loc) - cosmo_likelihood(r_fit) - THRESHOLD )
+        return delta
     '''
-    E = np.diag( (C_ell_fid[ell_min-2:ell_max-1] + YSY \
-       + Cls['yy'][ell_min-2:ell_max-1] \
-       + Cls['zy'][ell_min-2:ell_max-1] \
-       + Cls['yz'][ell_min-2:ell_max-1] ))
-    -----------
-    U_inv[k1,k2] = Sigma_inv[k1,k2] + \
-                   np.sum( (2*ell_v[:] + 1)*Cls['YY'][k1,k2,ell_min-2:ell_max-1]/C_ell[:] )
-    -----------
-    first_term = (2*ell_v[:]+1)*( 1 - ( 1.0/Cl )*np.trace( U.dot(Cls['YY'][:,:,ell_min-2:ell_max-1]) ) )
-    second_term = ((2*ell_v[:]+1)/Cl)*np.trace(d2LdBdB_loc_matrix.dot(Cls['YY'][:,:,ell_min-2:ell_max-1]))
-    for ell_ind1 in range(max_ell):
-        for ell_ind2 in range(max_ell):
-            trCinvC_2 += ((2*ell_v[ell_ind1]+1)/Cl[ell_ind1])*((2*ell_v[ell_ind2]+1)/Cl[ell_ind2])*\
-                       np.trace( U.dot(Cls['YY'][:,:,ell_min-2+ell_ind2].dot(d2LdBdB_loc_matrix.dot(Cls['YY'][:,:,ell_min-2+ell_ind1]))))
-    -----------
-    trCinvEC_1 = np.sum( ((2*ell_v[:]+1)/Cl)*( Cls['yy'][ell_min-2:ell_max-1] + Cls['zy'][ell_min-2:ell_max-1] + Cls['yz'][ell_min-2:ell_max-1] ) )
-    -----------
-    for ell_ind1 in range(max_ell):
-        for ell_ind2 in range(max_ell):
-            trCinvEC_2 += ((2*ell_v[ell_ind1]+1)/Cl[ell_ind1])*((2*ell_v[ell_ind2]+1)/Cl[ell_ind2])*\
-                          np.trace( U.dot( Cls['Yy'][np.newaxis,:,ell_min-2+ell_ind2].T.dot(Cls['yY'][np.newaxis,:,ell_min-2+ell_ind1]) \
-                          + Cls['Yy'][np.newaxis,:,ell_min-2+ell_ind2].T.dot(Cls['zY'][np.newaxis,:,ell_min-2+ell_ind1])\
-                          + Cls['Yz'][np.newaxis,:,ell_min-2+ell_ind2].T.dot(Cls['yY'][np.newaxis,:,ell_min-2+ell_ind1])  ) )
-    -----------
-    trCE = trCinvC_1 - trCinvC_2 + trCinvEC_1 - trCinvEC_2
-    D = np.diag( Cl )
-    logdetC = np.trace( (2*ell_v+1)*scipy.linalg.logm( D )) + np.trace( scipy.linalg.logm(d2LdBdB_loc_matrix) ) -\
-               np.trace( scipy.linalg.logm(U) )
-    logL = fsky*( trCE + logdetC ) 
-    -----------
     # analytical derivative of logL also available in xForecast .... 
 
     # optimization of logL wrt. r
