@@ -9,13 +9,15 @@ import numpy as np
 import pylab as pl
 import healpy as hp
 
-def xForecast(components, instrument, invN, d_fgs, s_cmb, Cl_fid, estimator=''):
+def xForecast(components, instrument, invN, d_fgs, estimator=''):
    """ Run xForecast or CMB4cast using the provided
        instrumental specifications and input foregrounds 
        maps 
 
     Parameters
     ----------
+    ### TODO
+    ### CLEAN THE FOLLOWING TEXT
     A_ev: function or list
         The evaluator of the mixing matrix. It takes a float or an array as
         argument and returns the mixing matrix, a ndarray with shape
@@ -25,15 +27,16 @@ def xForecast(components, instrument, invN, d_fgs, s_cmb, Cl_fid, estimator=''):
         The data vector. Shape `(n_freq, n_stokes, n_pix)`.
     invN: ndarray or None
         The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
-    s_cmb: input pure CMB map to estimate foregrounds residuals
-        in the recovered CMB map, with format (n_stokes, n_pix)
     estimator: power spectrum estimator to be chosen among ...... 
-	Cl_theory: theoretical angular power spectrum for likelihood
 
     Returns
     -------
     xFres:  
     """
+
+    ### TODO [DAVIDE]
+    ### COMPUTE and LOAD s_cmb with corresponding power spectra 
+
     ###############################################################################
     # 0. Prepare noise-free "data sets"
     d_obs = d_fgs.T + CMB().evaluate(instrument.Frequencies)*s_cmb[...,np.newaxis]
@@ -58,12 +61,15 @@ def xForecast(components, instrument, invN, d_fgs, s_cmb, Cl_fid, estimator=''):
     res.s = res.s.T
     A_maxL = A_ev( res.params )
     A_dB_maxL = A_dB_ev( res.params )
-    # build mixing matrix object and call diff_diff()
+    ### TODO [JOSQUIN]
+    ### build mixing matrix object and call diff_diff()
+    ### and remove _build_A_evaluators
     A_dBdB_maxL =
 
     ###############################################################################
     # 2. Estimate noise after component separation
-    ### TO DO
+    ### TO DO [DAVIDE]
+    ### A^T N_ell^-1 A
     Cl_noise = sr.Cl_noise_builder( instrument, A_maxL )
 
     ###############################################################################
@@ -88,13 +94,14 @@ def xForecast(components, instrument, invN, d_fgs, s_cmb, Cl_fid, estimator=''):
     # 4. Estimate the statistical and systematic foregrounds residuals 
 
     ### find ind_cmb, the dimension of the CMB component
-    ### TO DO: add this list to the MixingMatrix class
+    ### TO DO [DAVIDE]
+    ### add this list to the MixingMatrix class
     ind_cmb = [type(c).__name__ for c in MixingMatrix].index('CMB')
     W_maxL = W(A_maxL, invN=invN)[...,ind_cmb,:]
     W_dB_maxL = W_dB(A_maxL, A_dB_maxL, comp_of_param, invN=invN)[...,ind_cmb,:]
     W_dBdB_maxL = W_dBdB(A_maxL, A_dB_maxL, A_dBdB_maxL, comp_of_param, invN=invN)[...,ind_cmb,:]
     
-    ### check if arrow is necessary 
+    ### TODO: check if arrow is necessary [JOSQUIN]
     V_maxL = np.einsum('ij,ij...->...', res.Sigma, W_dBdB_maxL )
     
     # elementary quantities defined in Stompor, Errard, Poletti (2016)
@@ -147,15 +154,21 @@ def xForecast(components, instrument, invN, d_fgs, s_cmb, Cl_fid, estimator=''):
         D = np.diag( Cl )
         logL = fsky*( trCE + logdetC ) 
         
-    ### TODO 
+
+    ### TODO [JOSQUIN]
     ###  minimization, gridding, sigma(r)
     ### r_fit = ....
 
     def sigma_r_computation_from_logL(r_loc):
         THRESHOLD = 1.00
-        # THRESHOLD = 2.30 when two parameters
+        # THRESHOLD = 2.30 when two fitted parameters
         delta = np.abs( cosmo_likelihood(r_loc) - cosmo_likelihood(r_fit) - THRESHOLD )
         return delta
+
+
+    ### TODO [DAVIDE]        
+    ### outputs
+
     '''
     # analytical derivative of logL also available in xForecast .... 
 
