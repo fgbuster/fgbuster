@@ -1,16 +1,20 @@
 """ Forecasting toolbox for DustBust
 """
 
-import cosmological_analysis as ca
+#import cosmological_analysis as ca
 import angular_spectrum_estimation as ase
 from algebra import multi_comp_sep, comp_sep, W_dBdB, W_dB, _mm, _mtmm
 import separation_recipies as sr
 import numpy as np
 import pylab as pl
 import healpy as hp
+import os.path as op
+
+CMB_CL_FILE = op.join(
+    op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
 
 def xForecast(components, instrument, invN, d_fgs, estimator=''):
-   """ Run xForecast or CMB4cast using the provided
+    """ Run xForecast or CMB4cast using the provided
        instrumental specifications and input foregrounds 
        maps 
 
@@ -34,22 +38,21 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
     xFres:  
     """
 
-    ### TODO [DAVIDE]
-    ### COMPUTE and LOAD s_cmb with corresponding power spectra 
+    ### TODO [DAVIDE] DONE
+    cl_cmb = _get_Cl_cmb(lmax) # TODO A_lens, r have to be provided somehow
+    s_cmb = hp.synfast(cl_cmb)
 
     ###############################################################################
     # 0. Prepare noise-free "data sets"
     d_obs = d_fgs.T + CMB().evaluate(instrument.Frequencies)*s_cmb[...,np.newaxis]
-    
+
     ###############################################################################
     # 1. Component separation using the noise-free data sets
     # grab the max-L spectra parameters with the associated error bars
-    #  < S_spec > = −tr [(N^-1 − P)(dˆpdˆtp + Np)]
-    # P = N^-1 - N^-1 A (AtNinvA) A^t N^-1
     A_ev, A_dB_ev, comp_of_param, params = sr._build_A_evaluators(
         components, instrument)
     x0 = np.array([x for c in components for x in c.defaults])
-    
+
     if nside == 0:
         res = comp_sep(A_ev, d_obs, invN, A_dB_ev, comp_of_param, x0,
                        options=dict(disp=True))
@@ -64,13 +67,13 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
     ### TODO [JOSQUIN]
     ### build mixing matrix object and call diff_diff()
     ### and remove _build_A_evaluators
-    A_dBdB_maxL =
+    #A_dBdB_maxL =
 
     ###############################################################################
     # 2. Estimate noise after component separation
     ### TO DO [DAVIDE]
     ### A^T N_ell^-1 A
-    Cl_noise = sr.Cl_noise_builder( instrument, A_maxL )
+    Cl_noise = _get_Cl_cmb(instrument, A_maxL, lmax)
 
     ###############################################################################
     # 3. Compute spectra of the input foregrounds maps
@@ -100,10 +103,10 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
     W_maxL = W(A_maxL, invN=invN)[...,ind_cmb,:]
     W_dB_maxL = W_dB(A_maxL, A_dB_maxL, comp_of_param, invN=invN)[...,ind_cmb,:]
     W_dBdB_maxL = W_dBdB(A_maxL, A_dB_maxL, A_dBdB_maxL, comp_of_param, invN=invN)[...,ind_cmb,:]
-    
+
     ### TODO: check if arrow is necessary [JOSQUIN]
     V_maxL = np.einsum('ij,ij...->...', res.Sigma, W_dBdB_maxL )
-    
+
     # elementary quantities defined in Stompor, Errard, Poletti (2016)
     Cl_xF = {}
     Cl_xF['yy'] = _mtmm(W_maxL, Cl_fgs, W_maxL)
@@ -180,7 +183,23 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
     ###############################################################################
     # 6. Produce figures
     '''
-	# angular power spectrum showing theoretical Cl / noise per freq band / noise after comp sep / stat and sys residuals
-	# the emcee panels for the spectral parameters fit
-	# the profile cosmological likelihood (if it has been gridded)
+        # angular power spectrum showing theoretical Cl / noise per freq band / noise after comp sep / stat and sys residuals
+        # the emcee panels for the spectral parameters fit
+        # the profile cosmological likelihood (if it has been gridded)
     '''
+
+def _get_Cl_cmb(A_lens=1., r=0.):
+    power_spectrum = hp.read_cl(CMB_CL_FILE%'scalar')
+    if A_lens != 1.:
+        power_spectrum[2] *= A_lens
+    if r != 0.:
+        power_spectrum += r * hp.read_cl(CMB_CL_FILE%'tensor')
+    return power_spectrum
+
+
+def _get_Cl_noise(lmax, instrument, A):
+    bl = [hp.gauss_beam(np.radians(b/60.), lmax=lmax) for b in instrument.Beams]
+    nl = (np.array(bl) / np.radians(instrument.Sens_P/60.)[:, np.newaxis])**2
+    AtNA = np.einsum('...fi,...fl,...fj->...lij', A, nl, A)
+    inv_AtNA = np.linalg.inv(AtNA)
+    return inv_AtNA.swapaxes(-3, -1)
