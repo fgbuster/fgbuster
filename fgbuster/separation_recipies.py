@@ -85,7 +85,7 @@ def _get_prewhiten_factors(instrument, data_shape):
             sens = np.stack(
                 (instrument.Sens_I, instrument.Sens_P, instrument.Sens_P))
     except AttributeError:  # instrument has no sensitivity -> do not prewhite
-        print 'The sensitivity of the instrument is not specified'
+        print('The sensitivity of the instrument is not specified')
         return None
 
     return hp.nside2resol(instrument.Nside, arcmin=True) / sens

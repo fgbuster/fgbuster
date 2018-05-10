@@ -4,5 +4,6 @@ travis-sphinx
 healpy
 scipy
 numpy
-sympy
+sympy>=1.1.1
+six
 git+git://github.com/bthorne93/PySM_public.git#egg=pysm
