@@ -71,7 +71,7 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
 
     ###############################################################################
     # 2. Estimate noise after component separation
-    ### TO DO [DAVIDE]
+    ### TO DO [DAVIDE] DONE
     ### A^T N_ell^-1 A
     Cl_noise = _get_Cl_cmb(instrument, A_maxL, lmax)
 
@@ -97,9 +97,9 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
     # 4. Estimate the statistical and systematic foregrounds residuals 
 
     ### find ind_cmb, the dimension of the CMB component
-    ### TO DO [DAVIDE]
-    ### add this list to the MixingMatrix class
-    ind_cmb = [type(c).__name__ for c in MixingMatrix].index('CMB')
+    ### TO DO [DAVIDE] DONE
+    ### add this list to the MixingMatrix class 
+    ind_cmb = mixing_matrix.components.index('CMB')
     W_maxL = W(A_maxL, invN=invN)[...,ind_cmb,:]
     W_dB_maxL = W_dB(A_maxL, A_dB_maxL, comp_of_param, invN=invN)[...,ind_cmb,:]
     W_dBdB_maxL = W_dBdB(A_maxL, A_dB_maxL, A_dBdB_maxL, comp_of_param, invN=invN)[...,ind_cmb,:]

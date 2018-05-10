@@ -29,6 +29,10 @@ class MixingMatrix(tuple):
                 for c in self for p in c.params]
 
     @property
+    def components(self):
+        return [type(c).__name__ for c in self]
+
+    @property
     def n_param(self):
         return len(self.__comp_of_param)
 
