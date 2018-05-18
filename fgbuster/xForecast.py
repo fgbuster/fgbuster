@@ -130,10 +130,11 @@ def xForecast(components, instrument, invN, d_fgs, estimator='', *minimize_args,
     Cl_xF['zy'] = _mtmm(V_maxL, Cl_fgs, W_maxL)
     Cl_xF['yY'] = _mtmm(W_maxL , Cl_fgs, W_dB_maxL)
     # bias and statistical foregrounds residuals
-    Cl_xF['bias'] = Cl_xF['yy'] + Cl_xF['yz'] + Cl_xF['zy']
+    res.bias = Cl_xF['yy'] + Cl_xF['yz'] + Cl_xF['zy']
     YSY =  _mm(res.Sigma, Cl_xF['YY'])
-    Cl_xF['stat'] = np.trace( YSY )
-    Cl_xF['var'] = 2*(_mtmm(Cl_xF['yY'], res.Sigma, Cl_xF['Yy'] ) + Cl_xF['stat']** 2)
+    res.stat = np.trace( YSY )
+    res.var = 2*(_mtmm(Cl_xF['yY'], res.Sigma, Cl_xF['Yy'] ) + Cl_xF['stat']** 2)
+    res.noise = Cl_noise*1.0
 
     ###############################################################################
     # 5. Plug into the cosmological likelihood
@@ -175,7 +176,7 @@ def xForecast(components, instrument, invN, d_fgs, estimator='', *minimize_args,
 
     # Likelihood maximization
     res_Lr = sp.optimize.minimize(cosmo_likelihood, *minimize_args, **minimize_kwargs)
-
+    res.cosmo_params['r'] = res_Lr['x']
     def sigma_r_computation_from_logL(r_loc):
         THRESHOLD = 1.00
         # THRESHOLD = 2.30 when two fitted parameters
@@ -183,6 +184,7 @@ def xForecast(components, instrument, invN, d_fgs, estimator='', *minimize_args,
         return delta
 
     res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, *minimize_args, **minimize_kwargs)
+    res.cosmo_params['sigma_r'] = res_sr['x']
 
 
     ### TODO [DAVIDE]        
