@@ -4,7 +4,7 @@
 #import cosmological_analysis as ca
 import angular_spectrum_estimation as ase
 from algebra import multi_comp_sep, comp_sep, W_dBdB, W_dB, _mm, _mtmm
-import separation_recipies as sr
+from .mixingmatrix import MixingMatrix
 import numpy as np
 import pylab as pl
 import healpy as hp
@@ -13,7 +13,7 @@ import os.path as op
 CMB_CL_FILE = op.join(
     op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
 
-def xForecast(components, instrument, invN, d_fgs, estimator=''):
+def xForecast(components, instrument, invN, d_fgs, estimator='', *minimize_args, **minimize_kwargs):
     """ Run xForecast or CMB4cast using the provided
        instrumental specifications and input foregrounds 
        maps 
@@ -32,6 +32,18 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
     invN: ndarray or None
         The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
     estimator: power spectrum estimator to be chosen among ...... 
+    minimize_args: list
+        Positional arguments to be passed to `scipy.optimize.minimize`.
+        At this moment it just contains `x0`, the initial guess for the spectral
+        parameters
+    minimize_kwargs: dict
+        Keyword arguments to be passed to `scipy.optimize.minimize`.
+        A good choice for most cases is
+        `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
+        on both the solver and your signal to noise: it should ensure that the
+        difference between the best fit -logL and and the minimum is well less
+        then 1, without exagereting (a difference of 1e-4 is useless).
+        `disp` also triggers a verbose callback that monitors the convergence.
 
     Returns
     -------
@@ -49,8 +61,10 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
     ###############################################################################
     # 1. Component separation using the noise-free data sets
     # grab the max-L spectra parameters with the associated error bars
-    A_ev, A_dB_ev, comp_of_param, params = sr._build_A_evaluators(
-        components, instrument)
+    A = MixingMatrix(*components)
+    A_ev = A.evaluator(instrument.Frequencies)
+    A_dB_ev = A.diff_evaluator(instrument.Frequencies)
+
     x0 = np.array([x for c in components for x in c.defaults])
 
     if nside == 0:
@@ -60,14 +74,12 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
                                 hp.npix2nside(d_obs.shape[-1]))
         res = multi_comp_sep(A_ev, d_obs, invN, patch_ids, x0)
+    
     res.params = params
     res.s = res.s.T
-    A_maxL = A_ev( res.params )
-    A_dB_maxL = A_dB_ev( res.params )
-    ### TODO [JOSQUIN]
-    ### build mixing matrix object and call diff_diff()
-    ### and remove _build_A_evaluators
-    #A_dBdB_maxL =
+    A_maxL = A_ev(res.params)
+    A_dB_maxL = A_dB_ev(res.params)
+    A_dBdB_maxL = A.diff_diff(instrument.Frequencies, res.params)
 
     ###############################################################################
     # 2. Estimate noise after component separation
@@ -129,7 +141,7 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
     ## 5.1. data 
     E = np.diag(Cl_fid['BB'] + YSY + Cl_xF['yy'] + Cl_xF['zy'] + Cl_xF['yz'])
     ## 5.2. modeling
-    def cosmo_likelihood( r_ ):
+    def cosmo_likelihood(r_):
         Cl_BB_model = Cl_fid['BlBl']*A_L + Cl_fid['BuBu']*r_/r_fid + Cl_noise
 
         U_inv = _mm(res.Sigma_inv, np.sum((2*ell+1)*Cl_xF['YY']/Cl_BB_model))
@@ -160,13 +172,17 @@ def xForecast(components, instrument, invN, d_fgs, estimator=''):
 
     ### TODO [JOSQUIN]
     ###  minimization, gridding, sigma(r)
-    ### r_fit = ....
+
+    # Likelihood maximization
+    res_Lr = sp.optimize.minimize(cosmo_likelihood, *minimize_args, **minimize_kwargs)
 
     def sigma_r_computation_from_logL(r_loc):
         THRESHOLD = 1.00
         # THRESHOLD = 2.30 when two fitted parameters
-        delta = np.abs( cosmo_likelihood(r_loc) - cosmo_likelihood(r_fit) - THRESHOLD )
+        delta = np.abs( cosmo_likelihood(r_loc) - res_Lr['fun'] - THRESHOLD )
         return delta
+
+    res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, *minimize_args, **minimize_kwargs)
 
 
     ### TODO [DAVIDE]        
