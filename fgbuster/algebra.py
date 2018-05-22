@@ -44,6 +44,10 @@ def _mv(m, v):
     return np.einsum('...ij,...j->...i', m, v, optimize=OPTIMIZE)
 
 
+def _utmv(u,m, v):
+    return np.einsum('...i,...ij,...j->...', u, m, v, optimize=OPTIMIZE)
+
+
 def _mtv(m, v):
     return np.einsum('...ji,...j->...i', m, v, optimize=OPTIMIZE)
 
@@ -179,7 +183,7 @@ def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
         res_i -= _mmm(res_i, u, _T(u))
         res_i -= _mmm(_mmm(_T(inve_v), _T(u), A_dB_i), _T(slice_inve_v), _T(u))
         res.append(res_i)
-    return res
+    return np.array(res)
 
 
 def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
@@ -606,6 +610,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
             res.chi_dB.append(np.sum(res.chi[freq_of_dB] * As_dB_i, -1)
                               / np.linalg.norm(As_dB_i, axis=-1))
     res.Sigma = np.linalg.inv(fisher)
+    res.Sigma_inv = fisher
     return res
 
 

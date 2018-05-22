@@ -11,7 +11,7 @@ import numpy as np
 import healpy as hp
 import sys
 
-def TEB_spectra( IQU_map, IQU_map_2=None, ell_max=0.0, estimator=None, *args, **kwargs ):
+def TEB_spectra( IQU_map, IQU_map_2=None, lmax=0.0, estimator=None, *args, **kwargs ):
     """ Estimate the angular power spectra of given sky maps
 
     Parameters
@@ -22,7 +22,7 @@ def TEB_spectra( IQU_map, IQU_map_2=None, ell_max=0.0, estimator=None, *args, **
     IQU_map_2: float, array-like shape (Npix,) or (3, Npix)
               Either an array representing a map, or a sequence of 3 arrays
               representing I, Q, U maps
-    ell_max: int, scalar, optional
+    lmax: int, scalar, optional
              Maximum l of the power spectrum (default: 3*nside-1)
     estimator: string
                choice of the power spectrum estimator, among 'anafast' (default) and NaMaster 
@@ -99,9 +99,10 @@ def TEB_spectra( IQU_map, IQU_map_2=None, ell_max=0.0, estimator=None, *args, **
         else:
             nside_input_map = hp.npix2nside(len(IQU_map))
 
-        if ell_max <= 3*nside_input_map-1:
-        	ell_max = 3*nside_input_map-1
+        if lmax <= 3*nside_input_map-1:
+        	lmax = 3*nside_input_map-1
 
-        Cl = hp.sphtfunc.anafast( map1=IQU_map,map2=IQU_map_2, iter=10, lmax=ell_max ) 
+        Cl = hp.sphtfunc.anafast( map1=IQU_map,map2=IQU_map_2, iter=10, lmax=lmax ) 
+        ell = np.arange(0,len(Cl[0]))
 
-        return Cl
+        return Cl, ell
