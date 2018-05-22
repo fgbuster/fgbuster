@@ -44,8 +44,8 @@ def _mv(m, v):
     return np.einsum('...ij,...j->...i', m, v, optimize=OPTIMIZE)
 
 
-def _utmv(u,m, v):
-    return np.einsum('...i,...ij,...j->...', u, m, v, optimize=OPTIMIZE)
+def _utmv(u, m, v):
+    return np.einsum('...i,...ij,...j', u, m, v, optimize=OPTIMIZE)
 
 
 def _mtv(m, v):
