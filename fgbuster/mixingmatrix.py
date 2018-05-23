@@ -85,3 +85,9 @@ class MixingMatrix(tuple):
                     res[i][j] = (
                         comp_diff_diff[i - i_start][j - i_start].reshape(-1, 1))
         return res
+    
+    def diff_diff_evaluator(self, nu, unpack=(lambda x: x.reshape((-1,)))):
+        def f(param_array):
+            param_array = np.array(param_array)
+            return self.diff_diff(nu, *[p for p in unpack(param_array)])
+        return f
