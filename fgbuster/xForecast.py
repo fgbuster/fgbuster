@@ -1,51 +1,66 @@
-""" Forecasting toolbox for DustBust
+""" Forecasting toolbox
 """
-
-#import cosmological_analysis as ca
-import angular_spectrum_estimation as ase
-from algebra import multi_comp_sep, comp_sep, W_dBdB, W_dB, _mm, _mtmm, W, _mmm, _utmv, _mmv
-from .mixingmatrix import MixingMatrix
+import os.path as op
 import numpy as np
 import pylab as pl
 import healpy as hp
-import os.path as op
 import scipy as sp
-from scipy import optimize
-from separation_recipies import _get_prewhiten_factors
+import fgbuster.angular_spectrum_estimation as ase
+from .algebra import multi_comp_sep, comp_sep, W_dBdB, W_dB, _mm, W, _mmm, _utmv, _mmv
+from .mixingmatrix import MixingMatrix
+
 
 CMB_CL_FILE = op.join(
     op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
 
-def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.001, estimator='', make_figure=False, *minimize_args, **minimize_kwargs):
-    """ Run xForecast or CMB4cast using the provided
-       instrumental specifications and input foregrounds 
-       maps 
+
+def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
+              Alens=1.0, r=0.001, estimator='', make_figure=False,
+              *minimize_args, **minimize_kwargs):
+    """ xForecast
+
+    Run XForcast (Stompor et al, 2016) using the provided instrumental
+    specifications and input foregrounds maps. If the foreground maps match the
+    components provided (constant spectral indices are assumed), it reduces to
+    CMB4cast (Errard et al, 2011)
 
     Parameters
     ----------
-    ### TODO
-    ### CLEAN THE FOLLOWING TEXT
-    A_ev: function or list
-        The evaluator of the mixing matrix. It takes a float or an array as
-        argument and returns the mixing matrix, a ndarray with shape
-        `(..., n_freq, n_comp)`
-        If list, the i-th entry is the evaluator of the i-th patch.
-    d_fgs: ndarray
-        The data vector. Shape `(n_freq, n_stokes, n_pix)`.
-    lmin: minimum multipole entering the likelihood computation
-    lmax: maximum multipole entering the likelihood computation
-    fsky: fraction of sky entering the likelihood computation
-    Alens: A_lens, amplitude of the lensing B-modes entering the 
-        likelihood on r. 
-    r: tensor-to-scalar ratio, amplitude of the primordial B-modes entering the 
-        simulations and likelihood on r. 
-    estimator: power spectrum estimator to be chosen among ...... 
+    components: list or tuple of lists
+        Two input format are allowed
+         - List `Components` of the mixing matrix
+         - Tuple with two lists of `Components`, the first for temperature and
+           the second for polarization
+    instrument: PySM.Instrument
+        Instrument object used to define the mixing matrix and the
+        frequency-dependent noise weight.
+        It is required to have:
+         - frequencies
+        however, also the following are taken into account, if provided
+         - sens_I or sens_P (define the frequency inverse noise)
+         - bandpass (the mixing matrix is integrated over the bandpass)
+    d_fgs: array
+        The foreground maps. Shape `(n_freq, n_stokes, n_pix)`.
+    lmin: int
+        minimum multipole entering the likelihood computation
+    lmax: int
+        maximum multipole entering the likelihood computation
+    fsky: float
+        fraction of sky entering the likelihood computation
+    Alens: A_lens, amplitude of the lensing B-modes entering the
+        likelihood on r
+    r: float
+        tensor-to-scalar ratio assumed in the likelihood on r
+    estimator: string
+        power spectrum estimator to be chosen among ......
     minimize_args: list
-        Positional arguments to be passed to `scipy.optimize.minimize`.
+        Positional arguments to be passed to `scipy.optimize.minimize` during
+        the fitting of the spectral parameters.
         At this moment it just contains `x0`, the initial guess for the spectral
         parameters
     minimize_kwargs: dict
-        Keyword arguments to be passed to `scipy.optimize.minimize`.
+        Keyword arguments to be passed to `scipy.optimize.minimize` during
+        the fitting of the spectral parameters.
         A good choice for most cases is
         `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
         on both the solver and your signal to noise: it should ensure that the
@@ -55,7 +70,14 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.00
 
     Returns
     -------
-    xFres:  
+    xFres: dict
+        xForecast result. It includes
+         - the fitted spectral parameters
+         - noise-averaged post-component separation CMB power spectrum
+            - noise spectrum
+            - statistical residuals spectrum
+            - systematic residuals spectrum
+         - noise-averaged cosmological likelihood
     """
 
     # generating the CMB map, s_cmb
@@ -76,12 +98,13 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.00
 
     ###############################################################################
     # 0. Prepare noise-free "data sets"
+    # FIXME do not assume CMB to be the first component
     d_obs = d_fgs.T + (components[0].eval(instrument.Frequencies)*s_cmb[...,np.newaxis]).swapaxes(-3,-2)
 
     ###############################################################################
     # 1. Component separation using the noise-free data sets
     # grab the max-L spectra parameters with the associated error bars
-    print '======= ESTIMATION OF SPECTRAL PARAMETERS ======='
+    print ('======= ESTIMATION OF SPECTRAL PARAMETERS =======')
     A = MixingMatrix(*components)
     A_ev = A.evaluator(instrument.Frequencies)
     A_dB_ev = A.diff_evaluator(instrument.Frequencies)
@@ -106,14 +129,14 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.00
     ###############################################################################
     # 2. Estimate noise after component separation
     ### A^T N_ell^-1 A
-    print '======= ESTIMATION OF NOISE AFTER COMP SEP ======='
+    print ('======= ESTIMATION OF NOISE AFTER COMP SEP =======')
     ind_cmb = A.components.index('CMB')
     Cl_noise = _get_Cl_noise(instrument, A_maxL, lmax)[ind_cmb,ind_cmb,lmin-2:lmax-2]
 
     ###############################################################################
     # 3. Compute spectra of the input foregrounds maps
     ### TO DO: which size for Cl_fgs??? N_spec != 1 ? 
-    print '======= COMPUTATION OF CL_FGS ======='
+    print ('======= COMPUTATION OF CL_FGS =======')
     pl.figure()
     N_freqs = d_fgs.shape[0]
     for f_1 in range(N_freqs):
@@ -137,14 +160,21 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.00
     pl.show()
     ###############################################################################
     # 4. Estimate the statistical and systematic foregrounds residuals 
-    print '======= ESTIMATION OF STAT AND SYS RESIDUALS ======='
+    print ('======= ESTIMATION OF STAT AND SYS RESIDUALS =======')
     ind_cmb = A.components.index('CMB')
-    W_maxL = W(A_maxL, invN=invN)[ind_cmb,:]
+    W_maxL = W(A_maxL, invN=invN)[...,ind_cmb,:]
     W_dB_maxL = W_dB(A_maxL, A_dB_maxL, A.comp_of_dB, invN=invN)[...,ind_cmb,:]
     W_dBdB_maxL = W_dBdB(A_maxL, A_dB_maxL, A_dBdB_maxL, A.comp_of_dB, invN=invN)[...,ind_cmb,:]
-    V_maxL = np.einsum('ij,ij...->...', res.Sigma, W_dBdB_maxL )
+    V_maxL = np.einsum('ij,ij...->...', res.Sigma, W_dBdB_maxL)
 
     # elementary quantities defined in Stompor, Errard, Poletti (2016)
+    yy = (W_maxL[:,None]*W_maxL[None] * Cl_fgs).T
+    for f_1 in range(N_freqs):
+        for f_2 in range(N_freqs):
+            pl.loglog(yy[f_1, f_2], alpha=0.1)    
+    pl.loglog(yy.sum(axis=(0,1)))
+    pl.show()
+
     Cl_xF = {}
     Cl_xF['yy'] = _utmv(W_maxL, Cl_fgs, W_maxL)
     Cl_xF['YY'] = _mmm(W_dB_maxL, Cl_fgs, W_dB_maxL.T)
@@ -158,6 +188,11 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.00
         Cl_xF[key] = Cl_xF[key][lmin-2:lmax-2]
     # bias and statistical foregrounds residuals
     res.bias = Cl_xF['yy'] + Cl_xF['yz'] + Cl_xF['zy']
+    pl.loglog( Cl_xF['yy'])    
+    pl.loglog( Cl_xF['yz'])    
+    pl.loglog( Cl_xF['zy'])    
+    pl.legend()
+    pl.show()
     YSY =  np.sum(np.sum(res.Sigma*Cl_xF['YY'], axis=-1), axis=-1)
     res.stat = np.trace( _mm(res.Sigma, Cl_xF['YY']), axis1=-2, axis2=-1 )
     res.var = 2*(_mmm(Cl_xF['yY'].T, res.Sigma, Cl_xF['Yy'].T ) + res.stat** 2)
@@ -165,7 +200,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.00
 
     ###############################################################################
     # 5. Plug into the cosmological likelihood
-    print '======= OPTIMIZATION OF COSMO LIKELIHOOD ======='
+    print ('======= OPTIMIZATION OF COSMO LIKELIHOOD =======')
     Cl_fid = {}
     Cl_fid['BB'] = cl_cmb[2][lmin-2:lmax-2]
     Cl_fid['BuBu'] = _get_Cl_cmb(Alens=0.0, r=1.0)[2][lmin-2:lmax-2]
@@ -232,7 +267,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.00
     ### TODO [JOSQUIN]
     ###  minimization, gridding, sigma(r)
     # Likelihood maximization
-    r_grid = np.logspace(-4,-1,num=100)
+    r_grid = np.logspace(-4,1,num=100)
     logL = np.array([ cosmo_likelihood(r_loc) for r_loc in r_grid ])
     ind_r_min = np.argmin(logL)
     r0 = r_grid[ind_r_min]
@@ -252,16 +287,16 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.00
         bound_0 = r_grid[ind_r_min-1]
         bound_1 = r_grid[ind_r_min+1]
     res_Lr = sp.optimize.minimize(cosmo_likelihood, [r0], bounds=[(bound_0,bound_1)], *minimize_args, **minimize_kwargs)
-    print '    ===>> fitted r = ', res_Lr['x']
+    print ('    ===>> fitted r = ', res_Lr['x'])
 
-    print '======= ESTIMATION OF SIGMA(R) ======='
+    print ('======= ESTIMATION OF SIGMA(R) =======')
     def sigma_r_computation_from_logL(r_loc):
         THRESHOLD = 1.00
         # THRESHOLD = 2.30 when two fitted parameters
         delta = np.abs( cosmo_likelihood(r_loc) - res_Lr['fun'] - THRESHOLD )
         return delta
 
-    sr_grid = np.logspace(np.log10(res_Lr['x']),-1,num=100)
+    sr_grid = np.logspace(np.log10(res_Lr['x']),1,num=100)
     slogL = np.array([ sigma_r_computation_from_logL(sr_loc) for sr_loc in sr_grid ])
     ind_sr_min = np.argmin(slogL)
     sr0 = sr_grid[ind_sr_min]
@@ -275,7 +310,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.00
         bound_0 = sr_grid[ind_r_min-1]
         bound_1 = sr_grid[ind_r_min+1]
     res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, [sr0], bounds=[(bound_0,bound_1)], *minimize_args, **minimize_kwargs)
-    print '    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x']
+    print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
     res.cosmo_params = {}
     res.cosmo_params['r'] = (res_Lr['x'],res_sr['x']- res_Lr['x'])
 
@@ -283,7 +318,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky, Alens=1.0, r=0.00
     ###############################################################################
     # 6. Produce figures
     if make_figure:
-        print '======= GRIDDING COSMO LIKELIHOOD ======='
+        print ('======= GRIDDING COSMO LIKELIHOOD =======')
         r_grid = np.logspace(-4,-1,num=200)
         logL = np.array([ cosmo_likelihood(r_loc) for r_loc in r_grid ])
         chi2 = logL - np.min(logL)
