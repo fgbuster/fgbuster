@@ -233,7 +233,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     ## 5.2. modeling
     def cosmo_likelihood(r_):
         Cl_BB_model = Cl_fid['BlBl']*Alens + Cl_fid['BuBu']*r_+ Cl_noise
-        U_inv = _mm(res.Sigma_inv, np.sum( (2*ell+1)*Cl_xF['YY'].swapaxes(0,-1)/Cl_BB_model, axis=-1) )
+        U_inv = res.Sigma_inv*np.sum( (2*ell+1)*Cl_xF['YY'].swapaxes(0,-1)/Cl_BB_model, axis=-1)
         U = np.linalg.inv( U_inv ) 
         
         term_0 = (2*ell+1)*(1.0 - (1.0/Cl_BB_model)*np.trace(_mm(U, Cl_xF['YY']), axis1=-2, axis2=-1))
