@@ -6,7 +6,7 @@ import healpy as hp
 from .algebra import multi_comp_sep, comp_sep
 from .mixingmatrix import MixingMatrix
 
-def basic_comp_sep(components, instrument, data, nside=0):
+def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     """ Basic component separation
 
     Parameters
@@ -40,19 +40,24 @@ def basic_comp_sep(components, instrument, data, nside=0):
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluators(
         components, instrument, prewhiten_factors=prewhiten_factors)
     prewhitened_data = prewhiten_factors * data.T
+
+    # Launch component separation
     if nside == 0:
         res = comp_sep(A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, x0,
-                       options=dict(disp=True))
+                       **minimize_kwargs)
     else:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
                                 hp.npix2nside(data.shape[-1]))
         res = multi_comp_sep(
             A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, patch_ids,
-            x0, options=dict(disp=True))
+            x0, **minimize_kwargs)
 
-    # Launch component separation
+    # Craft output
     res.params = params
     res.s = res.s.T
+    if nside:
+        res.x = np.array([r.x for r in res.patch_res]).T
+        res.Sigma = np.array([r.Sigma for r in res.patch_res]).T
     return res
 
 
@@ -88,6 +93,7 @@ def _get_prewhiten_factors(instrument, data_shape):
         print('The sensitivity of the instrument is not specified')
         return None
 
+    assert np.all(np.isfinite(sens))
     return hp.nside2resol(instrument.Nside, arcmin=True) / sens
 
 
