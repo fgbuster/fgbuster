@@ -6,7 +6,7 @@ import pylab as pl
 import healpy as hp
 import scipy as sp
 import fgbuster.angular_spectrum_estimation as ase
-from .algebra import multi_comp_sep, comp_sep, W_dBdB, W_dB, _mm, W, _mmm, _utmv, _mmv
+from .algebra import multi_comp_sep, comp_sep, W_dBdB, W_dB, _mm, W, _mmm, _utmv, _mmv, _T
 from .mixingmatrix import MixingMatrix
 
 
@@ -100,6 +100,10 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     # 0. Prepare noise-free "data sets"
     # FIXME do not assume CMB to be the first component
     d_obs = d_fgs.T + (components[0].eval(instrument.Frequencies)*s_cmb[...,np.newaxis]).swapaxes(-3,-2)
+    # check if there is a mask
+    mask = np.where(d_fgs[0,0,:]==0.0)[0]
+    print 'mask = ', mask
+    d_obs[mask,...] = 0.0
 
     ###############################################################################
     # 1. Component separation using the noise-free data sets
@@ -137,7 +141,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     # 3. Compute spectra of the input foregrounds maps
     ### TO DO: which size for Cl_fgs??? N_spec != 1 ? 
     print ('======= COMPUTATION OF CL_FGS =======')
-    pl.figure()
+    # pl.figure()
     N_freqs = d_fgs.shape[0]
     for f_1 in range(N_freqs):
         for f_2 in range(N_freqs):
@@ -154,10 +158,10 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
             else:
                 # symmetrization of the Cl_fgs matrix
                 Cl_fgs[f_1,f_2,:] = Cl_fgs[f_2,f_1,:]
-            pl.loglog( Cl_fgs[f_1,f_2,:], alpha=0.1)    
-    Cl_fgs = Cl_fgs.swapaxes(-1,0)
+            # pl.loglog( Cl_fgs[f_1,f_2,:], alpha=0.1)    
+    Cl_fgs = Cl_fgs.swapaxes(-1,0)#/np.sqrt(fsky)
     ell = ell[lmin-2:lmax-2]
-    pl.show()
+    # pl.show()
     ###############################################################################
     # 4. Estimate the statistical and systematic foregrounds residuals 
     print ('======= ESTIMATION OF STAT AND SYS RESIDUALS =======')
@@ -168,12 +172,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     V_maxL = np.einsum('ij,ij...->...', res.Sigma, W_dBdB_maxL)
 
     # elementary quantities defined in Stompor, Errard, Poletti (2016)
-    yy = (W_maxL[:,None]*W_maxL[None] * Cl_fgs).T
-    for f_1 in range(N_freqs):
-        for f_2 in range(N_freqs):
-            pl.loglog(yy[f_1, f_2], alpha=0.1)    
-    pl.loglog(yy.sum(axis=(0,1)))
-    pl.show()
+    # yy = (W_maxL[:,None]*W_maxL[None] * Cl_fgs).T
 
     Cl_xF = {}
     Cl_xF['yy'] = _utmv(W_maxL, Cl_fgs, W_maxL)
@@ -181,18 +180,16 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     Cl_xF['yz'] = _utmv(W_maxL, Cl_fgs, V_maxL )
     Cl_xF['Yy'] = _mmv(W_dB_maxL, Cl_fgs, W_maxL)
     Cl_xF['Yz'] = _mmv(W_dB_maxL, Cl_fgs, V_maxL)
-    Cl_xF['zY'] = Cl_xF['Yz'].T
     Cl_xF['zy'] = _utmv(V_maxL, Cl_fgs, W_maxL )
-    Cl_xF['yY'] = Cl_xF['Yy'].T
+
     for key in Cl_xF.keys():
-        Cl_xF[key] = Cl_xF[key][lmin-2:lmax-2]
+        Cl_xF[key] = Cl_xF[key][lmin-2:lmax-2,...]
+
+    Cl_xF['zY'] = _T(Cl_xF['Yz'])
+    Cl_xF['yY'] = _T(Cl_xF['Yy'])
+
     # bias and statistical foregrounds residuals
     res.bias = Cl_xF['yy'] + Cl_xF['yz'] + Cl_xF['zy']
-    pl.loglog( Cl_xF['yy'])    
-    pl.loglog( Cl_xF['yz'])    
-    pl.loglog( Cl_xF['zy'])    
-    pl.legend()
-    pl.show()
     YSY =  np.sum(np.sum(res.Sigma*Cl_xF['YY'], axis=-1), axis=-1)
     res.stat = np.trace( _mm(res.Sigma, Cl_xF['YY']), axis1=-2, axis2=-1 )
     res.var = 2*(_mmm(Cl_xF['yY'].T, res.Sigma, Cl_xF['Yy'].T ) + res.stat** 2)
@@ -229,7 +226,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
         ax.set_xlim([lmin,lmax])
 
     ## 5.1. data 
-    E = np.diag(Cl_fid['BB'] + YSY + Cl_xF['yy'] + Cl_xF['zy'] + Cl_xF['yz'])
+    Cl_obs = Cl_fid['BB'] + Cl_noise #+ YSY + Cl_xF['yy'] + Cl_xF['zy'] + Cl_xF['yz']
+
     ## 5.2. modeling
     def cosmo_likelihood(r_):
         Cl_BB_model = Cl_fid['BlBl']*Alens + Cl_fid['BuBu']*r_+ Cl_noise
@@ -238,7 +236,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
         
         term_0 = (2*ell+1)*(1.0 - (1.0/Cl_BB_model)*np.trace(_mm(U, Cl_xF['YY']), axis1=-2, axis2=-1))
         term_1 = ((2*ell+1)/Cl_BB_model)*np.trace(_mm(res.Sigma,Cl_xF['YY']), axis1=-2, axis2=-1)
-        trCinvC_1 = np.sum( Cl_fid['BB']/Cl_BB_model*term_0 + term_1 )
+        trCinvC_1 = np.sum( Cl_obs/Cl_BB_model*term_0 + term_1 )
         
         trCinvC_2 = 0.0
         for i in range(len(ell)):
@@ -261,31 +259,33 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
                     np.trace( sp.linalg.logm(res.Sigma) ) -\
                         np.trace( sp.linalg.logm(U) )
 
-        logL = fsky*( trCE + logdetC ) 
+        logL = np.real(fsky*( trCE + logdetC ))
         return logL
 
     ### TODO [JOSQUIN]
     ###  minimization, gridding, sigma(r)
     # Likelihood maximization
-    r_grid = np.logspace(-4,1,num=100)
+    r_grid = np.logspace(-5,0,num=50)
     logL = np.array([ cosmo_likelihood(r_loc) for r_loc in r_grid ])
     ind_r_min = np.argmin(logL)
     r0 = r_grid[ind_r_min]
     if ind_r_min == 0:
         bound_0 = 0.0
         bound_1 = r_grid[1]
-        pl.figure()
-        pl.semilogx(r_grid, logL, 'r-')
-        pl.show()
+        # pl.figure()
+        # pl.semilogx(r_grid, logL, 'r-')
+        # pl.show()
     elif ind_r_min == len(r_grid)-1:
         bound_0 = r_grid[-2]
         bound_1 = 1.0
-        pl.figure()
-        pl.semilogx(r_grid, logL, 'r-')
-        pl.show()
+        # pl.figure()
+        # pl.semilogx(r_grid, logL, 'r-')
+        # pl.show()
     else:
         bound_0 = r_grid[ind_r_min-1]
         bound_1 = r_grid[ind_r_min+1]
+    print 'bounds on r = ', bound_0, ' / ', bound_1
+    print 'starting point = ', r0
     res_Lr = sp.optimize.minimize(cosmo_likelihood, [r0], bounds=[(bound_0,bound_1)], *minimize_args, **minimize_kwargs)
     print ('    ===>> fitted r = ', res_Lr['x'])
 
@@ -294,21 +294,35 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
         THRESHOLD = 1.00
         # THRESHOLD = 2.30 when two fitted parameters
         delta = np.abs( cosmo_likelihood(r_loc) - res_Lr['fun'] - THRESHOLD )
+        # print r_loc, cosmo_likelihood(r_loc),  res_Lr['fun']
         return delta
 
-    sr_grid = np.logspace(np.log10(res_Lr['x']),1,num=100)
+    if res_Lr['x'] != 0.0:
+        sr_grid = np.logspace(np.log10(res_Lr['x']),0,num=25)
+    else:
+        sr_grid = np.logspace(-5,0,num=25)
+
     slogL = np.array([ sigma_r_computation_from_logL(sr_loc) for sr_loc in sr_grid ])
     ind_sr_min = np.argmin(slogL)
     sr0 = sr_grid[ind_sr_min]
+    print 'ind_sr_min = ', ind_sr_min
+    print 'sr_grid[ind_sr_min-1] = ', sr_grid[ind_sr_min-1]
+    print 'sr_grid[ind_sr_min+1] = ', sr_grid[ind_sr_min+1]
+    print 'sr_grid = ', sr_grid
     if ind_sr_min == 0:
+        print 'case # 1'
         bound_0 = res_Lr['x']
         bound_1 = sr_grid[1]
     elif ind_sr_min == len(sr_grid)-1:
+        print 'case # 2'
         bound_0 = sr_grid[-2]
         bound_1 = 1.0
     else:
-        bound_0 = sr_grid[ind_r_min-1]
-        bound_1 = sr_grid[ind_r_min+1]
+        print 'case # 3'
+        bound_0 = sr_grid[ind_sr_min-1]
+        bound_1 = sr_grid[ind_sr_min+1]
+    print 'bounds on sigma(r) = ', bound_0, ' / ', bound_1
+    print 'starting point = ', sr0
     res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, [sr0], bounds=[(bound_0,bound_1)], *minimize_args, **minimize_kwargs)
     print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
     res.cosmo_params = {}
