@@ -11,8 +11,7 @@ from .mixingmatrix import MixingMatrix
 
 
 CMB_CL_FILE = op.join(
-    # op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
-    '/Users/josquin1/Documents/Dropbox/CNRS-CR2/softwares/fgbuster/fgbuster', 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
+    op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
 
 
 def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
