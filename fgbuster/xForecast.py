@@ -11,7 +11,8 @@ from .mixingmatrix import MixingMatrix
 
 
 CMB_CL_FILE = op.join(
-    op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
+    # op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
+    '/Users/josquin1/Documents/Dropbox/CNRS-CR2/softwares/fgbuster/fgbuster', 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
 
 
 def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
@@ -130,6 +131,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     A_dB_maxL = A_dB_ev(res.x)
     A_dBdB_maxL = A_dBdB_ev(res.x)
 
+    print 'res.x = ', res.x
+
     ###############################################################################
     # 2. Estimate noise after component separation
     ### A^T N_ell^-1 A
@@ -149,7 +152,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
                 # we only take the BB spectra, for ell >= 2
                 # this form should be able to handle binned spectra as well
                 if d_fgs.shape[1] == 2:
-                    Cl_loc, ell = ase.TEB_spectra( np.vstack((d_fgs[f_1,0,:], d_fgs[f_1,:,:])), IQU_map_2=np.vstack((d_fgs[f_2,0,:], d_fgs[f_2,:,:])), lmax=lmax, estimator=estimator)
+                    Cl_loc, ell = ase.TEB_spectra( np.vstack((d_fgs[f_1,0,:], d_fgs[f_1,:,:])), \
+                        IQU_map_2=np.vstack((d_fgs[f_2,0,:], d_fgs[f_2,:,:])), lmax=lmax, estimator=estimator)
                 else:
                     Cl_loc, ell = ase.TEB_spectra( d_fgs[f_1,:,:], IQU_map_2=d_fgs[f_2,:,:], lmax=lmax, estimator=estimator)
                 if f_1 == 0 and f_2 == 0:
@@ -158,14 +162,16 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
             else:
                 # symmetrization of the Cl_fgs matrix
                 Cl_fgs[f_1,f_2,:] = Cl_fgs[f_2,f_1,:]
-            # pl.loglog( Cl_fgs[f_1,f_2,:], alpha=0.1)    
+            # pl.loglog( Cl_fgs[f_1,f_2,:], alpha=0.1, label=str(f_1)+' x '+str(f_2))    
     Cl_fgs = Cl_fgs.swapaxes(-1,0)#/np.sqrt(fsky)
     ell = ell[lmin-2:lmax-2]
+    # pl.legend()
     # pl.show()
     ###############################################################################
     # 4. Estimate the statistical and systematic foregrounds residuals 
     print ('======= ESTIMATION OF STAT AND SYS RESIDUALS =======')
     ind_cmb = A.components.index('CMB')
+
     W_maxL = W(A_maxL, invN=invN)[...,ind_cmb,:]
     W_dB_maxL = W_dB(A_maxL, A_dB_maxL, A.comp_of_dB, invN=invN)[...,ind_cmb,:]
     W_dBdB_maxL = W_dBdB(A_maxL, A_dB_maxL, A_dBdB_maxL, A.comp_of_dB, invN=invN)[...,ind_cmb,:]
@@ -173,7 +179,6 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
 
     # elementary quantities defined in Stompor, Errard, Poletti (2016)
     # yy = (W_maxL[:,None]*W_maxL[None] * Cl_fgs).T
-
     Cl_xF = {}
     Cl_xF['yy'] = _utmv(W_maxL, Cl_fgs, W_maxL)
     Cl_xF['YY'] = _mmm(W_dB_maxL, Cl_fgs, W_dB_maxL.T)
@@ -326,7 +331,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, [sr0], bounds=[(bound_0,bound_1)], *minimize_args, **minimize_kwargs)
     print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
     res.cosmo_params = {}
-    res.cosmo_params['r'] = (res_Lr['x'],res_sr['x']- res_Lr['x'])
+    res.cosmo_params['r'] = (res_Lr['x'], res_sr['x']- res_Lr['x'])
 
 
     ###############################################################################
