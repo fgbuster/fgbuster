@@ -16,12 +16,12 @@
 #    index in L, the matrix can be passed as a (K, 1, M/K, M/K) ndarray, without
 #    repeating equal blocks.
 # 4) Vectors are just like matrices, without the domain dimension
-# 5) Many functions come in pairs foo(A, invN, ...) and _foo_svd(u_e_v, ...)
-#    In _foo_svd does what foo is supposed to, but:
+# 5) Many functions come in pairs foo(A, invN, ...) and _foo_svd(u_e_v, ...).
+#    _foo_svd does what foo is supposed to, but:
 #     - instead of providing A you provide its SVD, u_e_v
 #     - the domain of input and outputs matrices and vectors is prewhitend with
 #       sqrt(invN)
-#     - _foo_svd doen't perform all the checks that foo is required to do
+#     - _foo_svd doesn't perform all the checks that foo is required to do
 #     - foo can return the SVD, which can then be reused in _bar_svd(...)
 
 import inspect
@@ -90,10 +90,17 @@ def _svd_sqrt_invN_A(A, invN=None, L=None):
     Prewhiten `A` according to `invN` (if either `invN` of `L` is provided) and
     return both its SVD and the Cholesky factor of `invN`.
     If you provide the Cholesky factor L, invN is ignored.
+    It correctly handles blocks for invN equal to zero
     """
 
     if L is None and invN is not None:
-        L = np.linalg.cholesky(invN)
+        try:
+            L = np.linalg.cholesky(invN)
+        except np.linalg.LinAlgError:
+            L = np.zeros_like(invN)
+            mask = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
+                                   axis=-1))
+            L[mask] = np.linalg.cholesky(invN[mask])
 
     if L is not None:
         A = _mtm(L, A)
@@ -495,7 +502,11 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
                     pw_d[0] = _mtv(L[0], d)
 
     def _inv_logL(x):
-        _update_old(x)
+        try:
+            _update_old(x)
+        except np.linalg.linalg.LinAlgError:
+            print('SVD of A failed -> logL = -inf')
+            return np.inf
         return - _logL_svd(u_e_v_old[0], pw_d[0])
 
     if A_dB_ev is None:
@@ -503,7 +514,10 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
             return sp.optimize.approx_fprime(x, _inv_logL, _EPSILON_LOGL_DB)
     else:
         def _inv_logL_dB(x):
-            _update_old(x)
+            try:
+                _update_old(x)
+            except np.linalg.linalg.LinAlgError:
+                print('SVD of A failed -> logL_dB not updated')
             return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
                                   A_dB_old[0], comp_of_dB)
 
@@ -631,6 +645,8 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         The data vector. Shape `(..., n_freq)`.
     invN: ndarray or None
         The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
+        If a block of `invN` has a diagonal element equal to zero the
+        corresponding entries of `d` are masked.
     A_dB_ev : function
         The evaluator of the derivative of the mixing matrix.
         It returns a list, each entry is the derivative with respect to a
@@ -649,7 +665,7 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         Keyword arguments to be passed to `scipy.optimize.minimize`.
         A good choice for most cases is
         `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
-        on both the solver and your signal to noise: it should ensure that the
+        on both the solver and your signal-to-noise: it should ensure that the
         difference between the best fit -logL and the minimum is way less
         than 1, without exagerating (a difference of 1e-4 is useless).
         `disp` also triggers a verbose callback that monitors the convergence.
@@ -672,7 +688,6 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
     be compatible among different arguments in the `numpy` broadcasting sense.
     """
     # TODO: add the possibility of patch specific x0
-    # TODO: mask input arrays. What about masking where patch_ids < 0?
     assert np.all(patch_ids >= 0)
     max_id = patch_ids.max()
 
@@ -690,8 +705,13 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             patch_A_dB_ev = A_dB_ev
             patch_comp_of_dB = comp_of_dB
 
-        patch_d = d[patch_ids == patch_id]
-        return comp_sep(patch_A_ev, patch_d, invN,
+        patch_mask = patch_ids == patch_id
+        patch_d = d[patch_mask]
+        if invN is None:
+            patch_invN = None
+        else:
+            patch_invN = _indexed_matrix(invN, d.shape, patch_mask)
+        return comp_sep(patch_A_ev, patch_d, patch_invN,
                         patch_A_dB_ev, patch_comp_of_dB,
                         *minimize_args, **minimize_kargs)
 
@@ -702,12 +722,43 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
     # Collect results
     n_comp = res.patch_res[0].s.shape[-1]
     res.s = np.full((d.shape[:-1]+(n_comp,)), np.NaN) # NaN for testing
+    res.chi = np.full(d.shape, np.NaN) # NaN for testing
 
     for patch_id in range(max_id+1):
         mask = patch_ids == patch_id
         res.s[mask] = res.patch_res[patch_id].s
+        res.chi[mask] = res.patch_res[patch_id].chi
 
     return res
+
+
+def _indexed_matrix(matrix, data_shape, data_indexing):
+    """ Indexing of a (possibly compressed) matrix
+
+    Given the indexing of a vector, index a matrix that is broadcastable to the
+    shape of the vector.
+
+    In other words,
+
+        _mv(matrix, data)[data_indexing]
+
+    gives the same result as
+
+        _mv(_index_broadcastable_matrix(matrix, data.shape, data_indexing),
+            data[data_indexing])
+
+    """
+    if not isinstance(data_indexing, tuple):
+        data_indexing = (data_indexing, )
+    matrix_indexing = []
+    data_extra_dims = len(data_shape) - len(matrix.shape) + 1
+    for i_dim, indexing in enumerate(data_indexing, data_extra_dims):
+        if i_dim >= 0:
+            if matrix.shape[i_dim] == 1:
+                matrix_indexing.append(slice(None))
+            else:
+                matrix_indexing.append(indexing)
+    return matrix[tuple(matrix_indexing)]
 
 
 def verbose_callback():
