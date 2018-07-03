@@ -39,21 +39,33 @@ def get_instrument(nside, tag, units='uK_CMB'):
     Parameters
     ----------
     tag: string
-        name of the pre-defined experimental configuration. See the source or
+        name of the pre-defined experimental configurations. See the source or
         set tag to something random to have a list of the available
-        configurations.
+        configurations. it can contain the name of multiple experiments
+        separated by a space.
 
     Returns
     -------
     sky: PySM.Instrument
     """
     module = sys.modules[__name__]
-    try:
-        instrument = getattr(module, '_dict_instrument_'+tag)(nside, units)
-    except AttributeError:
-        raise ValueError('Instrument %s not available. Chose between: %s.'
-                         % (tag, ', '.join(_get_available_instruments())))
-    return pysm.Instrument(instrument)
+    instruments = []
+    for t in tag.split():
+        try:
+            instrument = getattr(module, '_dict_instrument_'+t)(nside, units)
+        except AttributeError:
+            raise ValueError('Instrument %s not available. Chose between: %s.'
+                             % (t, ', '.join(_get_available_instruments())))
+        else:
+            instruments.append(instrument)
+
+    for key in instruments[0]:
+        if isinstance(instruments[0][key], np.ndarray):
+            instruments[0][key] = np.concatenate([i[key] for i in instruments])
+
+    instruments[0]['prefix'] = '__'.join(tag.split())
+
+    return pysm.Instrument(instruments[0])
 
 
 def _get_available_instruments():
@@ -76,7 +88,7 @@ def _dict_instrument_test(nside, units='uK_CMB'):
         'output_units': units,
         'output_directory': '/dev/null',
         'output_prefix': 'test',
-        'use_smoothing': True,
+        'use_smoothing': False,
     }
 
 
@@ -93,7 +105,7 @@ def _dict_instrument_planck_P(nside, units='uK_CMB'):
         'output_units': units,
         'output_directory': '/dev/null',
         'output_prefix': 'planck',
-        'use_smoothing': True,
+        'use_smoothing': False,
     }
 
 
