@@ -11,8 +11,7 @@ from .mixingmatrix import MixingMatrix
 
 
 CMB_CL_FILE = op.join(
-    # op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
-    '/Users/josquin1/Documents/Dropbox/CNRS-CR2/softwares/fgbuster/fgbuster', 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
+     op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
 
 
 def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
@@ -93,7 +92,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
 
     # buildling invN
     invN = np.zeros((len(instrument.Sens_P),len(instrument.Sens_P)))
-    invN_diag = hp.nside2resol(nside, arcmin=True) / (instrument.Sens_P)**2
+    invN_diag = (hp.nside2resol(nside, arcmin=True) / (instrument.Sens_P))**2
     rowidx, colidx = np.diag_indices_from(invN[:,:])
     invN[rowidx,colidx] = invN_diag
 
