@@ -276,7 +276,7 @@ def _W_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
               + _T(A_dBdB))
 
     # Move back to the original basis
-    W_dBdB = _mtm(v * e[..., np.newaxis], W_dBdB)
+    W_dBdB = _mtm(inve_v, W_dBdB)
 
     return W_dBdB
 

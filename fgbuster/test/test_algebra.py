@@ -34,12 +34,12 @@ class TestAlgebraRandom(unittest.TestCase):
 class TestAlgebraPhysical(unittest.TestCase):
 
     def setUp(self):
-        self.DX = 1e-5  # NOTE: this is a bit fine-tuned
+        self.DX = 1e-4  # NOTE: this is a bit fine-tuned
         np.random.seed(0)
         self.n_freq = 6
         self.nu = np.logspace(1, 2.5, self.n_freq)
         self.n_stokes = 3
-        self.n_pixels = 10
+        self.n_pixels = 5
         self.components = [cm.CMB(), cm.Dust(200.), cm.Synchrotron(100.)]
         self.mm = MixingMatrix(*(self.components))
         self.params = [1.54, 20, -3]
@@ -49,7 +49,8 @@ class TestAlgebraPhysical(unittest.TestCase):
         self.invN = uniform(
             size=(self.n_pixels, self.n_stokes, self.n_freq, self.n_freq))
         self.invN += _T(self.invN)
-        self.invN += 4*np.eye(self.n_freq)
+        self.invN += 10*np.eye(self.n_freq)
+        self.invN *= 10
 
     def test_W_dB_invN(self):
         W_dB_analytic = W_dB(self.A, self.A_dB, self.mm.comp_of_dB, self.invN)
@@ -60,7 +61,7 @@ class TestAlgebraPhysical(unittest.TestCase):
             diff_A = self.mm.eval(self.nu, *diff_params)
             diff_W = W(diff_A, self.invN)
             W_dB_numerical = (diff_W - W_params) / self.DX
-            aac(W_dB_numerical, W_dB_analytic[i], rtol=self.DX*100)
+            aac(W_dB_numerical, W_dB_analytic[i], rtol=1e-3)
 
     def test_W_dB(self):
         W_dB_analytic = W_dB(self.A, self.A_dB, self.mm.comp_of_dB)
@@ -71,7 +72,7 @@ class TestAlgebraPhysical(unittest.TestCase):
             diff_A = self.mm.eval(self.nu, *diff_params)
             diff_W = W(diff_A)
             W_dB_numerical = (diff_W - W_params) / self.DX
-            aac(W_dB_numerical, W_dB_analytic[i], rtol=self.DX*100)
+            aac(W_dB_numerical, W_dB_analytic[i], rtol=1e-3)
 
     def test_W_dBdB(self):
         W_dBdB_analytic = W_dBdB(
@@ -90,13 +91,12 @@ class TestAlgebraPhysical(unittest.TestCase):
                 Wdx = get_W_displaced(i, j)
                 if i == j:
                     W_dBdB_numerical = (
-                        (2*Wdx(0, 0) - Wdx(+1, 0) - Wdx(-1, 0)) / self.DX**2)
+                        (-2*Wdx(0, 0) + Wdx(+1, 0) + Wdx(-1, 0)) / self.DX**2)
                 else:
                     W_dBdB_numerical = (
                         (Wdx(1, 1) - Wdx(+1, -1) - Wdx(-1, 1) + Wdx(-1, -1))
                         / (4 * self.DX**2))
-                # NOTE: this is just an order of magnitude check
-                aac(W_dBdB_numerical, W_dBdB_analytic[i][j], rtol=10)
+                aac(W_dBdB_numerical, W_dBdB_analytic[i][j], rtol=1e-1)
 
     def test_W_dBdB_invN(self):
         W_dBdB_analytic = W_dBdB(
@@ -115,13 +115,12 @@ class TestAlgebraPhysical(unittest.TestCase):
                 Wdx = get_W_displaced(i, j)
                 if i == j:
                     W_dBdB_numerical = (
-                        (2*Wdx(0, 0) - Wdx(+1, 0) - Wdx(-1, 0)) / self.DX**2)
+                        (-2*Wdx(0, 0) + Wdx(+1, 0) + Wdx(-1, 0)) / self.DX**2)
                 else:
                     W_dBdB_numerical = (
                         (Wdx(1, 1) - Wdx(+1, -1) - Wdx(-1, 1) + Wdx(-1, -1))
                         / (4 * self.DX**2))
-                # NOTE: this is just an order of magnitude check
-                aac(W_dBdB_numerical, W_dBdB_analytic[i][j], rtol=10)
+                aac(W_dBdB_numerical, W_dBdB_analytic[i][j], rtol=2e-1)
 
 
 if __name__ == '__main__':
