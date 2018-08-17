@@ -623,7 +623,10 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
             freq_of_dB = comp_of_dB_i[:-1] + (slice(None),)
             res.chi_dB.append(np.sum(res.chi[freq_of_dB] * As_dB_i, -1)
                               / np.linalg.norm(As_dB_i, axis=-1))
-    res.Sigma = np.linalg.inv(fisher)
+    try:
+        res.Sigma = np.linalg.inv(fisher)
+    except np.linalg.LinAlgError:
+        res.Sigma = fisher * np.nan
     res.Sigma_inv = fisher
     return res
 

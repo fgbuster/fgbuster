@@ -154,9 +154,9 @@ class ModifiedBlackBody(Component):
         analytic_expr = ('(exp(nu0 / temp * h_over_k) -1)'
                          '/ (exp(nu / temp * h_over_k) - 1)'
                          '* (nu / nu0)**(1 + beta_d)')
-        if units == 'K_CMB':
+        if 'K_CMB' in units:
             analytic_expr += ' * ' + K_RJ2K_CMB_NU0
-        elif units == 'K_RJ':
+        elif 'K_RJ' in units:
             pass
         else:
             raise ValueError('Unsupported units: %s'%units)
@@ -183,9 +183,9 @@ class PowerLaw(Component):
     def __init__(self, nu0, beta_pl=None, units='K_CMB'):
         # Prepare the analytic expression
         analytic_expr = ('(nu / nu0)**(beta_pl)')
-        if units == 'K_CMB':
+        if 'K_CMB' in units:
             analytic_expr += ' * ' + K_RJ2K_CMB_NU0
-        elif units == 'K_RJ':
+        elif 'K_RJ' in units:
             pass
         else:
             raise ValueError('Unsupported units: %s'%units)
@@ -206,9 +206,9 @@ class PowerLawCurv(Component):
     def __init__(self, nu0, beta_pl=None, running=None, nu_pivot=None, units='K_CMB'):
         # Prepare the analytic expression
         analytic_expr = ('(nu / nu0)**(beta_pl + running * log( nu / nu_pivot ))')
-        if units == 'K_CMB':
+        if 'K_CMB' in units:
             analytic_expr += ' * ' + K_RJ2K_CMB_NU0
-        elif units == 'K_RJ':
+        elif 'K_RJ' in units:
             pass
         else:
             raise ValueError('Unsupported units: %s'%units)
@@ -241,7 +241,7 @@ class CMB(Component):
 
         super(CMB, self).__init__(analytic_expr)
 
-        if units == 'K_CMB':
+        if 'K_CMB' in units:
             self.eval = lambda nu: np.ones_like(nu)
 
 
@@ -259,9 +259,9 @@ class FreeFree(Component):
         analytic_expr = analytic_expr.replace('tau', tau)
         analytic_expr = analytic_expr.replace('gff', gff)
         analytic_expr = analytic_expr.replace('T4', T4)
-        if units == 'K_CMB':
+        if 'K_CMB' in units:
             analytic_expr += ' * ' + K_RJ2K_CMB
-        elif units == 'K_RJ':
+        elif 'K_RJ' in units:
             pass
         else:
             raise ValueError('Unsupported units: %s'%units)
@@ -284,9 +284,9 @@ class AME(Component):
     def __init__(self, nu_0, nu_peak=None, units='K_CMB'):
         # analytic_expr contains just the analytic part of the emission law
         analytic_expr = 'nu**(-2)'
-        if units == 'K_CMB':
+        if 'K_CMB' in units:
             analytic_expr += '*' + K_RJ2K_CMB
-        elif units == 'K_RJ':
+        elif 'K_RJ' in units:
             pass
         else:
             raise ValueError('Unsupported units: %s'%units)

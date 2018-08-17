@@ -11,9 +11,7 @@ from .mixingmatrix import MixingMatrix
 
 
 CMB_CL_FILE = op.join(
-    # op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
-    '/Users/josquin1/Documents/Dropbox/CNRS-CR2/softwares/fgbuster/fgbuster', 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
-
+     op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
 
 def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
               Alens=1.0, r=0.001, estimator='', make_figure=False,
@@ -103,7 +101,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     d_obs = d_fgs.T + (components[0].eval(instrument.Frequencies)*s_cmb[...,np.newaxis]).swapaxes(-3,-2)
     # check if there is a mask
     mask = np.where(d_fgs[0,0,:]==0.0)[0]
-    print 'mask = ', mask
+    print('mask = ', mask)
     d_obs[mask,...] = 0.0
 
     ###############################################################################
@@ -131,7 +129,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     A_dB_maxL = A_dB_ev(res.x)
     A_dBdB_maxL = A_dBdB_ev(res.x)
 
-    print 'res.x = ', res.x
+    print('res.x = ', res.x)
 
     ###############################################################################
     # 2. Estimate noise after component separation
@@ -289,8 +287,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     else:
         bound_0 = r_grid[ind_r_min-1]
         bound_1 = r_grid[ind_r_min+1]
-    print 'bounds on r = ', bound_0, ' / ', bound_1
-    print 'starting point = ', r0
+    print('bounds on r = ', bound_0, ' / ', bound_1)
+    print('starting point = ', r0)
     res_Lr = sp.optimize.minimize(cosmo_likelihood, [r0], bounds=[(bound_0,bound_1)], *minimize_args, **minimize_kwargs)
     print ('    ===>> fitted r = ', res_Lr['x'])
 
@@ -310,24 +308,24 @@ def xForecast(components, instrument, d_fgs, lmin, lmax, fsky,
     slogL = np.array([ sigma_r_computation_from_logL(sr_loc) for sr_loc in sr_grid ])
     ind_sr_min = np.argmin(slogL)
     sr0 = sr_grid[ind_sr_min]
-    print 'ind_sr_min = ', ind_sr_min
-    print 'sr_grid[ind_sr_min-1] = ', sr_grid[ind_sr_min-1]
-    print 'sr_grid[ind_sr_min+1] = ', sr_grid[ind_sr_min+1]
-    print 'sr_grid = ', sr_grid
+    print('ind_sr_min = ', ind_sr_min)
+    print('sr_grid[ind_sr_min-1] = ', sr_grid[ind_sr_min-1])
+    print('sr_grid[ind_sr_min+1] = ', sr_grid[ind_sr_min+1])
+    print('sr_grid = ', sr_grid)
     if ind_sr_min == 0:
-        print 'case # 1'
+        print('case # 1')
         bound_0 = res_Lr['x']
         bound_1 = sr_grid[1]
     elif ind_sr_min == len(sr_grid)-1:
-        print 'case # 2'
+        print('case # 2')
         bound_0 = sr_grid[-2]
         bound_1 = 1.0
     else:
-        print 'case # 3'
+        print('case # 3')
         bound_0 = sr_grid[ind_sr_min-1]
         bound_1 = sr_grid[ind_sr_min+1]
-    print 'bounds on sigma(r) = ', bound_0, ' / ', bound_1
-    print 'starting point = ', sr0
+    print('bounds on sigma(r) = ', bound_0, ' / ', bound_1)
+    print('starting point = ', sr0)
     res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, [sr0], bounds=[(bound_0,bound_1)], *minimize_args, **minimize_kwargs)
     print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
     res.cosmo_params = {}
