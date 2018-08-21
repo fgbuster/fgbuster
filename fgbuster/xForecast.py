@@ -76,7 +76,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     nside = hp.npix2nside(d_fgs.shape[-1])
     n_stokes = d_fgs.shape[1]
     n_freqs = d_fgs.shape[0]
-    invN = np.diag(hp.nside2resol(nside, arcmin=True) / (instrument.Sens_P))**2
+    invN = np.diag(hp.nside2resol(nside, arcmin=True) / (instrument.Sens_P))**2 # XXX
     mask = d_fgs[0, 0, :] != 0.
     fsky = mask.astype(float).sum() / mask.size
     ell = np.arange(lmin, lmax+1)
@@ -125,7 +125,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         d_spectra[:, 1:] = d_fgs
 
     # Compute cross-spectra
-    almBs = [hp.map2alm(freq_map, lmax=lmax)[2] for freq_map in d_spectra]
+    almBs = [hp.map2alm(freq_map, lmax=lmax, iter=10)[2] for freq_map in d_spectra]
     Cl_fgs = np.zeros((n_freqs, n_freqs, lmax+1), dtype=d_fgs.dtype)
     for f1 in range(n_freqs):
         for f2 in range(n_freqs):
@@ -141,9 +141,9 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     print('======= ESTIMATION OF STAT AND SYS RESIDUALS =======')
 
     W_maxL = W(A_maxL, invN=invN)[i_cmb, :]
-    W_dB_maxL = W_dB(A_maxL, A_dB_maxL, A.comp_of_dB, invN=invN)[i_cmb]
+    W_dB_maxL = W_dB(A_maxL, A_dB_maxL, A.comp_of_dB, invN=invN)[:,i_cmb]
     W_dBdB_maxL = W_dBdB(A_maxL, A_dB_maxL, A_dBdB_maxL,
-                         A.comp_of_dB, invN=invN)[i_cmb]
+                         A.comp_of_dB, invN=invN)[:,i_cmb]
     V_maxL = np.einsum('ij,ij...->...', res.Sigma, W_dBdB_maxL)
 
     # Check dimentions
@@ -159,6 +159,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     Cl_xF['yz'] = _utmv(W_maxL, Cl_fgs.T, V_maxL )  # (ell,)
     Cl_xF['Yy'] = _mmv(W_dB_maxL, Cl_fgs.T, W_maxL)  # (ell, param)
     Cl_xF['Yz'] = _mmv(W_dB_maxL, Cl_fgs.T, V_maxL)  # (ell, param)
+    print Cl_xF['YY'][0]
 
     # bias and statistical foregrounds residuals
     res.noise = Cl_noise
@@ -240,6 +241,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         return trCinvC + trECinvC + logdetC
 
     #  minimization, gridding, sigma(r)
+    cosmo_likelihood(0.01)
 
     # Likelihood maximization
     r_grid = np.logspace(-5,0,num=50)
@@ -311,7 +313,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     # 6. Produce figures
     if make_figure:
         print ('======= GRIDDING COSMO LIKELIHOOD =======')
-        r_grid = np.logspace(-4,-1,num=200)
+        r_grid = np.logspace(-2.2,-1,num=200)
         logL = np.array([ cosmo_likelihood(r_loc) for r_loc in r_grid ])
         chi2 = logL - np.min(logL)
         ax0.semilogx( r_grid,  np.exp(-chi2), color='DarkOrange', linestyle='-', linewidth=2.0, alpha=0.8 )
