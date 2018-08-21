@@ -747,7 +747,7 @@ def _indexed_matrix(matrix, data_shape, data_indexing):
 
     gives the same result as
 
-        _mv(_index_broadcastable_matrix(matrix, data.shape, data_indexing),
+        _mv(_indexed_matrix(matrix, data.shape, data_indexing),
             data[data_indexing])
 
     """
