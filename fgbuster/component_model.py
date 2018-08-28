@@ -135,11 +135,15 @@ class Component(object):
 
     @property
     def defaults(self):
-        return self._defaults
+        if len(self._defaults) == self.n_param:
+            return self._defaults
+        else:
+            print('Component: uninitialized defaults requested, returning ones')
+            return [1] * self.n_param
 
     @defaults.setter
     def defaults(self, new_defaults):
-        assert len(self._defaults) == len(new_defaults)
+        assert len(new_defaults) == self.n_param
         self._defaults = new_defaults
 
 

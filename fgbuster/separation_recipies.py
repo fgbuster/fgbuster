@@ -24,9 +24,12 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         however, also the following are taken into account, if provided
          - sens_I or sens_P (define the frequency inverse noise)
          - bandpass (the mixing matrix is integrated over the bandpass)
-    data: array
+    data: array or MaskedArray
         Data vector to be separated. Shape (n_freq, ..., n_pix)
         If `...` is 2, use sens_P to define the weights, sens_I otherwise.
+        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        neglected during the component separation process. 
+        Note that a pixel is masked if at least one of its frequencies is masked
     nside:
         For each pixel of a HEALPix map with this nside, the non-linear
         parameters are estimated independently
@@ -34,8 +37,21 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     Returns
     -------
     result : scipy.optimze.OptimizeResult (dict)
-        see `milti_comp_sep`
+        See `multi_comp_sep` if `nside` is positive and `comp_sep` otherwise.
+
     """
+    # Prepare mask and set to zero all the frequencies in the masked pixels: 
+    # if all the frequencies in a pixel are zero the pixel doesn't contribute
+    # to the spectral likelihood
+    if isinstance(data, np.ma.MaskedArray):
+        mask = data.mask
+        data = data.data
+    else:
+        mask = data == hp.UNSEEN
+    mask = np.any(mask, axis=tuple(range(data.ndim-1)))  # Mask entire pixels
+    data = data.copy()
+    data[..., mask] = 0 
+
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape)
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluators(
         components, instrument, prewhiten_factors=prewhiten_factors)
@@ -53,11 +69,19 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
             x0, **minimize_kwargs)
 
     # Craft output
+    # 1) Apply the mask, if any
+    # 2) Restore the ordering of the input data (pixel dimension last)
     res.params = params
     res.s = res.s.T
+    res.s[..., mask] = hp.UNSEEN
+    res.chi = res.chi.T
+    res.chi[..., mask] = hp.UNSEEN
     if nside:
-        res.x = np.array([r.x for r in res.patch_res]).T
-        res.Sigma = np.array([r.Sigma for r in res.patch_res]).T
+        x_mask = hp.ud_grade(mask.astype(float), nside) == 1.
+        res.x[x_mask] = hp.UNSEEN
+        res.Sigma[x_mask] = hp.UNSEEN
+        res.x = res.x.T
+        res.Sigma = res.Sigma.T
     return res
 
 

@@ -78,8 +78,8 @@ def _get_available_instruments():
 def _dict_instrument_test(nside, units='uK_CMB'):
     return {
         'frequencies': np.arange(50., 700, 50.),
-        'sens_I': np.ones(13),
-        'sens_P': np.ones(13),
+        'sens_I': np.linspace(20, 50, 13),
+        'sens_P': np.linspace(20, 50, 13),
         'beams': np.ones(13),
         'nside': nside,
         'add_noise': True,

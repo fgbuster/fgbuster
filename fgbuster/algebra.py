@@ -1,5 +1,11 @@
 """ Recurrent algebraic functions in component separation
 
+All the routines in this module do NOT support `numpy.ma.MaskedArray`.
+If you have a `MaskedArray`, `masked_array` you have two options.
+ 1) Index `masked_array` with a mask so that you get standard `np.array`
+    containing only unmasked values
+ 2) Whenever it is possible, you can pass `masked_array.data` and handle the
+    masked values by setting the corresponding entries of `invN` to zero
 """
 
 # Note for developpers
@@ -87,12 +93,11 @@ def _T(x):
 def _svd_sqrt_invN_A(A, invN=None, L=None):
     """ SVD of A and Cholesky factor of invN
 
-    Prewhiten `A` according to `invN` (if either `invN` of `L` is provided) and
+    Prewhiten `A` according to `invN` (if either `invN` or `L` is provided) and
     return both its SVD and the Cholesky factor of `invN`.
     If you provide the Cholesky factor L, invN is ignored.
     It correctly handles blocks for invN equal to zero
     """
-
     if L is None and invN is not None:
         try:
             L = np.linalg.cholesky(invN)
@@ -340,6 +345,7 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     utd = _mtv(u, d)
     Dd = d - _mv(u, utd)
     s = _mtv(v, utd / e)
+    s[~np.isfinite(s)] = 0.
 
     n_param = len(A_dB)
     diff = np.empty(n_param)
@@ -481,14 +487,12 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
     x_old = [None]
     u_e_v_old = [None]
     A_dB_old = [None]
-    inv_e_old = [None]
     pw_d = [None]
 
     def _update_old(x):
         # If x is different from the last one, update the SVD
         if not np.all(x == x_old[0]):
             u_e_v_old[0], L[0] = _svd_sqrt_invN_A(A_ev(x), invN, L[0])
-            inv_e_old[0] = 1. / u_e_v_old[0][1]
             if A_dB_ev is not None:
                 if L[0] is None:
                     A_dB_old[0] = A_dB_ev(x)
@@ -731,6 +735,9 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         mask = patch_ids == patch_id
         res.s[mask] = res.patch_res[patch_id].s
         res.chi[mask] = res.patch_res[patch_id].chi
+
+    res.x = np.array([r.x for r in res.patch_res])
+    res.Sigma = np.array([r.Sigma for r in res.patch_res])
 
     return res
 

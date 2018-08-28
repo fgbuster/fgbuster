@@ -76,7 +76,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     nside = hp.npix2nside(d_fgs.shape[-1])
     n_stokes = d_fgs.shape[1]
     n_freqs = d_fgs.shape[0]
-    invN = np.diag(hp.nside2resol(nside, arcmin=True) / (instrument.Sens_P))**2 # XXX
+    invN = np.diag(hp.nside2resol(nside, arcmin=True) / (instrument.Sens_P))**2
     mask = d_fgs[0, 0, :] != 0.
     fsky = mask.astype(float).sum() / mask.size
     ell = np.arange(lmin, lmax+1)
