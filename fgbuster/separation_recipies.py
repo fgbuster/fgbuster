@@ -24,7 +24,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         however, also the following are taken into account, if provided
          - sens_I or sens_P (define the frequency inverse noise)
          - bandpass (the mixing matrix is integrated over the bandpass)
-    data: array or MaskedArray
+    data: ndarray or MaskedArray
         Data vector to be separated. Shape (n_freq, ..., n_pix)
         If `...` is 2, use sens_P to define the weights, sens_I otherwise.
         Values equal to hp.UNSEEN or, if MaskedArray, masked values are
@@ -41,16 +41,9 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
     """
     # Prepare mask and set to zero all the frequencies in the masked pixels: 
-    # if all the frequencies in a pixel are zero the pixel doesn't contribute
-    # to the spectral likelihood
-    if isinstance(data, np.ma.MaskedArray):
-        mask = data.mask
-        data = data.data
-    else:
-        mask = data == hp.UNSEEN
-    mask = np.any(mask, axis=tuple(range(data.ndim-1)))  # Mask entire pixels
-    data = data.copy()
-    data[..., mask] = 0 
+    mask = _intersect_mask(data)
+    data = hp.pixelfunc.ma_to_array(data).copy()
+    data[..., mask] = 0  # Thus no contribution to the spectral likelihood
 
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape)
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluators(
@@ -176,3 +169,12 @@ def _single_A_evaluators(components, instrument, prewhiten_factors=None):
     pw_A_dB_ev = lambda x: [prewhiten_factors[..., np.newaxis] * A_dB_i
                             for A_dB_i in A_dB_ev(x)]
     return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
+
+def _intersect_mask(maps):
+    if hp.pixelfunc.is_ma(maps):
+        mask = maps.mask
+    else:
+        mask = maps == hp.UNSEEN
+
+    # Mask entire pixel if any of the frequencies in the pixel is masked
+    return np.any(mask, axis=tuple(range(maps.ndim-1)))
