@@ -21,6 +21,7 @@ class TestBasicCompSep(unittest.TestCase):
         np.random.seed(0)
         instrument = get_instrument(NSIDE, INSTRUMENT)
         components = [cm.Component('(nu - nu0)**power', nu0=30)]
+        components[0].defaults = [1.]
         powers = np.linspace(1, 2, hp.nside2npix(NSIDE_PARAM))
         np.random.shuffle(powers)
         freq_maps = components[0].eval(instrument.Frequencies, powers)
@@ -29,8 +30,8 @@ class TestBasicCompSep(unittest.TestCase):
         np.random.shuffle(s)
         freq_maps = freq_maps * s
 
-        res = basic_comp_sep(components, instrument, freq_maps,
-                nside=NSIDE_PARAM, options={'disp': True})
+        res = basic_comp_sep(components, instrument,
+                             freq_maps, nside=NSIDE_PARAM)
         aac(res.x.flatten(), powers, rtol=1e-5)
         aac(res.s.flatten(), s, rtol=1e-5)
         aaae(res.chi, 0, decimal=2)
@@ -43,14 +44,15 @@ class TestBasicCompSep(unittest.TestCase):
         np.random.seed(0)
         instrument = get_instrument(NSIDE, INSTRUMENT)
         components = [cm.Component('(nu - nu0)**power', nu0=30)]
+        components[0].defaults = [1.]
         power = 1.5
         freq_maps = components[0].eval(instrument.Frequencies, power)
         s = np.linspace(1, 2, hp.nside2npix(NSIDE))
         np.random.shuffle(s)
         freq_maps = freq_maps[:, np.newaxis] * s
 
-        res = basic_comp_sep(components, instrument, freq_maps,
-                nside=NSIDE_PARAM, options={'disp': True})
+        res = basic_comp_sep(components, instrument,
+                             freq_maps, nside=NSIDE_PARAM)
         aac(res.x.flatten(), power, rtol=1e-5)
         aac(res.s.flatten(), s, rtol=1e-5)
         aaae(res.chi, 0, decimal=2)
@@ -63,6 +65,7 @@ class TestBasicCompSep(unittest.TestCase):
         np.random.seed(0)
         instrument = get_instrument(NSIDE, INSTRUMENT)
         components = [cm.Component('(nu - nu0)**power', nu0=30)]
+        components[0].defaults = [1.]
         powers = np.linspace(1, 2, hp.nside2npix(NSIDE_PARAM))
         np.random.shuffle(powers)
         freq_maps = components[0].eval(instrument.Frequencies, powers)
@@ -71,8 +74,8 @@ class TestBasicCompSep(unittest.TestCase):
         np.random.shuffle(s)
         freq_maps = freq_maps * s
 
-        res = basic_comp_sep(components, instrument, freq_maps,
-                nside=NSIDE_PARAM, options={'disp': True})
+        res = basic_comp_sep(components, instrument,
+                             freq_maps, nside=NSIDE_PARAM)
         aac(res.x.flatten(), powers, rtol=1e-5)
         aac(res.s.flatten(), s, rtol=1e-5)
         aaae(res.chi, 0, decimal=2)
@@ -86,6 +89,7 @@ class TestBasicCompSep(unittest.TestCase):
         np.random.seed(0)
         instrument = get_instrument(NSIDE, INSTRUMENT)
         components = [cm.Component('(nu - nu0)**power', nu0=30)]
+        components[0].defaults = [1.]
         powers = np.linspace(1, 2, hp.nside2npix(NSIDE_PARAM))
         np.random.shuffle(powers)
         freq_maps = components[0].eval(instrument.Frequencies, powers)
@@ -99,8 +103,8 @@ class TestBasicCompSep(unittest.TestCase):
         freq_maps[..., mask] = hp.UNSEEN
         s[..., mask] = hp.UNSEEN
 
-        res = basic_comp_sep(components, instrument, freq_maps,
-                nside=NSIDE_PARAM, options={'disp': True})
+        res = basic_comp_sep(components, instrument,
+                             freq_maps, nside=NSIDE_PARAM)
 
         s[..., mask] = hp.UNSEEN
         x_mask = hp.ud_grade(s, NSIDE_PARAM) == hp.UNSEEN
@@ -121,6 +125,7 @@ class TestBasicCompSep(unittest.TestCase):
         np.random.seed(0)
         instrument = get_instrument(NSIDE, INSTRUMENT)
         components = [cm.Component('(nu - nu0)**power', nu0=30)]
+        components[0].defaults = [1.]
         power = 1.5
         freq_maps = components[0].eval(instrument.Frequencies, power)
         s = np.linspace(1, 2, hp.nside2npix(NSIDE))
@@ -132,8 +137,8 @@ class TestBasicCompSep(unittest.TestCase):
         freq_maps[..., mask] = hp.UNSEEN
         s[..., mask] = hp.UNSEEN
 
-        res = basic_comp_sep(components, instrument, freq_maps,
-                nside=NSIDE_PARAM, options={'disp': True})
+        res = basic_comp_sep(components, instrument,
+                             freq_maps, nside=NSIDE_PARAM)
         aac(res.x.flatten(), power, rtol=1e-5)
         aac(res.s.flatten(), s, rtol=1e-5)
         aaae(res.chi[..., mask], hp.UNSEEN, decimal=2)

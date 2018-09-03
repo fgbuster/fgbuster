@@ -1,12 +1,13 @@
 #!/usr/bin/env python
+import unittest
 import numpy as np
 from numpy.random import uniform
 from numpy.testing import assert_array_almost_equal as aaae
 from numpy.testing import assert_allclose as aac
-import unittest
 import fgbuster.component_model as cm
 from ..mixingmatrix import MixingMatrix
-from ..algebra import W, Wd, invAtNA, W_dB, W_dBdB, _mv, _mtm, _T
+from ..algebra import (W, Wd, invAtNA, W_dB, W_dBdB, _mv, _mtm, _T, comp_sep,
+                       multi_comp_sep)
 
 class TestAlgebraRandom(unittest.TestCase):
 
@@ -29,6 +30,17 @@ class TestAlgebraRandom(unittest.TestCase):
 
     def test_W_on_d_is_s(self):
         aaae(self.s, _mv(W(self.A), self.d))
+
+    def test_comp_sep_no_par(self):
+        res = comp_sep(self.A, self.d, None, None, None)
+        aaae(self.s, res.s)
+
+    def test_multi_comp_sep_no_par(self):
+        patch_ids = np.arange(self.d.shape[0]) // 2
+        np.random.shuffle(patch_ids)
+        res = multi_comp_sep(self.A, self.d, None, None, None, patch_ids)
+        aaae(self.s, res.s)
+
 
 
 class TestAlgebraPhysical(unittest.TestCase):
@@ -120,7 +132,7 @@ class TestAlgebraPhysical(unittest.TestCase):
                     W_dBdB_numerical = (
                         (Wdx(1, 1) - Wdx(+1, -1) - Wdx(-1, 1) + Wdx(-1, -1))
                         / (4 * self.DX**2))
-                aac(W_dBdB_numerical, W_dBdB_analytic[i][j], rtol=2e-1)
+                aac(W_dBdB_numerical, W_dBdB_analytic[i][j], rtol=2.5e-1)
 
 
 if __name__ == '__main__':

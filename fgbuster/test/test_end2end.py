@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import unittest
+import sys
+import os
 import numpy as np
 from numpy.testing import assert_allclose as aac
 from numpy.testing import assert_array_almost_equal as aaae
@@ -9,6 +11,20 @@ from fgbuster.pysm_helpers import get_instrument, get_sky
 from fgbuster.algebra import _mtv
 import fgbuster.component_model as cm
 from fgbuster.separation_recipies import basic_comp_sep
+
+from contextlib import contextmanager
+
+@contextmanager
+def suppress_stdout():
+    # Borrowed from
+    # https://thesmithfam.org/blog/2012/10/25/temporarily-suppress-console-output-in-python/
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
 
 
 class TestEnd2EndNoiselessPhysical(unittest.TestCase):
@@ -20,8 +36,9 @@ class TestEnd2EndNoiselessPhysical(unittest.TestCase):
         X0_FACTOR = 0.99
         sky = get_sky(NSIDE, MODEL)
         self.instrument = get_instrument(NSIDE, INSTRUMENT)
-        self.freq_maps, self.noise = self.instrument.observe(
-            sky, write_outputs=False)
+        with suppress_stdout():
+            self.freq_maps, self.noise = self.instrument.observe(
+                sky, write_outputs=False)
 
         self.components = [cm.CMB(), cm.Dust(200.), cm.Synchrotron(100.)]
         freefree = cm.PowerLaw(100.)
@@ -34,7 +51,6 @@ class TestEnd2EndNoiselessPhysical(unittest.TestCase):
 
 
     def test_basic_comp_sep_T(self):
-        return #XXX
         res_T = basic_comp_sep(self.components, self.instrument,
                                self.freq_maps[:, :1, :])
         aac(res_T.x, np.array(self.input), rtol=1e-5)
@@ -42,7 +58,6 @@ class TestEnd2EndNoiselessPhysical(unittest.TestCase):
 
 
     def test_basic_comp_sep_P(self):
-        return #XXX
         res_P = basic_comp_sep(self.components[:-1], self.instrument,
                                self.freq_maps[:, 1:, :])
         aac(res_P.x, np.array(self.input[:-1]), rtol=1e-5)
@@ -63,7 +78,8 @@ class TestEnd2EndNoisy(unittest.TestCase):
         for component in components:
             ref += component.defaults
 
-        freq_maps, noise_maps = instrument.observe(sky, write_outputs=False)
+        with suppress_stdout():
+            freq_maps, noise_maps = instrument.observe(sky, write_outputs=False)
 
         signal = freq_maps[:, 0, 0]
         noise = np.std(noise_maps[:, 0], axis=-1)
@@ -87,7 +103,8 @@ class TestEnd2EndNoisy(unittest.TestCase):
         for component in components:
             ref += component.defaults
 
-        freq_maps, noise_maps = instrument.observe(sky, write_outputs=False)
+        with suppress_stdout():
+            freq_maps, noise_maps = instrument.observe(sky, write_outputs=False)
 
         signal = freq_maps[:, 0, 0]
         noise = noise_maps[:, 0]
@@ -114,9 +131,9 @@ class TestEnd2EndNoisy(unittest.TestCase):
         for component in components:
             ref += component.defaults
         ref = np.array(ref)
-        print ref
 
-        freq_maps, noise_maps = instrument.observe(sky, write_outputs=False)
+        with suppress_stdout():
+            freq_maps, noise_maps = instrument.observe(sky, write_outputs=False)
 
         signal = freq_maps[:, 0, 0]  # Same signal for all the pixels
         noise = noise_maps[:, 0]
@@ -133,10 +150,10 @@ class TestEnd2EndNoisy(unittest.TestCase):
 
 
     def test_Sigma_dust_sync_betas_temp(self):
-        NSIDE = 16
+        NSIDE = 8
         MODEL = 'd0s0'
         INSTRUMENT = 'litebird'
-        SIGNAL_TO_NOISE = 1000000
+        SIGNAL_TO_NOISE = 100000
         UNITS = 'uK_CMB'
         sky = get_sky(NSIDE, MODEL)
         instrument = get_instrument(NSIDE, INSTRUMENT, units=UNITS)
@@ -147,7 +164,8 @@ class TestEnd2EndNoisy(unittest.TestCase):
             ref += component.defaults
         ref = np.array(ref)
 
-        freq_maps, noise_maps = instrument.observe(sky, write_outputs=False)
+        with suppress_stdout():
+            freq_maps, noise_maps = instrument.observe(sky, write_outputs=False)
 
         signal = freq_maps[:, 0, 0]  # Same signal for all the pixels
         noise = noise_maps[:, 0]
@@ -160,7 +178,7 @@ class TestEnd2EndNoisy(unittest.TestCase):
         diff = (res.x.T - ref)
         postS = np.mean(diff[..., None] * diff[..., None, :], axis=0)
         S = res.Sigma.T[0]
-        aac(postS, S, rtol=1./NSIDE)
+        aac(postS, S, rtol=2./NSIDE)
 
 
 if __name__ == '__main__':

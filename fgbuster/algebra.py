@@ -344,7 +344,8 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     u, e, v = u_e_v
     utd = _mtv(u, d)
     Dd = d - _mv(u, utd)
-    s = _mtv(v, utd / e)
+    with np.errstate(divide='ignore'):
+        s = _mtv(v, utd / e)
     s[~np.isfinite(s)] = 0.
 
     n_param = len(A_dB)
@@ -589,6 +590,16 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     The `...` in the arguments denote any extra set of dimention. They have to
     be compatible among different arguments in the `numpy` broadcasting sense.
     """
+    # If mixing matrix is fixed, separate and return
+    if isinstance(A_ev, np.ndarray):
+        res = sp.optimize.OptimizeResult()
+        res.s, (u_e_v, L) = Wd(A_ev, d, invN, True)
+        res.invAtNA = _invAtNA_svd(u_e_v)
+        if L is not None:
+            d = _mtv(L, d)
+        res.chi = d - _As_svd(u_e_v, res.s)
+        return res
+
     # Checks input
     if A_dB_ev is not None:
         A_dB_ev, comp_of_dB = _A_dB_ev_and_comp_of_dB_as_compatible_list(
@@ -736,8 +747,11 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         res.s[mask] = res.patch_res[patch_id].s
         res.chi[mask] = res.patch_res[patch_id].chi
 
-    res.x = np.array([r.x for r in res.patch_res])
-    res.Sigma = np.array([r.Sigma for r in res.patch_res])
+    try:
+        res.x = np.array([r.x for r in res.patch_res])
+        res.Sigma = np.array([r.Sigma for r in res.patch_res])
+    except AttributeError:
+        pass
 
     return res
 
