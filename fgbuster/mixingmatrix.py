@@ -40,7 +40,10 @@ class MixingMatrix(tuple):
         return [np.s_[..., c] for c in self.__comp_of_param]
 
     def eval(self, nu, *params):
-        shape = np.broadcast(*params).shape + (len(nu), len(self))
+        if params:
+            shape = np.broadcast(*params).shape + (len(nu), len(self))
+        else:
+            shape = (len(nu), len(self))
         res = np.zeros(shape)
         for i_c, c in enumerate(self):
             i_fp = self.__first_param_of_comp[i_c]
@@ -48,9 +51,14 @@ class MixingMatrix(tuple):
         return res
 
     def evaluator(self, nu, shape=(-1,)):
-        def f(param_array):
-            param_array = np.array(param_array)
-            return self.eval(nu, *[p for p in param_array.reshape(shape)])
+        if self.n_param:
+            def f(param_array):
+                param_array = np.array(param_array)
+                return self.eval(nu, *[p for p in param_array.reshape(shape)])
+        else:
+            A = self.eval(nu)
+            def f():
+                return A
         return f
 
     def diff(self, nu, *params):
@@ -65,9 +73,12 @@ class MixingMatrix(tuple):
         return res
 
     def diff_evaluator(self, nu, unpack=(lambda x: x.reshape((-1,)))):
-        def f(param_array):
-            param_array = np.array(param_array)
-            return self.diff(nu, *[p for p in unpack(param_array)])
+        if self.n_param:
+            def f(param_array):
+                param_array = np.array(param_array)
+                return self.diff(nu, *[p for p in unpack(param_array)])
+        else:
+            return None
         return f
 
     def diff_diff(self, nu, *params):

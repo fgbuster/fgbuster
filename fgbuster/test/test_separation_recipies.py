@@ -13,6 +13,46 @@ from fgbuster.separation_recipies import basic_comp_sep
 
 class TestBasicCompSep(unittest.TestCase):
 
+    def test_T_s_2_no_param(self):
+        NSIDE = 2
+        NSIDE_PARAM = 0
+        INSTRUMENT = 'test'
+        power = 1.5
+
+        np.random.seed(0)
+        instrument = get_instrument(NSIDE, INSTRUMENT)
+        components = [cm.Component('(nu - nu0)**power', nu0=30, power=power)]
+        freq_maps = components[0].eval(instrument.Frequencies)
+        s = np.linspace(1, 2, hp.nside2npix(NSIDE))
+        np.random.shuffle(s)
+        freq_maps = freq_maps[:, np.newaxis] * s
+
+        res = basic_comp_sep(components, instrument,
+                             freq_maps, nside=NSIDE_PARAM)
+        aac(res.s.flatten(), s, rtol=1e-5)
+        aaae(res.chi, 0, decimal=2)
+
+    def test_s_3_no_param(self):
+        NSIDE = 2
+        NSIDE_PARAM = 0
+        INSTRUMENT = 'test'
+        power = 1.5
+
+        np.random.seed(0)
+        instrument = get_instrument(NSIDE, INSTRUMENT)
+        components = [[cm.Component('(nu - nu0)**power', nu0=30, power=power)],
+                      [cm.Component('(nu - nu0)**power', nu0=30, power=power)]]
+        freq_maps = components[0][0].eval(instrument.Frequencies)
+        s = np.linspace(1, 2, hp.nside2npix(NSIDE)*3)
+        np.random.shuffle(s)
+        freq_maps = freq_maps[:, np.newaxis] * s
+        freq_maps = freq_maps.reshape(freq_maps.shape[0], 3, -1)
+
+        res = basic_comp_sep(components, instrument,
+                             freq_maps, nside=NSIDE_PARAM)
+        aac(res.s.flatten(), s, rtol=1e-5)
+        aaae(res.chi, 0, decimal=2)
+
     def test_T_s_2_param_1(self):
         NSIDE = 2
         NSIDE_PARAM = 1

@@ -48,18 +48,20 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape)
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluators(
         components, instrument, prewhiten_factors=prewhiten_factors)
+    if not comp_of_param:
+        A_ev = A_ev()
     prewhitened_data = prewhiten_factors * data.T
 
     # Launch component separation
-    if nside == 0:
-        res = comp_sep(A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, x0,
-                       **minimize_kwargs)
-    else:
+    if nside:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
                                 hp.npix2nside(data.shape[-1]))
         res = multi_comp_sep(
             A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, patch_ids,
             x0, **minimize_kwargs)
+    else:
+        res = comp_sep(A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, x0,
+                       **minimize_kwargs)
 
     # Craft output
     # 1) Apply the mask, if any
@@ -126,6 +128,18 @@ def _T_P_A_evaluators(components, instrument, prewhiten_factors=None):
     A_ev_P, A_dB_ev_P, comp_of_dB_P, x0_P, params_P = _A_evaluators(
         components[1], instrument)
 
+    if len(comp_of_dB_T) == len(comp_of_dB_P) == 0:
+        # TODO Fix constant matrix properly
+        def A_ev():
+            A_T = A_ev_T()
+            A_P = A_ev_P()
+            if prewhiten_factors is None:
+                return np.stack((A_T, A_P, A_P))
+            else:
+                return (prewhiten_factors[..., np.newaxis] 
+                        * np.stack((A_T, A_P, A_P)))
+        return A_ev, None, [], None, []
+
     def A_ev(x):
         A_T = A_ev_T(x[:len(params_T)])
         A_P = A_ev_P(x[len(params_T):])
@@ -165,9 +179,13 @@ def _single_A_evaluators(components, instrument, prewhiten_factors=None):
     if prewhiten_factors is None:
         return A_ev, A_dB_ev, comp_of_dB, x0, params
 
-    pw_A_ev = lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
-    pw_A_dB_ev = lambda x: [prewhiten_factors[..., np.newaxis] * A_dB_i
-                            for A_dB_i in A_dB_ev(x)]
+    if A.n_param:
+        pw_A_ev = lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
+        pw_A_dB_ev = lambda x: [prewhiten_factors[..., np.newaxis] * A_dB_i
+                                for A_dB_i in A_dB_ev(x)]
+    else:
+        pw_A_ev = lambda: prewhiten_factors[..., np.newaxis] * A_ev()
+        pw_A_dB_ev = None
     return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
 
 def _intersect_mask(maps):
