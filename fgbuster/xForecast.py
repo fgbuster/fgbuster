@@ -141,9 +141,9 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     print('======= ESTIMATION OF STAT AND SYS RESIDUALS =======')
 
     W_maxL = W(A_maxL, invN=invN)[i_cmb, :]
-    W_dB_maxL = W_dB(A_maxL, A_dB_maxL, A.comp_of_dB, invN=invN)[:,i_cmb]
+    W_dB_maxL = W_dB(A_maxL, A_dB_maxL, A.comp_of_dB, invN=invN)[:, i_cmb]
     W_dBdB_maxL = W_dBdB(A_maxL, A_dB_maxL, A_dBdB_maxL,
-                         A.comp_of_dB, invN=invN)[:,i_cmb]
+                         A.comp_of_dB, invN=invN)[:, :, i_cmb]
     V_maxL = np.einsum('ij,ij...->...', res.Sigma, W_dBdB_maxL)
 
     # Check dimentions
@@ -159,7 +159,6 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     Cl_xF['yz'] = _utmv(W_maxL, Cl_fgs.T, V_maxL )  # (ell,)
     Cl_xF['Yy'] = _mmv(W_dB_maxL, Cl_fgs.T, W_maxL)  # (ell, param)
     Cl_xF['Yz'] = _mmv(W_dB_maxL, Cl_fgs.T, V_maxL)  # (ell, param)
-    print Cl_xF['YY'][0]
 
     # bias and statistical foregrounds residuals
     res.noise = Cl_noise
@@ -236,8 +235,6 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         # Cl_hat = Cl_obs + tr_SigmaYY
 
         ## Bringing things together
-        #print r_, trCinvC, trECinvC, logdetC,
-        #print trCinvC + trECinvC + logdetC
         return trCinvC + trECinvC + logdetC
 
     #  minimization, gridding, sigma(r)
@@ -247,7 +244,6 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     r_grid = np.logspace(-5,0,num=50)
     logL = np.array([cosmo_likelihood(r_loc) for r_loc in r_grid])
     ind_r_min = np.argmin(logL)
-    #import ipdb;ipdb.set_trace()
     r0 = r_grid[ind_r_min]
     if ind_r_min == 0:
         bound_0 = 0.0
