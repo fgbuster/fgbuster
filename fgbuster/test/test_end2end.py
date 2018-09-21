@@ -11,6 +11,7 @@ from fgbuster.pysm_helpers import get_instrument, get_sky
 from fgbuster.algebra import _mtv
 import fgbuster.component_model as cm
 from fgbuster.separation_recipies import basic_comp_sep
+from pysm.common import convert_units
 
 from contextlib import contextmanager
 
@@ -66,22 +67,48 @@ class TestEnd2EndNoiselessPhysical(unittest.TestCase):
 
 class TestEnd2EndNoisy(unittest.TestCase):
 
-    def test_Sigma_independence_on_nu0(self):
+    def test_dependence_on_nu0_RJ(self):
         NSIDE = 8
-        MODEL = 's0'
+        MODEL = 'c1s0'
         INSTRUMENT = 'litebird'
-        SIGNAL_TO_NOISE = 20
+        sky = get_sky(NSIDE, MODEL)
+        instrument = get_instrument(NSIDE, INSTRUMENT, units='uK_RJ')
+        components100 = [cm.CMB(units='K_RJ'),
+                         cm.Synchrotron(100., units='K_RJ')]
+        components10 = [cm.CMB(units='K_RJ'),
+                        cm.Synchrotron(10., units='K_RJ')]
+
+        with suppress_stdout():
+            freq_maps, _ = instrument.observe(sky, write_outputs=False)
+
+        res100 = basic_comp_sep(components100, instrument, freq_maps)
+        res10 = basic_comp_sep(components10, instrument, freq_maps)
+        aac(res100.Sigma, res10.Sigma)
+        aac(res100.x, res10.x)
+        aac(res100.s[0], res10.s[0])
+        aac(res100.s[1], res10.s[1] * 10**res10.x[0])
+
+
+    def test_dependence_on_nu0_CMB(self):
+        NSIDE = 8
+        MODEL = 'c1s0'
+        INSTRUMENT = 'litebird'
         sky = get_sky(NSIDE, MODEL)
         instrument = get_instrument(NSIDE, INSTRUMENT)
         components100 = [cm.CMB(), cm.Synchrotron(100.)]
         components10 = [cm.CMB(), cm.Synchrotron(10.)]
 
         with suppress_stdout():
-            freq_maps, noise_maps = instrument.observe(sky, write_outputs=False)
+            freq_maps, _ = instrument.observe(sky, write_outputs=False)
 
         res100 = basic_comp_sep(components100, instrument, freq_maps)
         res10 = basic_comp_sep(components10, instrument, freq_maps)
         aac(res100.Sigma, res10.Sigma)
+        aac(res100.x, res10.x)
+        aac(res100.s[0], res10.s[0])
+        factor = convert_units('K_CMB', 'K_RJ', 10.)
+        factor /= convert_units('K_CMB', 'K_RJ', 100.)
+        aac(res100.s[1], res10.s[1] * 10**res10.x[0] * factor)
 
 
     def test_Sigma_synchrotron(self):
