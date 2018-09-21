@@ -66,6 +66,24 @@ class TestEnd2EndNoiselessPhysical(unittest.TestCase):
 
 class TestEnd2EndNoisy(unittest.TestCase):
 
+    def test_Sigma_independence_on_nu0(self):
+        NSIDE = 8
+        MODEL = 's0'
+        INSTRUMENT = 'litebird'
+        SIGNAL_TO_NOISE = 20
+        sky = get_sky(NSIDE, MODEL)
+        instrument = get_instrument(NSIDE, INSTRUMENT)
+        components100 = [cm.CMB(), cm.Synchrotron(100.)]
+        components10 = [cm.CMB(), cm.Synchrotron(10.)]
+
+        with suppress_stdout():
+            freq_maps, noise_maps = instrument.observe(sky, write_outputs=False)
+
+        res100 = basic_comp_sep(components100, instrument, freq_maps)
+        res10 = basic_comp_sep(components10, instrument, freq_maps)
+        aac(res100.Sigma, res10.Sigma)
+
+
     def test_Sigma_synchrotron(self):
         NSIDE = 8
         MODEL = 's0'
@@ -153,7 +171,7 @@ class TestEnd2EndNoisy(unittest.TestCase):
         NSIDE = 8
         MODEL = 'd0s0'
         INSTRUMENT = 'litebird'
-        SIGNAL_TO_NOISE = 100000
+        SIGNAL_TO_NOISE = 10000
         UNITS = 'uK_CMB'
         sky = get_sky(NSIDE, MODEL)
         instrument = get_instrument(NSIDE, INSTRUMENT, units=UNITS)
@@ -178,7 +196,7 @@ class TestEnd2EndNoisy(unittest.TestCase):
         diff = (res.x.T - ref)
         postS = np.mean(diff[..., None] * diff[..., None, :], axis=0)
         S = res.Sigma.T[0]
-        aac(postS, S, rtol=2./NSIDE)
+        aac(postS, S, rtol=1./NSIDE)
 
 
 if __name__ == '__main__':

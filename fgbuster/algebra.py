@@ -450,17 +450,22 @@ def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
 
 def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
     u, _, _ = u_e_v
-    x = []
-    for i in range(len(A_dB)):
-        D_A_dB_s = np.zeros(s.shape[:-1] + u.shape[-2:-1])  # Full shape
-        comp_freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
-        comp_freq_of_dB += comp_of_dB[i][-1:]
-        A_dB_s = _mv(A_dB[i], s[comp_of_dB[i]])  # Compressed shape
-        D_A_dB_s[comp_freq_of_dB[:-1]] = (
-            A_dB_s - _mv(u[comp_freq_of_dB], _mtv(u[comp_freq_of_dB], A_dB_s)))
-        x.append(D_A_dB_s)
 
-    return np.array([[np.sum(x_i*x_j) for x_i in x] for x_j in x])
+    # Expand A_dB
+    n_dB = len(A_dB)
+    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
+                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
+    A_dB_full = np.zeros((n_dB,)+u.shape)
+    A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
+    for i in range(n_dB):
+        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+
+    D_A_dB_s = []
+    for i in range(len(A_dB)):
+        A_dB_s = _mv(A_dB_full[i], s)
+        D_A_dB_s.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
+
+    return np.array([[np.sum(i*j) for i in D_A_dB_s] for j in D_A_dB_s])
 
 
 def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
