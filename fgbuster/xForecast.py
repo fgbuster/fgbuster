@@ -10,7 +10,7 @@ from .mixingmatrix import MixingMatrix
 
 
 CMB_CL_FILE = op.join(
-     op.dirname(__file__), 'templates/ClCAMB_Planck15_lmax4200_%s.fits')
+     op.dirname(__file__), 'templates/Cls_Planck2018_%s.fits')
 
 
 def xForecast(components, instrument, d_fgs, lmin, lmax,
@@ -321,11 +321,12 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     return res
 
 def _get_Cl_cmb(Alens=1., r=0.):
-    power_spectrum = hp.read_cl(CMB_CL_FILE%'scalar')
+    power_spectrum = hp.read_cl(CMB_CL_FILE%'lensed_scalar')
     if Alens != 1.:
         power_spectrum[2] *= Alens
-    if r != 0.:
-        power_spectrum += r * hp.read_cl(CMB_CL_FILE%'tensor')
+    if r:
+        power_spectrum += r * hp.read_cl(CMB_CL_FILE
+                                         %'unlesend_scalar_and_tensor_r1')
     return power_spectrum
 
 
