@@ -321,12 +321,12 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     return res
 
 def _get_Cl_cmb(Alens=1., r=0.):
-    power_spectrum = hp.read_cl(CMB_CL_FILE%'lensed_scalar')
+    power_spectrum = hp.read_cl(CMB_CL_FILE%'lensed_scalar')[:,:4000]
     if Alens != 1.:
         power_spectrum[2] *= Alens
     if r:
         power_spectrum += r * hp.read_cl(CMB_CL_FILE
-                                         %'unlesend_scalar_and_tensor_r1')
+                                         %'unlensed_scalar_and_tensor_r1')[:,:4000]
     return power_spectrum
 
 
