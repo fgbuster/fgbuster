@@ -90,6 +90,7 @@ def _T(x):
     except ValueError:
         return x
 
+
 def _svd_sqrt_invN_A(A, invN=None, L=None):
     """ SVD of A and Cholesky factor of invN
 
@@ -105,7 +106,8 @@ def _svd_sqrt_invN_A(A, invN=None, L=None):
             L = np.zeros_like(invN)
             mask = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
                                    axis=-1))
-            L[mask] = np.linalg.cholesky(invN[mask])
+            if np.any(mask):
+                L[mask] = np.linalg.cholesky(invN[mask])
 
     if L is not None:
         A = _mtm(L, A)
@@ -604,12 +606,19 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
             d = _mtv(L, d)
         res.chi = d - _As_svd(u_e_v, res.s)
         return res
+    else:
+        # Mixing matrix has free paramters: check that x0 was provided
+        assert minimize_args
+        assert len(minimize_args[0])
 
-    # Checks input
+    # Check input
     if A_dB_ev is not None:
         A_dB_ev, comp_of_dB = _A_dB_ev_and_comp_of_dB_as_compatible_list(
             A_dB_ev, comp_of_dB, minimize_args[0])
-    disp = 'options' in minimize_kwargs and 'disp' in minimize_kwargs['options']
+    if 'options' in minimize_kwargs and 'disp' in minimize_kwargs['options']:
+        disp = minimize_kwargs['options']['disp']
+    else:
+        disp = False
 
     # Prepare functions for minimize
     fun, jac, last_values = _build_bound_inv_logL_and_logL_dB(
@@ -655,11 +664,12 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
                    *minimize_args, **minimize_kargs):
     """ Perform component separation
 
-    Run an independent `comp_sep` for entries identified by `patch_ids`
+    Run an independent `comp_sep` for entries identified by `patch_ids` and
+    gathers the result.
 
     Parameters
     ----------
-    A_ev : function or list
+    A_ev : function or ndarray
         The evaluator of the mixing matrix. It takes a float or an array as
         argument and returns the mixing matrix, a ndarray with shape
         `(..., n_freq, n_comp)`
@@ -682,8 +692,9 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         id of regions.
     minimize_args: list
         Positional arguments to be passed to `scipy.optimize.minimize`.
-        At this moment it just contains `x0`, the initial guess for the spectral
-        parameters.
+        At this moment, it just contains `x0`, the initial guess for the
+        spectral parameters. It is required if A_ev is a function and ignored
+        otherwise.
     minimize_kwargs: dict
         Keyword arguments to be passed to `scipy.optimize.minimize`.
         A good choice for most cases is
@@ -698,7 +709,7 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
     result : scipy.optimze.OptimizeResult (dict)
         Result of the spectral likelihood maximization
 	It is the output of `scipy.optimize.minimize`, and thus includes
-	- patch_resx : list
+	- patch_res : list
 	    the i-th entry is the result of `comp_sep` on `patch_ids == i`
         with the addition of some extra information
 	- s : (ndarray)
@@ -716,6 +727,8 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
 
     def patch_comp_sep(patch_id):
         if isinstance(A_ev, list):
+            # Allow different A_ev (and A_dB_ev) for each index, not supported
+            # yet
             patch_A_ev = A_ev[patch_id]
             if A_dB_ev is None:
                 patch_A_dB_ev = None
@@ -729,6 +742,8 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             patch_comp_of_dB = comp_of_dB
 
         patch_mask = patch_ids == patch_id
+        if not np.any(patch_mask):
+            return None
         patch_d = d[patch_mask]
         if invN is None:
             patch_invN = None
@@ -743,20 +758,48 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
     res.patch_res = [patch_comp_sep(patch_id) for patch_id in range(max_id+1)]
 
     # Collect results
-    n_comp = res.patch_res[0].s.shape[-1]
+    n_comp = next(r for r in res.patch_res if r is not None).s.shape[-1]
     res.s = np.full((d.shape[:-1]+(n_comp,)), np.NaN) # NaN for testing
+    res.invAtNA = np.full((d.shape[:-1]+(n_comp, n_comp)), np.NaN) # NaN for testing
     res.chi = np.full(d.shape, np.NaN) # NaN for testing
 
     for patch_id in range(max_id+1):
         mask = patch_ids == patch_id
-        res.s[mask] = res.patch_res[patch_id].s
-        res.chi[mask] = res.patch_res[patch_id].chi
+        if np.any(mask):
+            res.s[mask] = res.patch_res[patch_id].s
+            res.invAtNA[mask] = res.patch_res[patch_id].invAtNA
+            res.chi[mask] = res.patch_res[patch_id].chi
 
     try:
-        res.x = np.array([r.x for r in res.patch_res])
-        res.Sigma = np.array([r.Sigma for r in res.patch_res])
-    except AttributeError:
+        res.x = np.array([minimize_args[0] * np.nan if r is None else
+                          r.x for r in res.patch_res])
+        res.Sigma = np.array([
+            minimize_args[0] * minimize_args[0][:, np.newaxis] * np.nan
+            if r is None else r.Sigma for r in res.patch_res])
+    except (AttributeError, IndexError):  # The mixing matrix was constant
         pass
+
+    try:
+        n_param = len(comp_of_dB)
+    except TypeError:
+        n_param = 0
+
+    try:
+        # Does not work if patch_ids has more than one dimension
+        for i in range(n_param):
+            shape_chi_dB = patch_ids.shape+res.patch_res[0].chi_dB[i].shape[1:]
+            if i == 0:
+                res.chi_dB = []
+            res.chi_dB.append(np.full(shape_chi_dB, np.NaN)) # NaN for testing
+    #except (AttributeError, TypeError):  # No chi_dB (no A_dB_ev)
+    except AttributeError:  # No chi_dB (no A_dB_ev)
+        pass
+    else:
+        for i in range(n_param):
+            for patch_id in range(max_id+1):
+                mask = patch_ids == patch_id
+                if np.any(mask):
+                    res.chi_dB[i][mask] = res.patch_res[patch_id].chi_dB[i]
 
     return res
 

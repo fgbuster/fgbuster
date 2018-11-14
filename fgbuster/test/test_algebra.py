@@ -51,8 +51,8 @@ class TestAlgebraPhysical(unittest.TestCase):
         self.n_freq = 6
         self.nu = np.logspace(1, 2.5, self.n_freq)
         self.n_stokes = 3
-        self.n_pixels = 5
-        self.components = [cm.CMB(), cm.Dust(200.), cm.Synchrotron(100.)]
+        self.n_pixels = 2
+        self.components = [cm.CMB(), cm.Dust(200.), cm.Synchrotron(70.)]
         self.mm = MixingMatrix(*(self.components))
         self.params = [1.54, 20, -3]
         self.A = self.mm.eval(self.nu, *(self.params))

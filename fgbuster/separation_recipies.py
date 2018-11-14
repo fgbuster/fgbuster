@@ -6,30 +6,136 @@ import healpy as hp
 from .algebra import multi_comp_sep, comp_sep
 from .mixingmatrix import MixingMatrix
 
+
+def weighted_comp_sep(components, instrument, data, cov, nside=0,
+                      **minimize_kwargs):
+    """ Weighted component separation
+
+    Parameters
+    ----------
+    components: list or tuple of lists
+         List storing the `Components` of the mixing matrix
+    instrument: 
+        Instrument object used to define the mixing matrix.
+        It can be any object that has what follows wither as a key or as an
+        attribute (e.g. dictionary, PySM.Instrument)
+         - Frequencies
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
+        also absent.
+        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        neglected during the component separation process.
+    cov: ndarray or MaskedArray
+        Covariance maps. It has to be broadcastable to `data`.
+        Notice that you can not pass a pixel independent covariance as an array
+        with shape `(n_freq,)`: it has to be `(n_freq, ..., 1)` in order to be
+        broadcastable (consider using `basic_comp_sep`, in this case).
+        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        neglected during the component separation process.
+    patch_ids: array
+        For each pixel, the array stores the id of the region over which to
+        perform component separation independently.
+
+    Returns
+    -------
+    result : scipy.optimze.OptimizeResult (dict)
+        See `multi_comp_sep` if `nside` is positive and `comp_sep` otherwise.
+
+    Note
+    ----
+      * During the component separation, a pixel is masked if at least one of
+        its frequencies is masked, either in `data` or in `cov`.
+    """
+    instrument = _force_keys_as_attributes(instrument)
+    # Make sure that cov has the frequency dimension and is equal to n_freq
+    cov_shape = list(np.broadcast(cov, data).shape)
+    if cov.ndim < 2 or (data.ndim == 3 and cov.shape[-2] == 1):
+        cov_shape[-2] = 1
+    cov = np.broadcast_to(cov, cov_shape, subok=True)
+    
+    # Prepare mask and set to zero all the frequencies in the masked pixels: 
+    # NOTE: mask are good pixels
+    mask = ~(_intersect_mask(data) | _intersect_mask(cov))
+
+    invN = np.zeros(cov.shape[:1] + cov.shape)
+    for i in range(cov.shape[0]):
+        invN[i, i] = 1. / cov[i]
+    invN = invN.T
+    if invN.shape[0] != 1:
+        invN = invN[mask] 
+        
+    data_cs = hp.pixelfunc.ma_to_array(data).T[mask]
+    assert not np.any(hp.ma(data_cs).mask)
+
+    A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components,
+                                                            instrument)
+    if not len(x0):
+        A_ev = A_ev()
+
+    # Component separation
+    if nside:
+        patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
+                                hp.npix2nside(data.shape[-1]))[mask]
+        res = multi_comp_sep(A_ev, data_cs, invN, A_dB_ev, comp_of_param,
+                             patch_ids, x0, **minimize_kwargs)
+    else:
+        res = comp_sep(A_ev, data_cs, invN, A_dB_ev, comp_of_param, x0,
+                       **minimize_kwargs)
+
+    # Craft output
+    res.params = params
+
+    def craft_maps(maps):
+        # Unfold the masked maps
+        # Restore the ordering of the input data (pixel dimension last)
+        result = np.full(data.shape[-1:] + maps.shape[1:], hp.UNSEEN)
+        result[mask] = maps
+        return result.T
+
+    def craft_params(par_array):
+        # Add possible last pixels lost due to masking
+        # Restore the ordering of the input data (pixel dimension last)
+        missing_ids = np.max(patch_ids) - par_array.shape[0] + 1
+        extra_dims = np.full((missing_ids,) + par_array.shape[1:], hp.UNSEEN)
+        result = np.concatenate((par_array, extra_dims))
+        result[np.isnan(result)] = hp.UNSEEN
+        return result.T
+
+    if len(x0):
+        res.chi_dB = [craft_maps(c) for c in res.chi_dB]
+        if nside:
+            res.x = craft_params(res.x)
+            res.Sigma = craft_params(res.Sigma)
+
+    res.s = craft_maps(res.s)
+    res.chi = craft_maps(res.chi)
+    res.invAtNA = craft_maps(res.invAtNA)
+    res.mask_good = mask
+
+    return res
+
+
 def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     """ Basic component separation
 
     Parameters
     ----------
     components: list or tuple of lists
-        Two input format are allowed
-         - List `Components` of the mixing matrix
-         - Tuple with two lists of `Components`, the first for temperature and
-           the second for polarization
-    instrument: PySM.Instrument
-        Instrument object used to define the mixing matrix and the
-        frequency-dependent noise weight.
-        It is required to have:
-         - frequencies
+         List storing the `Components` of the mixing matrix
+    instrument: 
+        Instrument object used to define the mixing matrix.
+        It can be any object that has what follows wither as a key or as an
+        attribute (e.g. dictionary, PySM.Instrument)
+         - Frequencies
         however, also the following are taken into account, if provided
-         - sens_I or sens_P (define the frequency inverse noise)
-         - bandpass (the mixing matrix is integrated over the bandpass)
+         - Sens_I or Sens_P (define the frequency inverse noise)
     data: ndarray or MaskedArray
-        Data vector to be separated. Shape (n_freq, ..., n_pix)
-        If `...` is 2, use sens_P to define the weights, sens_I otherwise.
+        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
+          - absent or 1: temperature maps
+          - 2: polarization maps
+          - 3: temperature and polarization maps (see note)
         Values equal to hp.UNSEEN or, if MaskedArray, masked values are
-        neglected during the component separation process. 
-        Note that a pixel is masked if at least one of its frequencies is masked
+        neglected during the component separation process.
     nside:
         For each pixel of a HEALPix map with this nside, the non-linear
         parameters are estimated independently
@@ -39,20 +145,42 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     result : scipy.optimze.OptimizeResult (dict)
         See `multi_comp_sep` if `nside` is positive and `comp_sep` otherwise.
 
+    Note
+    ----
+      * During the component separation, a pixel is masked if at least one of
+        its frequencies is masked.
+      * If you provide temperature and polarization maps, they will constrain the
+        **same** set of parameters. In particular, separation is **not** done
+        independently for temperature and polarization. If you want an
+        independent fitting for temperature and polarization, please launch
+
+         res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)
+         res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
+
     """
-    # Prepare mask and set to zero all the frequencies in the masked pixels: 
+    instrument = _force_keys_as_attributes(instrument)
+    # Prepare mask and set to zero all the frequencies in the masked pixels:
+    # NOTE: mask are bad pixels
     mask = _intersect_mask(data)
     data = hp.pixelfunc.ma_to_array(data).copy()
     data[..., mask] = 0  # Thus no contribution to the spectral likelihood
 
-    prewhiten_factors = _get_prewhiten_factors(instrument, data.shape)
-    A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluators(
+    try:
+        data_nside = hp.get_nside(data[0])
+    except TypeError:
+        data_nside = 0
+    prewhiten_factors = _get_prewhiten_factors(instrument, data.shape,
+                                               data_nside)
+    A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(
         components, instrument, prewhiten_factors=prewhiten_factors)
-    if not comp_of_param:
+    if not len(x0):
         A_ev = A_ev()
-    prewhitened_data = prewhiten_factors * data.T
+    if prewhiten_factors is None:
+        prewhitened_data = data.T
+    else:
+        prewhitened_data = prewhiten_factors * data.T
 
-    # Launch component separation
+    # Component separation
     if nside:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
                                 hp.npix2nside(data.shape[-1]))
@@ -60,6 +188,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
             A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, patch_ids,
             x0, **minimize_kwargs)
     else:
+        #import ipdb;ipdb.set_trace()
         res = comp_sep(A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, x0,
                        **minimize_kwargs)
 
@@ -71,7 +200,11 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     res.s[..., mask] = hp.UNSEEN
     res.chi = res.chi.T
     res.chi[..., mask] = hp.UNSEEN
-    if nside:
+    if 'chi_dB' in res:
+        for i in range(len(res.chi_dB)):
+            res.chi_dB[i] = res.chi_dB[i].T
+            res.chi_dB[i][..., mask] = hp.UNSEEN
+    if nside and len(x0):
         x_mask = hp.ud_grade(mask.astype(float), nside) == 1.
         res.x[x_mask] = hp.UNSEEN
         res.Sigma[x_mask] = hp.UNSEEN
@@ -80,7 +213,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
-def _get_prewhiten_factors(instrument, data_shape):
+def _get_prewhiten_factors(instrument, data_shape, nside):
     """ Derive the prewhitening factor from the sensitivity
 
     Parameters
@@ -108,74 +241,26 @@ def _get_prewhiten_factors(instrument, data_shape):
         elif data_shape[1] == 3:
             sens = np.stack(
                 (instrument.Sens_I, instrument.Sens_P, instrument.Sens_P))
+        else:
+            raise ValueError(data_shape)
     except AttributeError:  # instrument has no sensitivity -> do not prewhite
-        print('The sensitivity of the instrument is not specified')
         return None
 
     assert np.all(np.isfinite(sens))
-    return hp.nside2resol(instrument.Nside, arcmin=True) / sens
-
-
-def _A_evaluators(components, instrument, prewhiten_factors=None):
-    if hp.cookbook.is_seq_of_seq(components):
-        return _T_P_A_evaluators(components, instrument, prewhiten_factors)
-    return _single_A_evaluators(components, instrument, prewhiten_factors)
-
-
-def _T_P_A_evaluators(components, instrument, prewhiten_factors=None):
-    A_ev_T, A_dB_ev_T, comp_of_dB_T, x0_T, params_T = _A_evaluators(
-        components[0], instrument)
-    A_ev_P, A_dB_ev_P, comp_of_dB_P, x0_P, params_P = _A_evaluators(
-        components[1], instrument)
-
-    if len(comp_of_dB_T) == len(comp_of_dB_P) == 0:
-        # TODO Fix constant matrix properly
-        def A_ev():
-            A_T = A_ev_T()
-            A_P = A_ev_P()
-            if prewhiten_factors is None:
-                return np.stack((A_T, A_P, A_P))
-            else:
-                return (prewhiten_factors[..., np.newaxis] 
-                        * np.stack((A_T, A_P, A_P)))
-        return A_ev, None, [], None, []
-
-    def A_ev(x):
-        A_T = A_ev_T(x[:len(params_T)])
-        A_P = A_ev_P(x[len(params_T):])
-        return np.stack((A_T, A_P, A_P))
-
-    def A_dB_ev(x):
-        A_dB_T = A_dB_ev_T(x[:len(params_T)])
-        A_dB_P = A_dB_ev_P(x[len(params_T):])
-        return A_dB_T + A_dB_P
-
-    comp_of_dB = [(el,) + (0,) + (c,) for el, c in comp_of_dB_T]
-    comp_of_dB += [(el, slice(1, 3, None), c) for el, c in comp_of_dB_P]
-    x0 = np.hstack((x0_T, x0_P))
-    params = ['T.%s' % p for p in params_T] + ['P.%s' % p for p in params_P]
-    if prewhiten_factors is None:
-        return A_ev, A_dB_ev, comp_of_dB, x0, params
-
-    pw_A_ev = lambda x: prewhiten_factors[..., np.newaxis] * A_ev(x)
-    if len(prewhiten_factors.shape) < 2 or prewhiten_factors.shape[-2] < 2:
-        # prewhiten_factors is not stokes-dependent
-        pwf_dB = [prewhiten_factors] * len(params_T)
+    if nside:
+        return hp.nside2resol(nside, arcmin=True) / sens
     else:
-        pwf_dB = [prewhiten_factors[..., 0, :, np.newaxis]] * len(params_T)
-        pwf_dB += [prewhiten_factors[..., 1:, :, np.newaxis]] * len(params_P)
-    pw_A_dB_ev = lambda x: [pwf_dB_i * A_dB_i
-                            for pwf_dB_i, A_dB_i in zip(pwf_dB, A_dB_ev(x))]
-    return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
+        return 12**0.5 * hp.nside2resol(1, arcmin=True) / sens
 
 
-def _single_A_evaluators(components, instrument, prewhiten_factors=None):
+def _A_evaluator(components, instrument, prewhiten_factors=None):
     A = MixingMatrix(*components)
     A_ev = A.evaluator(instrument.Frequencies)
     A_dB_ev = A.diff_evaluator(instrument.Frequencies)
     comp_of_dB = A.comp_of_dB
     x0 = np.array([x for c in components for x in c.defaults])
     params = A.params
+
     if prewhiten_factors is None:
         return A_ev, A_dB_ev, comp_of_dB, x0, params
 
@@ -186,7 +271,9 @@ def _single_A_evaluators(components, instrument, prewhiten_factors=None):
     else:
         pw_A_ev = lambda: prewhiten_factors[..., np.newaxis] * A_ev()
         pw_A_dB_ev = None
+
     return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
+
 
 def _intersect_mask(maps):
     if hp.pixelfunc.is_ma(maps):
@@ -196,3 +283,15 @@ def _intersect_mask(maps):
 
     # Mask entire pixel if any of the frequencies in the pixel is masked
     return np.any(mask, axis=tuple(range(maps.ndim-1)))
+
+
+class _AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(_AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+def _force_keys_as_attributes(instrument):
+    if hasattr(instrument, 'Frequencies'):
+        return instrument
+    else:
+        return _AttrDict(instrument)

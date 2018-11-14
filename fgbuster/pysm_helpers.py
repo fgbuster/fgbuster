@@ -3,6 +3,7 @@
 import sys
 import numpy as np
 import pysm
+import healpy as hp
 
 def get_sky(nside, tag='c1d0s0'):
     """ Get a pre-defined PySM sky
@@ -77,10 +78,10 @@ def _get_available_instruments():
 
 def _dict_instrument_test(nside, units='uK_CMB'):
     return {
-        'frequencies': np.arange(50., 700, 50.),
-        'sens_I': np.linspace(20, 50, 13),
-        'sens_P': np.linspace(20, 50, 13),
-        'beams': np.ones(13),
+        'frequencies': np.arange(10., 300, 30.),
+        'sens_I': (np.linspace(20, 40, 10) - 30)**2,
+        'sens_P': (np.linspace(20, 40, 10) - 30)**2,
+        'beams': np.ones(9),
         'nside': nside,
         'add_noise': True,
         'noise_seed': 1234,
