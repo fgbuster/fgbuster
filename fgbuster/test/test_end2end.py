@@ -54,7 +54,7 @@ class TestEnd2EndNoiselessPhysical(unittest.TestCase):
     def test_basic_comp_sep_T(self):
         res_T = basic_comp_sep(self.components, self.instrument,
                                self.freq_maps[:, :1, :])
-        aac(res_T.x, np.array(self.input), rtol=1e-5)
+        aac(res_T.x, np.array(self.input), rtol=2e-5)
         aaae(res_T.chi, 0, decimal=2)
 
 
