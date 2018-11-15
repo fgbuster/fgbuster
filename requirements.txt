@@ -1,9 +1,0 @@
-sphinx
-numdifftools
-travis-sphinx
-healpy
-scipy
-numpy
-sympy>=1.1.1
-six
-git+git://github.com/bthorne93/PySM_public.git#egg=pysm
