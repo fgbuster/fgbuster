@@ -6,9 +6,11 @@ python:
 
 install:
   - pip install .
-  - pip install -r requirements.txt
 
 script:
   - python setup.py test          
-#  travis-sphinx -n build
-#after_success: travis-sphinx deploy
+
+after_success: 
+  - pip install --user travis-sphinx
+  - travis-sphinx build
+  - travis-sphinx deploy

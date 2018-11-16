@@ -1,4 +1,4 @@
-""" Component separation with many different setups
+""" High-level component separation routines
 
 """
 import numpy as np
@@ -15,7 +15,7 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
     ----------
     components: list or tuple of lists
          List storing the `Components` of the mixing matrix
-    instrument: 
+    instrument:
         Instrument object used to define the mixing matrix.
         It can be any object that has what follows wither as a key or as an
         attribute (e.g. dictionary, PySM.Instrument)
@@ -120,17 +120,20 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
     Parameters
     ----------
-    components: list or tuple of lists
-         List storing the `Components` of the mixing matrix
-    instrument: 
+    components: list
+        List storing the `Components` of the mixing matrix
+    instrument
         Instrument object used to define the mixing matrix.
-        It can be any object that has what follows wither as a key or as an
-        attribute (e.g. dictionary, PySM.Instrument)
-         - Frequencies
-        however, also the following are taken into account, if provided
-         - Sens_I or Sens_P (define the frequency inverse noise)
+        It can be any object that has what follows either as a key or as an
+        attribute (e.g. ``dict``, ``PySM.Instrument``)
+
+         * ``Frequencies``
+         * ``Sens_I`` or ``Sens_P`` (optional, frequencies are inverse-noise
+           weighted according to these noise levels)
+
     data: ndarray or MaskedArray
-        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
+        Data vector to be separated. Shape ``(n_freq, ..., n_pix)``.
+        ``...`` can be
           - absent or 1: temperature maps
           - 2: polarization maps
           - 3: temperature and polarization maps (see note)

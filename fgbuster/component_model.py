@@ -1,4 +1,4 @@
-""" Components that have an analytic frequency emission law
+""" Parametric emission laws
 
 These classes have to provide the following functionality:
     - are constructed from an arbitrary analytic expression

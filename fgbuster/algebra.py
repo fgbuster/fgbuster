@@ -1,11 +1,12 @@
-""" Recurrent algebraic functions in component separation
+""" Low-level component separation functions
 
 All the routines in this module do NOT support `numpy.ma.MaskedArray`.
 If you have a `MaskedArray`, `masked_array` you have two options.
- 1) Index `masked_array` with a mask so that you get standard `np.array`
-    containing only unmasked values
- 2) Whenever it is possible, you can pass `masked_array.data` and handle the
-    masked values by setting the corresponding entries of `invN` to zero
+
+1) Index `masked_array` with a mask so that you get standard `np.array`
+   containing only unmasked values
+2) Whenever it is possible, you can pass `masked_array.data` and handle the
+   masked values by setting the corresponding entries of `invN` to zero
 """
 
 # Note for developpers
@@ -581,6 +582,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
         Result of the spectral likelihood maximisation
         It is the output of `scipy.optimize.minimize`, plus some extra.
         It includes
+
         - x : (array)
             Maximum likelihood spectral parameters
         - Sigma : (ndarray)
@@ -590,7 +592,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
             Separated components. Shape `(..., n_comp)`
         - invAtNA : (ndarray)
             Covariance of the separated components.
-                Shape `(..., n_comp, n_comp)`
+            Shape `(..., n_comp, n_comp)`
 
     Note
     ----
