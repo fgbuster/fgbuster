@@ -18,6 +18,7 @@ setup(
     long_description = read('README.rst'),
     install_requires = [
         'parameterized',
+        'corner',
         'numdifftools',
         'sympy',
         'healpy',

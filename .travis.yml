@@ -11,6 +11,6 @@ script:
   - python setup.py test          
 
 after_success: 
-  - pip install --user travis-sphinx
-  - travis-sphinx build
-  - travis-sphinx deploy
+    - pip install travis-sphinx nbsphinx sphinx_rtd_theme jupyter_client
+    - travis-sphinx build
+    - travis-sphinx deploy
