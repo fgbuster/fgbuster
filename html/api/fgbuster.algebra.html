@@ -1,0 +1,570 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fgbuster.algebra &mdash; FGBuster 0.1.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Examples" href="../examples.html" />
+    <link rel="prev" title="fgbuster.mixingmatrix" href="fgbuster.mixingmatrix.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> FGBuster
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.separation_recipies.html">fgbuster.separation_recipies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.xForecast.html">fgbuster.xForecast</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.component_model.html">fgbuster.component_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.mixingmatrix.html">fgbuster.mixingmatrix</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">fgbuster.algebra</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">FGBuster</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../api.html">API</a> &raquo;</li>
+        
+      <li>fgbuster.algebra</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/fgbuster.algebra.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="module-fgbuster.algebra">
+<span id="fgbuster-algebra"></span><h1>fgbuster.algebra<a class="headerlink" href="#module-fgbuster.algebra" title="Permalink to this headline">¶</a></h1>
+<p>Low-level component separation functions</p>
+<p>All the routines in this module do NOT support <cite>numpy.ma.MaskedArray</cite>.
+If you have a <cite>MaskedArray</cite>, <cite>masked_array</cite> you have two options.</p>
+<ol class="arabic simple">
+<li>Index <cite>masked_array</cite> with a mask so that you get standard <cite>np.array</cite>
+containing only unmasked values</li>
+<li>Whenever it is possible, you can pass <cite>masked_array.data</cite> and handle the
+masked values by setting the corresponding entries of <cite>invN</cite> to zero</li>
+</ol>
+<p class="rubric">Functions</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">W</span></code>(A[,&nbsp;invN,&nbsp;return_svd])</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#fgbuster.algebra.W_dB" title="fgbuster.algebra.W_dB"><code class="xref py py-obj docutils literal"><span class="pre">W_dB</span></code></a>(A,&nbsp;A_dB,&nbsp;comp_of_dB[,&nbsp;invN,&nbsp;return_svd])</td>
+<td>Derivative of W</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.algebra.W_dBdB" title="fgbuster.algebra.W_dBdB"><code class="xref py py-obj docutils literal"><span class="pre">W_dBdB</span></code></a>(A,&nbsp;A_dB,&nbsp;A_dBdB,&nbsp;comp_of_dB[,&nbsp;invN,&nbsp;…])</td>
+<td>Second Derivative of W</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">Wd</span></code>(A,&nbsp;d[,&nbsp;invN,&nbsp;return_svd])</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.algebra.comp_sep" title="fgbuster.algebra.comp_sep"><code class="xref py py-obj docutils literal"><span class="pre">comp_sep</span></code></a>(A_ev,&nbsp;d,&nbsp;invN,&nbsp;A_dB_ev,&nbsp;comp_of_dB,&nbsp;…)</td>
+<td>Perform component separation</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">fisher_logL_dB_dB</span></code>(A,&nbsp;s,&nbsp;A_dB,&nbsp;comp_of_dB[,&nbsp;…])</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">invAtNA</span></code>(A[,&nbsp;invN,&nbsp;return_svd])</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">logL</span></code>(A,&nbsp;d[,&nbsp;invN,&nbsp;return_svd])</td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.algebra.logL_dB" title="fgbuster.algebra.logL_dB"><code class="xref py py-obj docutils literal"><span class="pre">logL_dB</span></code></a>(A,&nbsp;d,&nbsp;invN,&nbsp;A_dB[,&nbsp;comp_of_dB,&nbsp;…])</td>
+<td>Derivative of the log likelihood</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#fgbuster.algebra.multi_comp_sep" title="fgbuster.algebra.multi_comp_sep"><code class="xref py py-obj docutils literal"><span class="pre">multi_comp_sep</span></code></a>(A_ev,&nbsp;d,&nbsp;invN,&nbsp;A_dB_ev,&nbsp;…)</td>
+<td>Perform component separation</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.algebra.verbose_callback" title="fgbuster.algebra.verbose_callback"><code class="xref py py-obj docutils literal"><span class="pre">verbose_callback</span></code></a>()</td>
+<td>Provide a verbose callback function</td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="fgbuster.algebra.W_dB">
+<code class="descclassname">fgbuster.algebra.</code><code class="descname">W_dB</code><span class="sig-paren">(</span><em>A</em>, <em>A_dB</em>, <em>comp_of_dB</em>, <em>invN=None</em>, <em>return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#W_dB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.W_dB" title="Permalink to this definition">¶</a></dt>
+<dd><p>Derivative of W</p>
+<p>which could be particularly useful for the computation of residuals
+through the first order development of the map-making equation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <cite>(…, n_freq, n_comp)</cite></li>
+<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <cite>(…, n_freq, n_freq)</cite>.</li>
+<li><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
+derivative with respect to a different parameter.</li>
+<li><strong>comp_of_dB</strong> (<em>index</em><em> or </em><em>list of indices</em>) – It allows to provide in <cite>A_dB</cite> only the non-zero columns <cite>A</cite>.
+<cite>A_dB</cite> is assumed to be the derivative of <cite>A[comp_of_dB]</cite>.
+If a list is provided, also <cite>A_dB</cite> has to be a list and
+<cite>A_dB[i]</cite> is assumed to be the derivative of <cite>A[comp_of_dB[i]]</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res</strong> – Derivative of W. If <cite>A_dB</cite> is a list, <cite>res[i]</cite>
+is computed from <cite>A_dB[i]</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.algebra.W_dBdB">
+<code class="descclassname">fgbuster.algebra.</code><code class="descname">W_dBdB</code><span class="sig-paren">(</span><em>A</em>, <em>A_dB</em>, <em>A_dBdB</em>, <em>comp_of_dB</em>, <em>invN=None</em>, <em>return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#W_dBdB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.W_dBdB" title="Permalink to this definition">¶</a></dt>
+<dd><p>Second Derivative of W</p>
+<p>which could be particularly useful for the computation of
+<em>statistical</em> residuals through the second order development
+of the map-making equation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <cite>(…, n_freq, n_comp)</cite></li>
+<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <cite>(…, n_freq, n_freq)</cite>.</li>
+<li><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
+derivative with respect to a different parameter.</li>
+<li><strong>A_dBdB</strong> (<em>ndarray</em><em> or </em><em>list of list of ndarray</em>) – The second derivative of the mixing matrix. If list, each entry is the
+derivative of A_dB with respect to a different parameter.</li>
+<li><strong>comp_of_dB</strong> (<em>index</em><em> or </em><em>list of indices</em>) – It allows to provide in <cite>A_dB</cite> only the non-zero columns <cite>A</cite>.
+<cite>A_dB</cite> is assumed to be the derivative of <cite>A[comp_of_dB]</cite>.
+If a list is provided, also <cite>A_dB</cite> and <cite>A_dBdB</cite> have to be a lists,
+<cite>A_dB[i]</cite> and <cite>A_dBdB[i][j]</cite> (for any j) are assumed to be the
+derivatives of <cite>A[comp_of_dB[i]]</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res</strong> – Second Derivative of W. If <cite>A_dB</cite> is a list, <cite>res[i]</cite>
+is co</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.algebra.comp_sep">
+<code class="descclassname">fgbuster.algebra.</code><code class="descname">comp_sep</code><span class="sig-paren">(</span><em>A_ev</em>, <em>d</em>, <em>invN</em>, <em>A_dB_ev</em>, <em>comp_of_dB</em>, <em>*minimize_args</em>, <em>**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.comp_sep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform component separation</p>
+<p>Build the (inverse) spectral likelihood and minimize it to estimate the
+parameters of the mixing matrix. Separate the components using the best-fit
+mixing matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A_ev</strong> (<em>function</em>) – The evaluator of the mixing matrix. It takes a float or an array as
+argument and returns the mixing matrix, a ndarray with shape
+<cite>(…, n_freq, n_comp)</cite></li>
+<li><strong>d</strong> (<em>ndarray</em>) – The data vector. Shape <cite>(…, n_freq)</cite>.</li>
+<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <cite>(…, n_freq, n_freq)</cite>.</li>
+<li><strong>A_dB_ev</strong> (<em>function</em>) – The evaluator of the derivative of the mixing matrix.
+It returns a list, each entry is the derivative with respect to a
+different parameter.</li>
+<li><strong>comp_of_dB</strong> (<em>list of IndexExpression</em>) – It allows to provide as output of <cite>A_dB_ev</cite> only the non-zero columns
+<cite>A</cite>. <cite>A_dB_ev(x)[i]</cite> is assumed to be the derivative of
+<cite>A[comp_of_dB[i]]</cite>.</li>
+<li><strong>minimize_args</strong> (<em>list</em>) – Positional arguments to be passed to <cite>scipy.optimize.minimize</cite>.
+At this moment it just contains <cite>x0</cite>, the initial guess for the spectral
+parameters</li>
+<li><strong>minimize_kwargs</strong> (<em>dict</em>) – Keyword arguments to be passed to <cite>scipy.optimize.minimize</cite>.
+A good choice for most cases is
+<cite>minimize_kwargs = {‘tol’: 1, options: {‘disp’: True}}</cite>. <cite>tol</cite> depends
+on both the solver and your signal to noise: it should ensure that the
+difference between the best fit -logL and and the minimum is well less
+then 1, without exagereting (a difference of 1e-4 is useless).
+<cite>disp</cite> also triggers a verbose callback that monitors the convergence.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>result</strong> – Result of the spectral likelihood maximisation
+It is the output of <cite>scipy.optimize.minimize</cite>, plus some extra.
+It includes</p>
+<ul class="simple">
+<li><dl class="first docutils">
+<dt>x <span class="classifier-delimiter">:</span> <span class="classifier">(array)</span></dt>
+<dd>Maximum likelihood spectral parameters</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Sigma <span class="classifier-delimiter">:</span> <span class="classifier">(ndarray)</span></dt>
+<dd>Covariance of the spectral parameters,
+with the addition of some extra information</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>s <span class="classifier-delimiter">:</span> <span class="classifier">(ndarray)</span></dt>
+<dd>Separated components. Shape <cite>(…, n_comp)</cite></dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>invAtNA <span class="classifier-delimiter">:</span> <span class="classifier">(ndarray)</span></dt>
+<dd>Covariance of the separated components.
+Shape <cite>(…, n_comp, n_comp)</cite></dd>
+</dl>
+</li>
+</ul>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult (dict)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <cite>…</cite> in the arguments denote any extra set of dimention. They have to
+be compatible among different arguments in the <cite>numpy</cite> broadcasting sense.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.algebra.logL_dB">
+<code class="descclassname">fgbuster.algebra.</code><code class="descname">logL_dB</code><span class="sig-paren">(</span><em>A</em>, <em>d</em>, <em>invN</em>, <em>A_dB</em>, <em>comp_of_dB=Ellipsis</em>, <em>return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#logL_dB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.logL_dB" title="Permalink to this definition">¶</a></dt>
+<dd><p>Derivative of the log likelihood</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <cite>(…, n_freq, n_comp)</cite></li>
+<li><strong>d</strong> (<em>ndarray</em>) – The data vector. Shape <cite>(…, n_freq)</cite>.</li>
+<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <cite>(…, n_freq, n_freq)</cite>.</li>
+<li><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
+derivative with respect to a different parameter.</li>
+<li><strong>comp_of_dB</strong> (<em>IndexExpression</em><em> or </em><em>list of IndexExpression</em>) – It allows to provide in <cite>A_dB</cite> only the non-zero columns <cite>A</cite>.
+<cite>A_dB</cite> is assumed to be the derivative of <cite>A[comp_of_dB]</cite>.
+If a list is provided, also <cite>A_dB</cite> has to be a list and
+<cite>A_dB[i]</cite> is assumed to be the derivative of <cite>A[comp_of_dB[i]]</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>diff</strong> – Derivative of the spectral likelihood. If <cite>A_dB</cite> is a list, <cite>diff[i]</cite>
+is computed from <cite>A_dB[i]</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <cite>…</cite> in the shape of the arguments denote any extra set of dimentions.
+They have to be compatible among different arguments in the <cite>numpy</cite>
+broadcasting sense.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.algebra.multi_comp_sep">
+<code class="descclassname">fgbuster.algebra.</code><code class="descname">multi_comp_sep</code><span class="sig-paren">(</span><em>A_ev</em>, <em>d</em>, <em>invN</em>, <em>A_dB_ev</em>, <em>comp_of_dB</em>, <em>patch_ids</em>, <em>*minimize_args</em>, <em>**minimize_kargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#multi_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.multi_comp_sep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform component separation</p>
+<p>Run an independent <cite>comp_sep</cite> for entries identified by <cite>patch_ids</cite> and
+gathers the result.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A_ev</strong> (<em>function</em><em> or </em><em>ndarray</em>) – The evaluator of the mixing matrix. It takes a float or an array as
+argument and returns the mixing matrix, a ndarray with shape
+<cite>(…, n_freq, n_comp)</cite>
+If list, the i-th entry is the evaluator of the i-th patch.</li>
+<li><strong>d</strong> (<em>ndarray</em>) – The data vector. Shape <cite>(…, n_freq)</cite>.</li>
+<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <cite>(…, n_freq, n_freq)</cite>.
+If a block of <cite>invN</cite> has a diagonal element equal to zero the
+corresponding entries of <cite>d</cite> are masked.</li>
+<li><strong>A_dB_ev</strong> (<em>function</em>) – The evaluator of the derivative of the mixing matrix.
+It returns a list, each entry is the derivative with respect to a
+different parameter.</li>
+<li><strong>comp_of_dB</strong> (<em>list of IndexExpression</em>) – It allows to provide as output of <cite>A_dB_ev</cite> only the non-zero columns
+<cite>A</cite>. <cite>A_dB_ev(x)[i]</cite> is assumed to be the derivative of
+<cite>A[comp_of_dB[i]]</cite>.</li>
+<li><strong>patch_ids</strong> (<em>array</em>) – id of regions.</li>
+<li><strong>minimize_args</strong> (<em>list</em>) – Positional arguments to be passed to <cite>scipy.optimize.minimize</cite>.
+At this moment, it just contains <cite>x0</cite>, the initial guess for the
+spectral parameters. It is required if A_ev is a function and ignored
+otherwise.</li>
+<li><strong>minimize_kwargs</strong> (<em>dict</em>) – Keyword arguments to be passed to <cite>scipy.optimize.minimize</cite>.
+A good choice for most cases is
+<cite>minimize_kwargs = {‘tol’: 1, options: {‘disp’: True}}</cite>. <cite>tol</cite> depends
+on both the solver and your signal-to-noise: it should ensure that the
+difference between the best fit -logL and the minimum is way less
+than 1, without exagerating (a difference of 1e-4 is useless).
+<cite>disp</cite> also triggers a verbose callback that monitors the convergence.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>result</strong> – Result of the spectral likelihood maximization
+It is the output of <cite>scipy.optimize.minimize</cite>, and thus includes
+- patch_res : list</p>
+<blockquote>
+<div><p>the i-th entry is the result of <cite>comp_sep</cite> on <cite>patch_ids == i</cite></p>
+</div></blockquote>
+<p>with the addition of some extra information
+- s : (ndarray)</p>
+<blockquote>
+<div><p>Separated components, collected from all the patches.
+Shape <cite>(…, n_comp)</cite></p>
+</div></blockquote>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult (dict)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <cite>…</cite> in the arguments denote any extra set of dimention. They have to
+be compatible among different arguments in the <cite>numpy</cite> broadcasting sense.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.algebra.verbose_callback">
+<code class="descclassname">fgbuster.algebra.</code><code class="descname">verbose_callback</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#verbose_callback"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.verbose_callback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide a verbose callback function</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Currently, tested for the bfgs method. It can raise <cite>KeyError</cite> for other
+methods.</p>
+</div>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="fgbuster.mixingmatrix.html" class="btn btn-neutral" title="fgbuster.mixingmatrix" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'../',
+              VERSION:'0.1.1',
+              LANGUAGE:'en',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

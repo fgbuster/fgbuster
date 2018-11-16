@@ -1,0 +1,86 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Example of forecasting"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%load_ext autoreload\n",
+    "%autoreload 2\n",
+    "from fgbuster.pysm_helpers import get_instrument, get_sky\n",
+    "import healpy as hp\n",
+    "import numpy as np\n",
+    "from fgbuster.xForecast import xForecast\n",
+    "\n",
+    "nside = 16\n",
+    "# define sky and foregrounds simulations\n",
+    "sky = get_sky(nside, 'd0s0')\n",
+    "# define instrument\n",
+    "instrument = get_instrument(nside, 'litebird')\n",
+    "# get noiseless frequency maps\n",
+    "freq_maps = instrument.observe(sky, write_outputs=False)[0]\n",
+    "# take only the Q and U maps\n",
+    "freq_maps = freq_maps[:,1:]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# define components used in the modeling\n",
+    "from fgbuster.component_model import CMB, Dust, Synchrotron\n",
+    "components = [CMB(), Dust(350.), Synchrotron(20.)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# call for xForecast\n",
+    "# with lmin=2, lmax=2*nside-1, and Alens=0.6\n",
+    "# you can try with make_figure=True if you want to output angular power spectra and profile likelihood on r\n",
+    "res = xForecast(components, instrument, freq_maps, 2, 2*nside-1, 1.0, make_figure=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.5"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
