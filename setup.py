@@ -15,7 +15,15 @@ setup(
     keywords = 'statistics cosmology cmb foregrounds',
     url = 'https://github.com/fgbuster/fgbuster',
     packages = ['fgbuster'],
-    long_description = read('README.md'),
+    long_description = read('README.rst'),
+    install_requires = [
+        'parameterized',
+        'numdifftools',
+        'sympy',
+        'healpy',
+        'pysm',
+    ],
+    dependency_links=['git+https://github.com/bthorne93/PySM_public.git@master#egg=pysm-2.1.0'],
     classifiers = ['Development Status :: 1 - Pre-Alpha'],
     test_suite = 'fgbuster.test'
 )
