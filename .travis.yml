@@ -12,5 +12,5 @@ script:
 
 after_success: 
     - pip install travis-sphinx nbsphinx sphinx_rtd_theme jupyter_client
-    - travis-sphinx build
+    - travis-sphinx build -n
     - travis-sphinx deploy
