@@ -85,7 +85,10 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Contributing</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Contributing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#generating-the-documentation">Generating the documentation</a></li>
+</ul>
+</li>
 </ul>
 
             
@@ -171,7 +174,41 @@
 </style>
 <div class="section" id="contributing">
 <span id="id1"></span><h1>Contributing<a class="headerlink" href="#contributing" title="Permalink to this headline">¶</a></h1>
-<p>Here is how to contribute</p>
+<p>Follow the <a class="reference external" href="https://github.com/google/styleguide/blob/gh-pages/pyguide.md">Google style guide</a>
+and…write docstrings! They auto-generate the documentation. Use the
+<a class="reference external" href="https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html">numpy sphinx syntax</a>.</p>
+<div class="section" id="generating-the-documentation">
+<h2>Generating the documentation<a class="headerlink" href="#generating-the-documentation" title="Permalink to this headline">¶</a></h2>
+<p>Call <code class="docutils literal"><span class="pre">ROOT_DIR</span></code> the folder where you cloned the FGBuster repository.
+Clone the documentation branch</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">cd</span> ROOT_DIR
+mkdir fgbuster-docs
+<span class="nb">cd</span> fgbuster-docs
+git clone git@github.com:fgbuster/fgbuster.git html
+<span class="nb">cd</span> html
+git ch gh-pages
+</pre></div>
+</div>
+<p>You have now two clones of the FGBuster repository. It is important that they
+have the right relative location.</p>
+<p>To check the documentation locally, open <code class="docutils literal"><span class="pre">ROOT_DIR/fgbuster-docs/html/index.html</span></code>
+with your browser.</p>
+<p>Whenever you make changes to FGBuster, build the documentation with</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">cd</span> ROOT_DIR
+<span class="nb">cd</span> fgbuster/docs/
+make html
+</pre></div>
+</div>
+<p>and refresh your browser. The documentation is up-to-date.</p>
+<p>To update the online documentation,</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">cd</span> ROOT_DIR
+<span class="nb">cd</span> fgbuster-docs/html
+git add --all
+git commit
+git push
+</pre></div>
+</div>
+</div>
 </div>
 
 
