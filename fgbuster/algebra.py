@@ -769,8 +769,11 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         mask = patch_ids == patch_id
         if np.any(mask):
             res.s[mask] = res.patch_res[patch_id].s
+            del res.patch_res[patch_id].s
             res.invAtNA[mask] = res.patch_res[patch_id].invAtNA
+            del res.patch_res[patch_id].invAtNA
             res.chi[mask] = res.patch_res[patch_id].chi
+            del res.patch_res[patch_id].chi
 
     try:
         res.x = np.array([minimize_args[0] * np.nan if r is None else
@@ -778,6 +781,10 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         res.Sigma = np.array([
             minimize_args[0] * minimize_args[0][:, np.newaxis] * np.nan
             if r is None else r.Sigma for r in res.patch_res])
+        for r in res.patch_res:
+            if r is not None:
+                del r.x
+                del r.Sigma
     except (AttributeError, IndexError):  # The mixing matrix was constant
         pass
 
@@ -802,6 +809,10 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
                 mask = patch_ids == patch_id
                 if np.any(mask):
                     res.chi_dB[i][mask] = res.patch_res[patch_id].chi_dB[i]
+        if n_param:
+            for r in res.patch_res:
+                if r is not None:
+                    del r.chi_dB
 
     return res
 

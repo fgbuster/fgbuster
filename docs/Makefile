@@ -6,7 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = FGBuster
 SOURCEDIR     = source
-BUILDDIR      = ../../fgbuster-doc/
+BUILDDIR      = ../../fgbuster-docs/
 
 # Put it first so that "make" without argument is like "make help".
 help:
