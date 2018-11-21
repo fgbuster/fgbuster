@@ -8,11 +8,28 @@
    ]
   },
   {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%load_ext autoreload\n",
+    "%autoreload 2\n",
+    "%matplotlib inline\n",
+    "\n",
+    "import healpy as hp\n",
+    "from fgbuster.pysm_helpers import get_instrument, get_sky\n",
+    "from fgbuster.component_model import CMB, Dust, Synchrotron\n",
+    "from fgbuster.separation_recipies import basic_comp_sep\n",
+    "from fgbuster.visualization import corner_norm"
+   ]
+  },
+  {
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## Simulate a sky\n",
-    "We need a sky to clean. DustBuster provides a handy way of generating simulated sky obsersvation that exploit the `pysm`"
+    "## Simulate your frequency maps\n",
+    "You have some frequecy maps to clean, they can be either data or simulations. For example, you can use `pysm` to simulate microwave skys with different complexities. ForeGroundBuster adds a couple of functions that make the process even easier."
    ]
   },
   {
@@ -21,15 +38,6 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "%load_ext autoreload\n",
-    "%autoreload 2\n",
-    "\n",
-    "from fgbuster.pysm_helpers import get_instrument, get_sky\n",
-    "import healpy as hp\n",
-    "import numpy as np\n",
-    "import matplotlib.pyplot as plt\n",
-    "%matplotlib inline\n",
-    "\n",
     "nside = 32\n",
     "sky = get_sky(nside, 'c1d0s0')\n",
     "instrument = get_instrument(nside, 'litebird')\n",
@@ -42,7 +50,7 @@
    "metadata": {},
    "source": [
     "## Define what you fit for\n",
-    "Notice that this choice is independent of what the actual sky contains. Here we fit for CMB, dust and synchrotron. The spectral index of dust and synchrotron are free parameters."
+    "Create your sky model as a list of components"
    ]
   },
   {
@@ -51,7 +59,6 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "from fgbuster.component_model import CMB, Dust, Synchrotron\n",
     "components = [CMB(), Dust(150.), Synchrotron(20.)]"
    ]
   },
@@ -60,7 +67,7 @@
    "metadata": {},
    "source": [
     "## Component separation\n",
-    "The tools in DustBuster allow for very flexible and diverse component separation approaches. However, we also provide a set of predefined function that perform component separation out of the box. They suit most of the case-of-use."
+    "The tools inside ForeGroundBuster allow for very flexible and diverse component separation approaches. However, we also provide a set of predefined function that perform component separation out of the box. They suit most common use cases."
    ]
   },
   {
@@ -71,8 +78,7 @@
    },
    "outputs": [],
    "source": [
-    "from fgbuster.separation_recipies import basic_comp_sep\n",
-    "res = basic_comp_sep(components, instrument, freq_maps)"
+    "result = basic_comp_sep(components, instrument, freq_maps)"
    ]
   },
   {
@@ -80,7 +86,9 @@
    "metadata": {},
    "source": [
     "## Explore the results\n",
-    "Inspect both the non-linear parameters"
+    "You have just solved for both the spectral parameters of your components and their amplitudes.\n",
+    "\n",
+    "Get the spectral parameters name and values with"
    ]
   },
   {
@@ -89,16 +97,15 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "from fgbuster.visualization import corner_norm\n",
-    "print res.params\n",
-    "corner_norm(res.x, res.Sigma, labels=res.params)"
+    "print(result.params)\n",
+    "print(result.x)"
    ]
   },
   {
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "and the component maps\n"
+    "You can also have a look at their semi-analytic covariance, but remember that it is accurate only the high signal-to-noise regime"
    ]
   },
   {
@@ -107,10 +114,25 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "print res.s.shape\n",
-    "hp.mollview(res.s[0,1], title='CMB')\n",
-    "hp.mollview(res.s[1,1], title='Dust', norm='hist')\n",
-    "hp.mollview(res.s[2,1], title='Synchrotron', norm='hist')"
+    "corner_norm(result.x, result.Sigma, labels=result.params)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The amplitudes of the components are stacked in the ``s`` attribute and they are in the same format of the input frequency maps: Q and U healpix maps, in this case."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "hp.mollview(result.s[0,1], title='CMB')\n",
+    "hp.mollview(result.s[1,1], title='Dust', norm='hist')\n",
+    "hp.mollview(result.s[2,1], title='Synchrotron', norm='hist')"
    ]
   }
  ],

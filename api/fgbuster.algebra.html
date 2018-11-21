@@ -182,8 +182,8 @@
 <div class="section" id="module-fgbuster.algebra">
 <span id="fgbuster-algebra"></span><h1>fgbuster.algebra<a class="headerlink" href="#module-fgbuster.algebra" title="Permalink to this headline">¶</a></h1>
 <p>Low-level component separation functions</p>
-<p>All the routines in this module do NOT support <cite>numpy.ma.MaskedArray</cite>.
-If you have a <cite>MaskedArray</cite>, <cite>masked_array</cite> you have two options.</p>
+<p>All the routines in this module do NOT support <code class="docutils literal"><span class="pre">numpy.ma.MaskedArray</span></code>.
+In that case, you have two options.</p>
 <ol class="arabic simple">
 <li>Index <cite>masked_array</cite> with a mask so that you get standard <cite>np.array</cite>
 containing only unmasked values</li>
@@ -458,22 +458,28 @@ than 1, without exagerating (a difference of 1e-4 is useless).
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>result</strong> – Result of the spectral likelihood maximization
-It is the output of <cite>scipy.optimize.minimize</cite>, and thus includes
-- patch_res : list</p>
-<blockquote>
-<div><p>the i-th entry is the result of <cite>comp_sep</cite> on <cite>patch_ids == i</cite></p>
-</div></blockquote>
-<p>with the addition of some extra information
-- s : (ndarray)</p>
-<blockquote>
-<div><p>Separated components, collected from all the patches.
-Shape <cite>(…, n_comp)</cite></p>
-</div></blockquote>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>result</strong> – It has the following attributes</p>
+<ul class="simple">
+<li><dl class="first docutils">
+<dt><cite>patch_res</cite> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd>the i-th entry is the result of <a class="reference internal" href="#fgbuster.algebra.comp_sep" title="fgbuster.algebra.comp_sep"><code class="xref py py-func docutils literal"><span class="pre">comp_sep()</span></code></a> on
+<code class="docutils literal"><span class="pre">patch_ids</span> <span class="pre">==</span> <span class="pre">i</span></code></dd>
+</dl>
+</li>
+</ul>
+<p>with the addition of some extra information</p>
+<ul class="simple">
+<li><dl class="first docutils">
+<dt>s <span class="classifier-delimiter">:</span> <span class="classifier">(ndarray)</span></dt>
+<dd>Separated components, collected from all the patches.
+Shape <cite>(…, n_comp)</cite></dd>
+</dl>
+</li>
+</ul>
 </p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult (dict)</p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult</p>
 </td>
 </tr>
 </tbody>

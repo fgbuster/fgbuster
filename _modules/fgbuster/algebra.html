@@ -150,8 +150,8 @@
   <h1>Source code for fgbuster.algebra</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot; Low-level component separation functions</span>
 
-<span class="sd">All the routines in this module do NOT support `numpy.ma.MaskedArray`.</span>
-<span class="sd">If you have a `MaskedArray`, `masked_array` you have two options.</span>
+<span class="sd">All the routines in this module do NOT support ``numpy.ma.MaskedArray``.</span>
+<span class="sd">In that case, you have two options.</span>
 
 <span class="sd">1) Index `masked_array` with a mask so that you get standard `np.array`</span>
 <span class="sd">   containing only unmasked values</span>
@@ -826,9 +826,9 @@
 <span class="sd">        argument and returns the mixing matrix, a ndarray with shape</span>
 <span class="sd">        `(..., n_freq, n_comp)`</span>
 <span class="sd">        If list, the i-th entry is the evaluator of the i-th patch.</span>
-<span class="sd">    d: ndarray</span>
+<span class="sd">    d : ndarray</span>
 <span class="sd">        The data vector. Shape `(..., n_freq)`.</span>
-<span class="sd">    invN: ndarray or None</span>
+<span class="sd">    invN : ndarray or None</span>
 <span class="sd">        The inverse noise matrix. Shape `(..., n_freq, n_freq)`.</span>
 <span class="sd">        If a block of `invN` has a diagonal element equal to zero the</span>
 <span class="sd">        corresponding entries of `d` are masked.</span>
@@ -836,18 +836,18 @@
 <span class="sd">        The evaluator of the derivative of the mixing matrix.</span>
 <span class="sd">        It returns a list, each entry is the derivative with respect to a</span>
 <span class="sd">        different parameter.</span>
-<span class="sd">    comp_of_dB: list of IndexExpression</span>
+<span class="sd">    comp_of_dB : list of IndexExpression</span>
 <span class="sd">        It allows to provide as output of `A_dB_ev` only the non-zero columns</span>
 <span class="sd">        `A`. `A_dB_ev(x)[i]` is assumed to be the derivative of</span>
 <span class="sd">        `A[comp_of_dB[i]]`.</span>
-<span class="sd">    patch_ids: array</span>
+<span class="sd">    patch_ids : array</span>
 <span class="sd">        id of regions.</span>
-<span class="sd">    minimize_args: list</span>
+<span class="sd">    minimize_args : list</span>
 <span class="sd">        Positional arguments to be passed to `scipy.optimize.minimize`.</span>
 <span class="sd">        At this moment, it just contains `x0`, the initial guess for the</span>
 <span class="sd">        spectral parameters. It is required if A_ev is a function and ignored</span>
 <span class="sd">        otherwise.</span>
-<span class="sd">    minimize_kwargs: dict</span>
+<span class="sd">    minimize_kwargs : dict</span>
 <span class="sd">        Keyword arguments to be passed to `scipy.optimize.minimize`.</span>
 <span class="sd">        A good choice for most cases is</span>
 <span class="sd">        `minimize_kwargs = {&#39;tol&#39;: 1, options: {&#39;disp&#39;: True}}`. `tol` depends</span>
@@ -858,12 +858,15 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    result : scipy.optimze.OptimizeResult (dict)</span>
-<span class="sd">        Result of the spectral likelihood maximization</span>
-<span class="sd">	It is the output of `scipy.optimize.minimize`, and thus includes</span>
-<span class="sd">	- patch_res : list</span>
-<span class="sd">	    the i-th entry is the result of `comp_sep` on `patch_ids == i`</span>
+<span class="sd">    result : scipy.optimze.OptimizeResult</span>
+<span class="sd">        It has the following attributes</span>
+
+<span class="sd">	- `patch_res` : list</span>
+<span class="sd">            the i-th entry is the result of :func:`comp_sep` on </span>
+<span class="sd">            ``patch_ids == i``</span>
+
 <span class="sd">        with the addition of some extra information</span>
+
 <span class="sd">	- s : (ndarray)</span>
 <span class="sd">	    Separated components, collected from all the patches.</span>
 <span class="sd">            Shape `(..., n_comp)`</span>
@@ -919,8 +922,11 @@
         <span class="n">mask</span> <span class="o">=</span> <span class="n">patch_ids</span> <span class="o">==</span> <span class="n">patch_id</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
             <span class="n">res</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">patch_res</span><span class="p">[</span><span class="n">patch_id</span><span class="p">]</span><span class="o">.</span><span class="n">s</span>
+            <span class="k">del</span> <span class="n">res</span><span class="o">.</span><span class="n">patch_res</span><span class="p">[</span><span class="n">patch_id</span><span class="p">]</span><span class="o">.</span><span class="n">s</span>
             <span class="n">res</span><span class="o">.</span><span class="n">invAtNA</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">patch_res</span><span class="p">[</span><span class="n">patch_id</span><span class="p">]</span><span class="o">.</span><span class="n">invAtNA</span>
+            <span class="k">del</span> <span class="n">res</span><span class="o">.</span><span class="n">patch_res</span><span class="p">[</span><span class="n">patch_id</span><span class="p">]</span><span class="o">.</span><span class="n">invAtNA</span>
             <span class="n">res</span><span class="o">.</span><span class="n">chi</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">patch_res</span><span class="p">[</span><span class="n">patch_id</span><span class="p">]</span><span class="o">.</span><span class="n">chi</span>
+            <span class="k">del</span> <span class="n">res</span><span class="o">.</span><span class="n">patch_res</span><span class="p">[</span><span class="n">patch_id</span><span class="p">]</span><span class="o">.</span><span class="n">chi</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">res</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">minimize_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span>
@@ -928,6 +934,10 @@
         <span class="n">res</span><span class="o">.</span><span class="n">Sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
             <span class="n">minimize_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">minimize_args</span><span class="p">[</span><span class="mi">0</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
             <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">r</span><span class="o">.</span><span class="n">Sigma</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">patch_res</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">patch_res</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">r</span><span class="o">.</span><span class="n">x</span>
+                <span class="k">del</span> <span class="n">r</span><span class="o">.</span><span class="n">Sigma</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>  <span class="c1"># The mixing matrix was constant</span>
         <span class="k">pass</span>
 
@@ -952,6 +962,10 @@
                 <span class="n">mask</span> <span class="o">=</span> <span class="n">patch_ids</span> <span class="o">==</span> <span class="n">patch_id</span>
                 <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
                     <span class="n">res</span><span class="o">.</span><span class="n">chi_dB</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">patch_res</span><span class="p">[</span><span class="n">patch_id</span><span class="p">]</span><span class="o">.</span><span class="n">chi_dB</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">n_param</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">patch_res</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">del</span> <span class="n">r</span><span class="o">.</span><span class="n">chi_dB</span>
 
     <span class="k">return</span> <span class="n">res</span></div>
 
