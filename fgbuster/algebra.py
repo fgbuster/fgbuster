@@ -1,7 +1,7 @@
 """ Low-level component separation functions
 
-All the routines in this module do NOT support `numpy.ma.MaskedArray`.
-If you have a `MaskedArray`, `masked_array` you have two options.
+All the routines in this module do NOT support ``numpy.ma.MaskedArray``.
+In that case, you have two options
 
 1) Index `masked_array` with a mask so that you get standard `np.array`
    containing only unmasked values
@@ -676,9 +676,9 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         argument and returns the mixing matrix, a ndarray with shape
         `(..., n_freq, n_comp)`
         If list, the i-th entry is the evaluator of the i-th patch.
-    d: ndarray
+    d : ndarray
         The data vector. Shape `(..., n_freq)`.
-    invN: ndarray or None
+    invN : ndarray or None
         The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
         If a block of `invN` has a diagonal element equal to zero the
         corresponding entries of `d` are masked.
@@ -686,18 +686,18 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         The evaluator of the derivative of the mixing matrix.
         It returns a list, each entry is the derivative with respect to a
         different parameter.
-    comp_of_dB: list of IndexExpression
+    comp_of_dB : list of IndexExpression
         It allows to provide as output of `A_dB_ev` only the non-zero columns
         `A`. `A_dB_ev(x)[i]` is assumed to be the derivative of
         `A[comp_of_dB[i]]`.
-    patch_ids: array
+    patch_ids : array
         id of regions.
-    minimize_args: list
+    minimize_args : list
         Positional arguments to be passed to `scipy.optimize.minimize`.
         At this moment, it just contains `x0`, the initial guess for the
         spectral parameters. It is required if A_ev is a function and ignored
         otherwise.
-    minimize_kwargs: dict
+    minimize_kwargs : dict
         Keyword arguments to be passed to `scipy.optimize.minimize`.
         A good choice for most cases is
         `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
@@ -711,9 +711,13 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
     result : scipy.optimze.OptimizeResult (dict)
         Result of the spectral likelihood maximization
 	It is the output of `scipy.optimize.minimize`, and thus includes
-	- patch_res : list
-	    the i-th entry is the result of `comp_sep` on `patch_ids == i`
+
+	- `patch_res` : list
+            the i-th entry is the result of :func:`comp_sep` on
+            ``patch_ids == i``
+
         with the addition of some extra information
+
 	- s : (ndarray)
 	    Separated components, collected from all the patches.
             Shape `(..., n_comp)`
