@@ -87,5 +87,3 @@ def from_Cl_to_r_estimate(ClBB_tot, ell_v, fsky, ClBB_model_other_than_prim, r_v
 
     return r_fit, sigma_r_fit, likelihood_on_r
 
-
-
