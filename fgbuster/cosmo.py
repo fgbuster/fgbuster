@@ -7,6 +7,7 @@ import os.path as op
 from fgbuster.xForecast import _get_Cl_cmb
 import sys
 import scipy
+from fgbuster.algebra import W_dB, _mmm
 
 CMB_CL_FILE = op.join(
      op.dirname(__file__), 'templates/Cls_Planck2018_%s.fits')
@@ -88,16 +89,41 @@ def from_Cl_to_r_estimate(ClBB_tot, ell_v, fsky, ClBB_model_other_than_prim, r_v
     return r_fit, sigma_r_fit, likelihood_on_r
 
 
-def estimation_of_Cl_stat_res(Sigma, Cl_comp):
+def estimation_of_Cl_stat_res(Sigma, d_fgs, A_ev, A_dB_ev, comp_of_dB, beta_maxL, invN, lmin, lmax, i_cmb=0):
+
     """Estimation of the statistical residuals
     following Errard and Stompor 2018.
 
     Parameters
     ----------
-    Sigma: 2d-array
+    Sigma: 2d-array or list of 2d-arrays
          Covariance of error bars on spectral indices.
-    Cl_sky_comp: 2d-array
-    
+    d_fgs: ndarray
+         The data vector. Shape `(..., n_freq)`.
+    A_ev : function
+        The evaluator of the mixing matrix. It takes a float or an array as
+        argument and returns the mixing matrix, a ndarray with shape
+        `(..., n_freq, n_comp)`
+    invN: ndarray or None
+        The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
+    A_dB_ev : function
+        The evaluator of the derivative of the mixing matrix.
+        It returns a list, each entry is the derivative with respect to a
+        different parameter.
+    comp_of_dB: IndexExpression or list of IndexExpression
+        It allows to provide in `A_dB` only the non-zero columns `A`.
+        `A_dB` is assumed to be the derivative of `A[comp_of_dB]`.
+        If a list is provided, also `A_dB` has to be a list and
+        `A_dB[i]` is assumed to be the derivative of `A[comp_of_dB[i]]`.
+    beta_maxL: 1-d array or list of 1-d arrays
+         Spectral indices as found by the maximization of the
+         spectral likelihood     
+    lmin, lmax: int
+         minimum and maximum multipoles to be considered 
+         in the analysis
+    i_cmb: int
+         Index for the CMB dimensions, typically given by
+         A.components.index('CMB'), with A = MixingMatrix(*components)
     Returns
     -------
     ClBB_stat_model: ndarray
@@ -105,14 +131,48 @@ def estimation_of_Cl_stat_res(Sigma, Cl_comp):
 
     Note
     ----
+         * The formalism is following Errard and Stompor 2018
+         * In the case of multipatch, this assumes uncorrelated foregrounds residuals between sky patches
 
     """
-    Cl_stat_res_per_patch_analytic = Cl_dust*0.0
-    ClYY = np.zeros((len(drv),len(drv), len(Cl_dust)))
-    for l in range(len(Cl_dust)):
-        for ch1 in range(len(drv)):
-            for ch2 in range(len(drv)):
-                 ClYY[ch1,ch2,l] = dW_kb_sq['matrix'][ch1,inds_].T.dot( np.array([[0.0, 0.0, 0.0],[0.0, Cl_dust[l], Cl_dxs[l]],\
-                                                                    [0.0, Cl_sxd[l], Cl_sync[l]]]) ).dot(dW_kb_sq['matrix'][ch2,inds_])
-        Cl_stat_res_per_patch_analytic[l] = np.trace( d2LdBdB_inv_analytic[:,:].dot( ClYY[:,:,l] ) )/BB_factor_computation(150.0)**2
 
+    # first, we preprocess the frequency sky maps
+    n_stokes = d_fgs.shape[1]
+    n_freqs = d_fgs.shape[0]
+    if isinstance(Sigma, (list,)):
+        n_patches = len(Sigma)
+    else: n_patches = 1
+    
+    if n_stokes == 3:  
+        d_spectra = d_fgs
+    else:  # Only P is provided, add T for map2alm
+        d_spectra = np.zeros((n_freqs, 3, d_fgs.shape[2]), dtype=d_fgs.dtype)
+        d_spectra[:, 1:] = d_fgs
+    # masked data and fsky
+    mask = d_fgs[0, 0, :] != 0.
+    fsky = mask.astype(float).sum() / mask.size
+    # go to Fourier space and build matrix with
+    # all the observed auto- and cross-spectra 
+    almBs = [hp.map2alm(freq_map, lmax=lmax, iter=10)[2] for freq_map in d_spectra]
+    Cl_fgs = np.zeros((n_freqs, n_freqs, lmax+1), dtype=d_fgs.dtype)
+    for f1 in range(n_freqs):
+        for f2 in range(n_freqs):
+            if f1 > f2:
+                Cl_fgs[f1, f2] = Cl_fgs[f2, f1]
+            else:
+                Cl_fgs[f1, f2] = hp.alm2cl(almBs[f1], almBs[f2], lmax=lmax)
+    # concatanating everything, and correcting for fsky
+    Cl_fgs = Cl_fgs[..., lmin:] / fsky
+    # from the mixing matrix and its derivative at the peak
+    # of the likelihood, we build dW/dB
+    A_maxL = A_ev(beta_maxL)
+    A_dB_maxL = A_dB_ev(beta_maxL)
+    W_dB_maxL = W_dB(A_maxL, A_dB_maxL, comp_of_dB, invN=invN)[:, i_cmb]
+    # and then Cl_YY, cf Stompor et al 2016
+    Cl_YY = _mmm(W_dB_maxL, Cl_fgs.T, W_dB_maxL.T)  
+    # and finally, using the covariance of error bars on spectral indices
+    # we compute the model for the statistical foregrounds residuals, 
+    # cf. Errard et al 2018
+    tr_SigmaYY = np.einsum('ij, lji -> l', Sigma, Cl_YY)
+
+    return tr_SigmaYY
