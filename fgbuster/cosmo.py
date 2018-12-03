@@ -87,3 +87,32 @@ def from_Cl_to_r_estimate(ClBB_tot, ell_v, fsky, ClBB_model_other_than_prim, r_v
 
     return r_fit, sigma_r_fit, likelihood_on_r
 
+
+def estimation_of_Cl_stat_res(Sigma, Cl_comp):
+    """Estimation of the statistical residuals
+    following Errard and Stompor 2018.
+
+    Parameters
+    ----------
+    Sigma: 2d-array
+         Covariance of error bars on spectral indices.
+    Cl_sky_comp: 2d-array
+    
+    Returns
+    -------
+    ClBB_stat_model: ndarray
+         Vector containing the amplitudes of the angular power spectrum
+
+    Note
+    ----
+
+    """
+    Cl_stat_res_per_patch_analytic = Cl_dust*0.0
+    ClYY = np.zeros((len(drv),len(drv), len(Cl_dust)))
+    for l in range(len(Cl_dust)):
+        for ch1 in range(len(drv)):
+            for ch2 in range(len(drv)):
+                 ClYY[ch1,ch2,l] = dW_kb_sq['matrix'][ch1,inds_].T.dot( np.array([[0.0, 0.0, 0.0],[0.0, Cl_dust[l], Cl_dxs[l]],\
+                                                                    [0.0, Cl_sxd[l], Cl_sync[l]]]) ).dot(dW_kb_sq['matrix'][ch2,inds_])
+        Cl_stat_res_per_patch_analytic[l] = np.trace( d2LdBdB_inv_analytic[:,:].dot( ClYY[:,:,l] ) )/BB_factor_computation(150.0)**2
+
