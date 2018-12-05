@@ -37,6 +37,7 @@ import six
 import numpy as np
 import scipy as sp
 import numdifftools
+from functools import reduce
 
 OPTIMIZE = False
 _EPSILON_LOGL_DB = 1e-6
@@ -187,6 +188,42 @@ def W(A, invN=None, return_svd=False):
     return res
 
 
+def _P_svd(u_e_v):
+    u, e, v = u_e_v
+    return _mm(u, _T(u))
+
+
+def P(A, invN=None, return_svd=False):
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is None:
+        res = _P_svd(u_e_v)
+    else:
+        res = _mm(_P_svd(u_e_v), _T(L))
+        res = sp.linalg.solve_triangular(L, res, lower=True,
+                                         overwrite_b=True, trans='T')
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
+def _D_svd(u_e_v):
+    u, e, v = u_e_v
+    return np.eye(u.shape[-2]) - _mm(u, _T(u))
+
+
+def D(A, invN=None, return_svd=False):
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is None:
+        res = _D_svd(u_e_v)
+    else:
+        res = _mm(_D_svd(u_e_v), _T(L))
+        res = sp.linalg.solve_triangular(L, res, lower=True,
+                                         overwrite_b=True, trans='T')
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
 def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
     u, e, v = u_e_v
     res = []
@@ -237,6 +274,98 @@ def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
 
     if L is not None:
         res = _mm(res, _T(L))
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
+def _P_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
+    u, e, v = u_e_v
+    n_dB = len(A_dB)
+
+    # Expand A_dB and A_dBdB to full shape
+    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
+                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
+    A_dB_full = np.zeros((n_dB,)+u.shape)
+    A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
+    for i in range(n_dB):
+        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+        for j in range(n_dB):
+            A_dBdB_full[(i, j)+comp_of_dB_A[i]] = A_dBdB[i][j]
+
+    # Apply diag(e^(-1)) * v to the domain of the components
+    # In this basis A' = u and (A'^t A') = 1
+    inve_v = v / e[..., np.newaxis]
+    A_dB = _mm(A_dB_full, _T(inve_v))
+    A_dBdB = _mm(A_dBdB_full, _T(inve_v))
+
+    # Aliases that improve readability
+    A = u
+    A_dBj = A_dB
+    A_dBi = A_dBj[:, np.newaxis, ...]
+    mm = lambda *args: reduce(np.matmul, args)
+    D = _D_svd(u_e_v)
+
+    # Computation
+    P_dBdB = (+ mm(D, A_dBj, _T(A_dBi), D)
+              - mm(A, _T(A_dBj), A, _T(A_dBi), D)
+              + mm(A, _T(A_dBdB), D)
+              - mm(A, _T(A_dBi), A, _T(A_dBj), D)
+              - mm(A, _T(A_dBi), D, A_dBj, _T(A))
+             )
+    P_dBdB += _T(P_dBdB)
+
+    return P_dBdB
+
+
+def P_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
+    """ Second Derivative of P
+
+    which could be useful for the computation of
+    curvature of the log likelihood for any point and data vector
+
+    Parameters
+    ----------
+    A : ndarray
+        Mixing matrix. Shape `(..., n_freq, n_comp)`
+    invN: ndarray or None
+        The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
+    A_dB : ndarray or list of ndarray
+        The derivative of the mixing matrix. If list, each entry is the
+        derivative with respect to a different parameter.
+    A_dBdB : ndarray or list of list of ndarray
+        The second derivative of the mixing matrix. If list, each entry is the
+        derivative of A_dB with respect to a different parameter.
+    comp_of_dB: index or list of indices
+        It allows to provide in `A_dB` only the non-zero columns `A`.
+        `A_dB` is assumed to be the derivative of `A[comp_of_dB]`.
+        If a list is provided, also `A_dB` and `A_dBdB` have to be a lists,
+        `A_dB[i]` and `A_dBdB[i][j]` (for any j) are assumed to be the
+        derivatives of `A[comp_of_dB[i]]`.
+
+    Returns
+    -------
+    res : array
+        Second Derivative of P.
+    """
+    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
+    if not isinstance(A_dBdB, list):
+        A_dBdB = [[A_dBdB]]
+    assert len(A_dBdB) == len(A_dB)
+    for A_dBdB_i in A_dBdB:
+        assert len(A_dBdB_i) == len(A_dB)
+
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
+        A_dBdB = [[_mtm(L, A_dBdB_ij)
+                   for A_dBdB_ij in A_dBdB_i] for A_dBdB_i in A_dBdB]
+
+    res = _P_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB)
+
+    if L is not None:
+        invLt = np.linalg.inv(_T(L))
+        res = _mmm(invLt, res, _T(L))
     if return_svd:
         return res, (u_e_v, L)
     return res
@@ -318,8 +447,7 @@ def W_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
     Returns
     -------
     res : array
-        Second Derivative of W. If `A_dB` is a list, `res[i]`
-        is co
+        Second Derivative of W.
     """
     A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
     if not isinstance(A_dBdB, list):

@@ -28,6 +28,10 @@ class MixingMatrix(tuple):
                 for c in self for p in c.params]
 
     @property
+    def defaults(self):
+        return [d for c in self for d in c.defaults]
+
+    @property
     def components(self):
         return [type(c).__name__ for c in self]
 
