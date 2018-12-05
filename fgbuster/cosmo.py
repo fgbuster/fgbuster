@@ -129,6 +129,11 @@ def estimation_of_Cl_stat_res(Sigma, d_fgs, A_ev, A_dB_ev, comp_of_dB, beta_maxL
     i_cmb: int
          Index for the CMB dimensions, typically given by
          A.components.index('CMB'), with A = MixingMatrix(*components)
+    patch_ids: list or 1-d array
+         For each pixel, the array stores the id of the region over which to
+         perform component separation independently.
+    mask_patch: list of 1-d array
+         Same length as patch_ids, but with 0 and 1 values describing a sky patch
     Returns
     -------
     ClBB_stat_model: ndarray
