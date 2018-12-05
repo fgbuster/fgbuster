@@ -4,7 +4,7 @@
 import numpy as np
 import healpy as hp
 import os.path as op
-from fgbuster.xForecast import _get_Cl_cmb
+from fgbuster.xForecast import _get_Cl_cmb, _get_Cl_noise
 import sys
 import scipy
 from fgbuster.algebra import W_dB, _mmm, _indexed_matrix
@@ -94,7 +94,7 @@ def from_Cl_to_r_estimate(ClBB_tot, ell_v, fsky, Cl_BB_prim, ClBB_model_other_th
     return r_fit, sigma_r_fit, likelihood_on_r
 
 
-def estimation_of_Cl_stat_res(Sigma, d_fgs, A_ev, A_dB_ev, comp_of_dB, beta_maxL, invN, lmin, lmax, i_cmb=0, patch_ids=[]):
+def estimation_of_Cl_stat_res(Sigma, d_fgs, A_ev, A_dB_ev, comp_of_dB, beta_maxL, invN, lmin, lmax, i_cmb=0, patch_ids=[], mask_patch=[]):
 
     """Estimation of the statistical residuals
     following Errard and Stompor 2018.
@@ -146,14 +146,14 @@ def estimation_of_Cl_stat_res(Sigma, d_fgs, A_ev, A_dB_ev, comp_of_dB, beta_maxL
     n_freqs = d_fgs.shape[0]
     print type(patch_ids)
     if any(patch_ids):
-        n_patches = patch_ids.max()
-    # if isinstance(Sigma, (list,)):
-        # n_patches = len(Sigma)
-    else: n_patches = 1
+        n_patches = len(patch_ids)#.max()
+    else: 
+        patch_ids = [0]
+        n_patches = 1
 
     print 'n_stokes = ', n_stokes
-    print 'n_patches = ', n_patches
-    print 'Sigma = ', Sigma
+    print 'n_patches full sky = ', n_patches
+    # print 'Sigma = ', Sigma
 
     if n_stokes == 3:  
         d_spectra = d_fgs
@@ -162,12 +162,17 @@ def estimation_of_Cl_stat_res(Sigma, d_fgs, A_ev, A_dB_ev, comp_of_dB, beta_maxL
         d_spectra[:, 1:] = d_fgs
     d_spectra = d_spectra.T
 
-    for i_patch in range(n_patches):
+    # only loop for patches outside the galactic mask ... 
+    patch_ids_loop = np.array([patch_ids[p] for p in range(len(patch_ids)) if mask_patch[p]!=0])
+
+    for i_patch in set(patch_ids_loop):#range(n_patches):
         print 'patch # ', i_patch
         # we define the sky mask
         patch_mask = patch_ids == i_patch
+
         if not np.any(patch_mask):
             return None
+
         patch_d = d_spectra*0.0
         patch_d[patch_mask] = d_spectra[patch_mask]
         # masked data and fsky
