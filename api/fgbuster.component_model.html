@@ -185,7 +185,7 @@
 <p>Unified API for evaluating SEDs, see <a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-class docutils literal"><span class="pre">Component</span></code></a>.</p>
 <p>This module also provides a handy way of generating a <a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-class docutils literal"><span class="pre">Component</span></code></a> from
 analytic expressions, see the <a class="reference internal" href="#fgbuster.component_model.AnalyticComponent" title="fgbuster.component_model.AnalyticComponent"><code class="xref py py-class docutils literal"><span class="pre">AnalyticComponent</span></code></a>. For components
-frequently used (e.g. power law, gray body, CMB) these are classe are already
+frequently used (e.g. power law, gray body, CMB) these are already
 prepared.</p>
 <p class="rubric">Classes</p>
 <table border="1" class="longtable docutils">
@@ -252,7 +252,7 @@ or is set eaual to <code class="docutils literal"><span class="pre">None</span><
 <li>Efficient evaluators of the SED and its derivatives are prepared at
 construction time</li>
 <li>Following the API specified in <a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-class docutils literal"><span class="pre">Component</span></code></a>, <code class="docutils literal"><span class="pre">nu</span></code> has a special
-meaning and has a dedicated dimention (the last one) when evaluations are
+meaning and has a dedicated dimension (the last one) when evaluations are
 performed</li>
 <li><code class="docutils literal"><span class="pre">diff</span></code> (and <code class="docutils literal"><span class="pre">diff_diff</span></code>) return the evaluation of the derivatives with
 respect to all the free parameters, not the expression of the
@@ -263,7 +263,7 @@ derivatives with respect to a specific parameter</li>
 <li>You can trade a longer construction time for faster evaluation time by
 setting <code class="docutils literal"><span class="pre">component_model.lambdify</span></code> to
 <code class="docutils literal"><span class="pre">sympy.utilities.autowrap.ufuncify</span></code>.
-After constructing the anlytic component you can rever back the change by
+After constructing the anlytic component you can revert back the change by
 setting <code class="docutils literal"><span class="pre">component_model.lambdify</span></code> back to <code class="docutils literal"><span class="pre">sympy.lambdify</span></code>.</li>
 </ul>
 </div>
@@ -304,7 +304,7 @@ setting <code class="docutils literal"><span class="pre">component_model.lambdif
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>nu</strong> (<em>array</em>) – Frequencies at which the SED is evaluated</li>
-<li><strong>*params</strong> (<em>float</em><em> or </em><em>ndarray</em>) – Value of the free parameters. They can be arrays and, inthis case,
+<li><strong>*params</strong> (<em>float</em><em> or </em><em>ndarray</em>) – Value of the free parameters. They can be arrays and, in this case,
 they should be broadcastable to a common shape.</li>
 </ul>
 </td>
@@ -373,7 +373,7 @@ this case, they should be broadcastable to a common shape.</li>
 <em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">FreeFree</code><span class="sig-paren">(</span><em>logEM=None</em>, <em>Te=None</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#FreeFree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.FreeFree" title="Permalink to this definition">¶</a></dt>
 <dd><p>Free-free</p>
 <p>Anlytic model for bremsstrahlung emission (Draine, 2011)
-Above 1GHz it is essentially equivalent ot a power law.</p>
+Above 1GHz it is essentially equivalent to a power law.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />

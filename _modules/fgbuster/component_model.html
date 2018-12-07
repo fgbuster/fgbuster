@@ -154,7 +154,7 @@
 
 <span class="sd">This module also provides a handy way of generating a :class:`Component` from</span>
 <span class="sd">analytic expressions, see the :class:`AnalyticComponent`. For components</span>
-<span class="sd">frequently used (e.g. power law, gray body, CMB) these are classe are already</span>
+<span class="sd">frequently used (e.g. power law, gray body, CMB) these are already</span>
 <span class="sd">prepared.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
@@ -163,7 +163,6 @@
 <span class="kn">import</span> <span class="nn">sympy</span>
 <span class="kn">from</span> <span class="nn">sympy</span> <span class="k">import</span> <span class="n">lambdify</span>
 <span class="kn">from</span> <span class="nn">sympy.parsing.sympy_parser</span> <span class="k">import</span> <span class="n">parse_expr</span>
-<span class="kn">from</span> <span class="nn">sympy.utilities.autowrap</span> <span class="k">import</span> <span class="n">ufuncify</span>
 <span class="kn">import</span> <span class="nn">scipy</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">constants</span>
 <span class="kn">from</span> <span class="nn">astropy.cosmology</span> <span class="k">import</span> <span class="n">Planck15</span>
@@ -187,12 +186,12 @@
 <span class="sd">    It defines the API.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">_add_last_dimention_if_not_scalar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_add_last_dimension_if_not_scalar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="c1"># Lambdified expressions always output an ndarray with shape</span>
             <span class="c1"># (param_dim_1, ..., param_dim_n, n_freq). However, parameters and</span>
             <span class="c1"># frequencies are both symbols with (no special meaning). In order</span>
-            <span class="c1"># to impose the shape of the output, we append a dimesion to the</span>
+            <span class="c1"># to impose the shape of the output, we append a dimension to the</span>
             <span class="c1"># parameters and let the broadcasting inside the lambdified</span>
             <span class="c1"># expressions do the rest</span>
             <span class="c1"># TODO: Can replace this with a try/except?</span>
@@ -222,7 +221,7 @@
         <span class="c1"># Make sure that broadcasting rules will apply correctly when passing</span>
         <span class="c1"># the parameters to the lambdified functions:</span>
         <span class="c1"># last axis has to be nu, but that axis is missing in the parameters</span>
-        <span class="n">new_params</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimention_if_not_scalar</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">new_params</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimension_if_not_scalar</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lambda</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="o">*</span><span class="n">new_params</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Component.diff"><a class="viewcode-back" href="../../api/fgbuster.component_model.html#fgbuster.component_model.Component.diff">[docs]</a>    <span class="k">def</span> <span class="nf">diff</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="o">*</span><span class="n">params</span><span class="p">):</span>
@@ -233,7 +232,7 @@
 <span class="sd">        nu: array</span>
 <span class="sd">            Frequencies at which the SED is evaluated</span>
 <span class="sd">        *params: float or ndarray</span>
-<span class="sd">            Value of the free parameters. They can be arrays and, inthis case,</span>
+<span class="sd">            Value of the free parameters. They can be arrays and, in this case,</span>
 <span class="sd">            they should be broadcastable to a common shape.</span>
 
 <span class="sd">        Returns</span>
@@ -255,7 +254,7 @@
         <span class="c1"># Make sure that broadcasting rules will apply correctly when passing</span>
         <span class="c1"># the parameters to the lambdified functions:</span>
         <span class="c1"># last axis has to be nu, but that axis is missing in the parameters</span>
-        <span class="n">new_params</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimention_if_not_scalar</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">new_params</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimension_if_not_scalar</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
 
         <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i_p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_param</span><span class="p">):</span>
@@ -276,7 +275,7 @@
         <span class="c1"># Make sure that broadcasting rules will apply correctly when passing</span>
         <span class="c1"># the parameters to the lambdified functions:</span>
         <span class="c1"># last axis has to be nu, but that axis is missing in the parameters</span>
-        <span class="n">new_params</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimention_if_not_scalar</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">new_params</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimension_if_not_scalar</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
 
         <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i_p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_param</span><span class="p">):</span>
@@ -300,7 +299,7 @@
     <span class="k">def</span> <span class="nf">defaults</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Default values of the free parameters</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span> 
+        <span class="k">try</span><span class="p">:</span>
             <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_defaults</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_param</span>
         <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">AssertionError</span><span class="p">):</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Component: uninitialized defaults requested, returning ones&quot;</span><span class="p">)</span>
@@ -366,7 +365,7 @@
 <span class="sd">    * Efficient evaluators of the SED and its derivatives are prepared at</span>
 <span class="sd">      construction time</span>
 <span class="sd">    * Following the API specified in :class:`Component`, ``nu`` has a special</span>
-<span class="sd">      meaning and has a dedicated dimention (the last one) when evaluations are</span>
+<span class="sd">      meaning and has a dedicated dimension (the last one) when evaluations are</span>
 <span class="sd">      performed</span>
 <span class="sd">    * ``diff`` (and ``diff_diff``) return the evaluation of the derivatives with</span>
 <span class="sd">      respect to all the free parameters, not the expression of the</span>
@@ -377,7 +376,7 @@
 <span class="sd">    * You can trade a longer construction time for faster evaluation time by</span>
 <span class="sd">      setting ``component_model.lambdify`` to</span>
 <span class="sd">      ``sympy.utilities.autowrap.ufuncify``.</span>
-<span class="sd">      After constructing the anlytic component you can rever back the change by</span>
+<span class="sd">      After constructing the anlytic component you can revert back the change by</span>
 <span class="sd">      setting ``component_model.lambdify`` back to ``sympy.lambdify``.</span>
 
 <span class="sd">    .. _functions: https://docs.sympy.org/latest/modules/functions/index.html</span>
@@ -385,7 +384,6 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">analytic_expr</span><span class="p">,</span> <span class="o">**</span><span class="n">fixed_params</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_analytic_expr</span> <span class="o">=</span> <span class="n">analytic_expr</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_fixed_params</span> <span class="o">=</span> <span class="n">fixed_params</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_expr</span> <span class="o">=</span> <span class="n">parse_expr</span><span class="p">(</span><span class="n">analytic_expr</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">fixed_params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_params</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expr</span><span class="o">.</span><span class="n">free_symbols</span><span class="p">])</span>
@@ -564,7 +562,7 @@
     <span class="sd">&quot;&quot;&quot; Free-free</span>
 <span class="sd">    </span>
 <span class="sd">    Anlytic model for bremsstrahlung emission (Draine, 2011)</span>
-<span class="sd">    Above 1GHz it is essentially equivalent ot a power law.</span>
+<span class="sd">    Above 1GHz it is essentially equivalent to a power law.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
