@@ -183,7 +183,7 @@
 <span id="fgbuster-algebra"></span><h1>fgbuster.algebra<a class="headerlink" href="#module-fgbuster.algebra" title="Permalink to this headline">¶</a></h1>
 <p>Low-level component separation functions</p>
 <p>All the routines in this module do NOT support <code class="docutils literal"><span class="pre">numpy.ma.MaskedArray</span></code>.
-In that case, you have two options.</p>
+In that case, you have two options</p>
 <ol class="arabic simple">
 <li>Index <cite>masked_array</cite> with a mask so that you get standard <cite>np.array</cite>
 containing only unmasked values</li>
@@ -232,6 +232,41 @@ masked values by setting the corresponding entries of <cite>invN</cite> to zero<
 </tr>
 </tbody>
 </table>
+<dl class="function">
+<dt id="fgbuster.algebra.P_dBdB">
+<code class="descclassname">fgbuster.algebra.</code><code class="descname">P_dBdB</code><span class="sig-paren">(</span><em>A</em>, <em>A_dB</em>, <em>A_dBdB</em>, <em>comp_of_dB</em>, <em>invN=None</em>, <em>return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#P_dBdB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.P_dBdB" title="Permalink to this definition">¶</a></dt>
+<dd><p>Second Derivative of P</p>
+<p>which could be useful for the computation of
+curvature of the log likelihood for any point and data vector</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <cite>(…, n_freq, n_comp)</cite></li>
+<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <cite>(…, n_freq, n_freq)</cite>.</li>
+<li><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
+derivative with respect to a different parameter.</li>
+<li><strong>A_dBdB</strong> (<em>ndarray</em><em> or </em><em>list of list of ndarray</em>) – The second derivative of the mixing matrix. If list, each entry is the
+derivative of A_dB with respect to a different parameter.</li>
+<li><strong>comp_of_dB</strong> (<em>index</em><em> or </em><em>list of indices</em>) – It allows to provide in <cite>A_dB</cite> only the non-zero columns <cite>A</cite>.
+<cite>A_dB</cite> is assumed to be the derivative of <cite>A[comp_of_dB]</cite>.
+If a list is provided, also <cite>A_dB</cite> and <cite>A_dBdB</cite> have to be a lists,
+<cite>A_dB[i]</cite> and <cite>A_dBdB[i][j]</cite> (for any j) are assumed to be the
+derivatives of <cite>A[comp_of_dB[i]]</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res</strong> – Second Derivative of P.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="function">
 <dt id="fgbuster.algebra.W_dB">
 <code class="descclassname">fgbuster.algebra.</code><code class="descname">W_dB</code><span class="sig-paren">(</span><em>A</em>, <em>A_dB</em>, <em>comp_of_dB</em>, <em>invN=None</em>, <em>return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#W_dB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.W_dB" title="Permalink to this definition">¶</a></dt>
@@ -291,8 +326,7 @@ derivatives of <cite>A[comp_of_dB[i]]</cite>.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res</strong> – Second Derivative of W. If <cite>A_dB</cite> is a list, <cite>res[i]</cite>
-is co</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res</strong> – Second Derivative of W.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
@@ -458,7 +492,8 @@ than 1, without exagerating (a difference of 1e-4 is useless).
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>result</strong> – It has the following attributes</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>result</strong> – Result of the spectral likelihood maximization
+It is the output of <cite>scipy.optimize.minimize</cite>, and thus includes</p>
 <ul class="simple">
 <li><dl class="first docutils">
 <dt><cite>patch_res</cite> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
@@ -479,7 +514,7 @@ Shape <cite>(…, n_comp)</cite></dd>
 </p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult</p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult (dict)</p>
 </td>
 </tr>
 </tbody>

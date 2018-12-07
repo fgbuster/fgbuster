@@ -151,7 +151,7 @@
 <span></span><span class="sd">&quot;&quot;&quot; Low-level component separation functions</span>
 
 <span class="sd">All the routines in this module do NOT support ``numpy.ma.MaskedArray``.</span>
-<span class="sd">In that case, you have two options.</span>
+<span class="sd">In that case, you have two options</span>
 
 <span class="sd">1) Index `masked_array` with a mask so that you get standard `np.array`</span>
 <span class="sd">   containing only unmasked values</span>
@@ -187,6 +187,7 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">scipy</span> <span class="k">as</span> <span class="nn">sp</span>
 <span class="kn">import</span> <span class="nn">numdifftools</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">reduce</span>
 
 <span class="n">OPTIMIZE</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="n">_EPSILON_LOGL_DB</span> <span class="o">=</span> <span class="mf">1e-6</span>
@@ -337,6 +338,42 @@
     <span class="k">return</span> <span class="n">res</span>
 
 
+<span class="k">def</span> <span class="nf">_P_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">):</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">u_e_v</span>
+    <span class="k">return</span> <span class="n">_mm</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">u</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">P</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_svd</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="n">_svd_sqrt_invN_A</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">L</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">_P_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">_mm</span><span class="p">(</span><span class="n">_P_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">),</span> <span class="n">_T</span><span class="p">(</span><span class="n">L</span><span class="p">))</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve_triangular</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                         <span class="n">overwrite_b</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">trans</span><span class="o">=</span><span class="s1">&#39;T&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">return_svd</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">res</span><span class="p">,</span> <span class="p">(</span><span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+
+<span class="k">def</span> <span class="nf">_D_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">):</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">u_e_v</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span> <span class="o">-</span> <span class="n">_mm</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">u</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">D</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_svd</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="n">_svd_sqrt_invN_A</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">L</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">_D_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">_mm</span><span class="p">(</span><span class="n">_D_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">),</span> <span class="n">_T</span><span class="p">(</span><span class="n">L</span><span class="p">))</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve_triangular</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                         <span class="n">overwrite_b</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">trans</span><span class="o">=</span><span class="s1">&#39;T&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">return_svd</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">res</span><span class="p">,</span> <span class="p">(</span><span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+
 <span class="k">def</span> <span class="nf">_W_dB_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">,</span> <span class="n">A_dB</span><span class="p">,</span> <span class="n">comp_of_dB</span><span class="p">):</span>
     <span class="n">u</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">u_e_v</span>
     <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
@@ -387,6 +424,98 @@
 
     <span class="k">if</span> <span class="n">L</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">res</span> <span class="o">=</span> <span class="n">_mm</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">L</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">return_svd</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">res</span><span class="p">,</span> <span class="p">(</span><span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+<span class="k">def</span> <span class="nf">_P_dBdB_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">,</span> <span class="n">A_dB</span><span class="p">,</span> <span class="n">A_dBdB</span><span class="p">,</span> <span class="n">comp_of_dB</span><span class="p">):</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">u_e_v</span>
+    <span class="n">n_dB</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">A_dB</span><span class="p">)</span>
+
+    <span class="c1"># Expand A_dB and A_dBdB to full shape</span>
+    <span class="n">comp_of_dB_A</span> <span class="o">=</span> <span class="p">[</span><span class="n">comp_of_dB_i</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">s_</span><span class="p">[:],)</span> <span class="o">+</span> <span class="n">comp_of_dB_i</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:]</span>
+                    <span class="k">for</span> <span class="n">comp_of_dB_i</span> <span class="ow">in</span> <span class="n">comp_of_dB</span><span class="p">]</span>  <span class="c1"># Add freq dimension</span>
+    <span class="n">A_dB_full</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_dB</span><span class="p">,)</span><span class="o">+</span><span class="n">u</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">A_dBdB_full</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_dB</span><span class="p">,</span> <span class="n">n_dB</span><span class="p">)</span><span class="o">+</span><span class="n">u</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dB</span><span class="p">):</span>
+        <span class="n">A_dB_full</span><span class="p">[(</span><span class="n">i</span><span class="p">,)</span><span class="o">+</span><span class="n">comp_of_dB_A</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">A_dB</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dB</span><span class="p">):</span>
+            <span class="n">A_dBdB_full</span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span><span class="o">+</span><span class="n">comp_of_dB_A</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">A_dBdB</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+
+    <span class="c1"># Apply diag(e^(-1)) * v to the domain of the components</span>
+    <span class="c1"># In this basis A&#39; = u and (A&#39;^t A&#39;) = 1</span>
+    <span class="n">inve_v</span> <span class="o">=</span> <span class="n">v</span> <span class="o">/</span> <span class="n">e</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+    <span class="n">A_dB</span> <span class="o">=</span> <span class="n">_mm</span><span class="p">(</span><span class="n">A_dB_full</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">inve_v</span><span class="p">))</span>
+    <span class="n">A_dBdB</span> <span class="o">=</span> <span class="n">_mm</span><span class="p">(</span><span class="n">A_dBdB_full</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">inve_v</span><span class="p">))</span>
+
+    <span class="c1"># Aliases that improve readability</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">u</span>
+    <span class="n">A_dBj</span> <span class="o">=</span> <span class="n">A_dB</span>
+    <span class="n">A_dBi</span> <span class="o">=</span> <span class="n">A_dBj</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">mm</span> <span class="o">=</span> <span class="k">lambda</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">reduce</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">matmul</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">_D_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">)</span>
+
+    <span class="c1"># Computation</span>
+    <span class="n">P_dBdB</span> <span class="o">=</span> <span class="p">(</span><span class="o">+</span> <span class="n">mm</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">A_dBj</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">A_dBi</span><span class="p">),</span> <span class="n">D</span><span class="p">)</span>
+              <span class="o">-</span> <span class="n">mm</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">A_dBj</span><span class="p">),</span> <span class="n">A</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">A_dBi</span><span class="p">),</span> <span class="n">D</span><span class="p">)</span>
+              <span class="o">+</span> <span class="n">mm</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">A_dBdB</span><span class="p">),</span> <span class="n">D</span><span class="p">)</span>
+              <span class="o">-</span> <span class="n">mm</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">A_dBi</span><span class="p">),</span> <span class="n">A</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">A_dBj</span><span class="p">),</span> <span class="n">D</span><span class="p">)</span>
+              <span class="o">-</span> <span class="n">mm</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">A_dBi</span><span class="p">),</span> <span class="n">D</span><span class="p">,</span> <span class="n">A_dBj</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">A</span><span class="p">))</span>
+             <span class="p">)</span>
+    <span class="n">P_dBdB</span> <span class="o">+=</span> <span class="n">_T</span><span class="p">(</span><span class="n">P_dBdB</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">P_dBdB</span>
+
+
+<div class="viewcode-block" id="P_dBdB"><a class="viewcode-back" href="../../api/fgbuster.algebra.html#fgbuster.algebra.P_dBdB">[docs]</a><span class="k">def</span> <span class="nf">P_dBdB</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">A_dB</span><span class="p">,</span> <span class="n">A_dBdB</span><span class="p">,</span> <span class="n">comp_of_dB</span><span class="p">,</span> <span class="n">invN</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_svd</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Second Derivative of P</span>
+
+<span class="sd">    which could be useful for the computation of</span>
+<span class="sd">    curvature of the log likelihood for any point and data vector</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    A : ndarray</span>
+<span class="sd">        Mixing matrix. Shape `(..., n_freq, n_comp)`</span>
+<span class="sd">    invN: ndarray or None</span>
+<span class="sd">        The inverse noise matrix. Shape `(..., n_freq, n_freq)`.</span>
+<span class="sd">    A_dB : ndarray or list of ndarray</span>
+<span class="sd">        The derivative of the mixing matrix. If list, each entry is the</span>
+<span class="sd">        derivative with respect to a different parameter.</span>
+<span class="sd">    A_dBdB : ndarray or list of list of ndarray</span>
+<span class="sd">        The second derivative of the mixing matrix. If list, each entry is the</span>
+<span class="sd">        derivative of A_dB with respect to a different parameter.</span>
+<span class="sd">    comp_of_dB: index or list of indices</span>
+<span class="sd">        It allows to provide in `A_dB` only the non-zero columns `A`.</span>
+<span class="sd">        `A_dB` is assumed to be the derivative of `A[comp_of_dB]`.</span>
+<span class="sd">        If a list is provided, also `A_dB` and `A_dBdB` have to be a lists,</span>
+<span class="sd">        `A_dB[i]` and `A_dBdB[i][j]` (for any j) are assumed to be the</span>
+<span class="sd">        derivatives of `A[comp_of_dB[i]]`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    res : array</span>
+<span class="sd">        Second Derivative of P.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">A_dB</span><span class="p">,</span> <span class="n">comp_of_dB</span> <span class="o">=</span> <span class="n">_A_dB_and_comp_of_dB_as_compatible_list</span><span class="p">(</span><span class="n">A_dB</span><span class="p">,</span> <span class="n">comp_of_dB</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">A_dBdB</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">A_dBdB</span> <span class="o">=</span> <span class="p">[[</span><span class="n">A_dBdB</span><span class="p">]]</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">A_dBdB</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">A_dB</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">A_dBdB_i</span> <span class="ow">in</span> <span class="n">A_dBdB</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">A_dBdB_i</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">A_dB</span><span class="p">)</span>
+
+    <span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="n">_svd_sqrt_invN_A</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">L</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">A_dB</span> <span class="o">=</span> <span class="p">[</span><span class="n">_mtm</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">A_dB_i</span><span class="p">)</span> <span class="k">for</span> <span class="n">A_dB_i</span> <span class="ow">in</span> <span class="n">A_dB</span><span class="p">]</span>
+        <span class="n">A_dBdB</span> <span class="o">=</span> <span class="p">[[</span><span class="n">_mtm</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">A_dBdB_ij</span><span class="p">)</span>
+                   <span class="k">for</span> <span class="n">A_dBdB_ij</span> <span class="ow">in</span> <span class="n">A_dBdB_i</span><span class="p">]</span> <span class="k">for</span> <span class="n">A_dBdB_i</span> <span class="ow">in</span> <span class="n">A_dBdB</span><span class="p">]</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="n">_P_dBdB_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">,</span> <span class="n">A_dB</span><span class="p">,</span> <span class="n">A_dBdB</span><span class="p">,</span> <span class="n">comp_of_dB</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">L</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">invLt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">_T</span><span class="p">(</span><span class="n">L</span><span class="p">))</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">_mmm</span><span class="p">(</span><span class="n">invLt</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">_T</span><span class="p">(</span><span class="n">L</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">return_svd</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">res</span><span class="p">,</span> <span class="p">(</span><span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">res</span></div>
@@ -468,8 +597,7 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    res : array</span>
-<span class="sd">        Second Derivative of W. If `A_dB` is a list, `res[i]`</span>
-<span class="sd">        is co</span>
+<span class="sd">        Second Derivative of W.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">A_dB</span><span class="p">,</span> <span class="n">comp_of_dB</span> <span class="o">=</span> <span class="n">_A_dB_and_comp_of_dB_as_compatible_list</span><span class="p">(</span><span class="n">A_dB</span><span class="p">,</span> <span class="n">comp_of_dB</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">A_dBdB</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
@@ -858,11 +986,12 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    result : scipy.optimze.OptimizeResult</span>
-<span class="sd">        It has the following attributes</span>
+<span class="sd">    result : scipy.optimze.OptimizeResult (dict)</span>
+<span class="sd">        Result of the spectral likelihood maximization</span>
+<span class="sd">	It is the output of `scipy.optimize.minimize`, and thus includes</span>
 
 <span class="sd">	- `patch_res` : list</span>
-<span class="sd">            the i-th entry is the result of :func:`comp_sep` on </span>
+<span class="sd">            the i-th entry is the result of :func:`comp_sep` on</span>
 <span class="sd">            ``patch_ids == i``</span>
 
 <span class="sd">        with the addition of some extra information</span>
