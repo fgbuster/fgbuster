@@ -14,7 +14,7 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
     Parameters
     ----------
     components: list or tuple of lists
-         List storing the `Components` of the mixing matrix
+        List storing the `Components` of the mixing matrix
     instrument:
         Instrument object used to define the mixing matrix.
         It can be any object that has what follows wither as a key or as an

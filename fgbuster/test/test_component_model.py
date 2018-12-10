@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 import unittest
-from ..component_model import Component, Dust
+from fgbuster.component_model import AnalyticComponent, Dust
 
 class TestModifiedBlackBody(unittest.TestCase):
 
@@ -24,10 +24,11 @@ class TestModifiedBlackBody(unittest.TestCase):
             x, self.dust.eval(self.freqs))
 
 
-class TestComponent(unittest.TestCase):
+class TestAnalyticComponent(unittest.TestCase):
 
     def test_evaluate_all_vec(self):
-        comp = Component('nu * param_0 + param_1 + hundred', hundred=100)
+        comp = AnalyticComponent(
+            'nu * param_0 + param_1 + hundred', hundred=100)
         nu = np.arange(1,3) * 10
         mult = np.arange(1,4)
         add = np.arange(3)
@@ -35,7 +36,8 @@ class TestComponent(unittest.TestCase):
         np.testing.assert_array_almost_equal(comp.eval(nu, mult, add), res)
 
     def test_evaluate_vec_scalar(self):
-        comp = Component('nu * param_0 + param_1 + hundred', hundred=100)
+        comp = AnalyticComponent(
+            'nu * param_0 + param_1 + hundred', hundred=100)
         nu = np.arange(1,3) * 10
         mult = 1
         add = np.arange(3)
@@ -43,7 +45,8 @@ class TestComponent(unittest.TestCase):
         np.testing.assert_array_almost_equal(comp.eval(nu, mult, add), res)
 
     def test_evaluate_all_scalar(self):
-        comp = Component('nu * param_0 + param_1 + hundred', hundred=100)
+        comp = AnalyticComponent(
+            'nu * param_0 + param_1 + hundred', hundred=100)
         nu = np.arange(1,3) * 10
         mult = 1
         add = 2
