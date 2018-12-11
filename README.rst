@@ -45,3 +45,26 @@ Development takes place on `github
 <https://github.com/fgbuster/fgbuster/issues/new>`_.
 
 See  :ref:`contributing`.
+
+----
+
+Acknowledgements
+----------------
+
+Davide Poletti acknowledges the support from the
+`RADIOFOREGROUNDS <http://www.radioforegrounds.eu/>`_ project, funded by the
+European Commissions H2020 Research Infrastructures under the Grant Agreement
+687312, and the
+`International School for Advanced Studies <www.sissa.it>`_ (SISSA)
+
+|sissa| |radioforegrounds|
+
+.. |sissa| image:: /_static/logo_sissa.png
+    :alt: SISSA
+    :height: 100px
+    :target: http://www.sissa.it
+
+.. |radioforegrounds| image:: /_static/logo_radioforegrounds_v.png
+    :alt: RADIOFOREGROUNDS
+    :height: 100px
+    :target: http://www.radioforegrounds.eu
