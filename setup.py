@@ -15,6 +15,8 @@ setup(
     keywords = 'statistics cosmology cmb foregrounds',
     url = 'https://github.com/fgbuster/fgbuster',
     packages = ['fgbuster'],
+    package_data={'': ['fgbuster/templates/*.fits']},
+    include_package_data=True,
     long_description = read('README.rst'),
     install_requires = [
         'parameterized',
