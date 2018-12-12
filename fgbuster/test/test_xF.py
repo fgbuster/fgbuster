@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import healpy as hp
 from fgbuster.pysm_helpers import get_instrument, get_sky
-from fgbuster.xForecast import xForecast
+from fgbuster.cosmology import xForecast
 from numpy.testing import assert_allclose as aac
 from numpy.testing import assert_array_almost_equal as aaae
 
