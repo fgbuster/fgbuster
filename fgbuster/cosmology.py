@@ -242,11 +242,9 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         ## Bringing things together
         return trCinvC + trECinvC + logdetC
 
-    #  minimization, gridding, sigma(r)
-    cosmo_likelihood(0.01)
 
     # Likelihood maximization
-    r_grid = np.logspace(-5,0,num=50)
+    r_grid = np.logspace(-5,0,num=500)
     logL = np.array([cosmo_likelihood(r_loc) for r_loc in r_grid])
     ind_r_min = np.argmin(logL)
     r0 = r_grid[ind_r_min]
@@ -314,7 +312,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     # 6. Produce figures
     if make_figure:
         print ('======= GRIDDING COSMO LIKELIHOOD =======')
-        r_grid = np.logspace(-2.2,-1,num=200)
+        r_grid = np.logspace(-4,-1,num=500)
         logL = np.array([ cosmo_likelihood(r_loc) for r_loc in r_grid ])
         chi2 = logL - np.min(logL)
         ax0.semilogx( r_grid,  np.exp(-chi2), color='DarkOrange', linestyle='-', linewidth=2.0, alpha=0.8 )
