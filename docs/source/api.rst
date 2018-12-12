@@ -6,7 +6,7 @@ API
    :toctree: api/
 
    fgbuster.separation_recipies
-   fgbuster.xForecast
+   fgbuster.cosmology
    fgbuster.component_model
    fgbuster.mixingmatrix
    fgbuster.algebra
