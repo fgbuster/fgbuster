@@ -133,6 +133,25 @@ def _dict_instrument_litebird(nside, units='uK_CMB'):
         'use_smoothing': False,
     }
 
+
+def _dict_instrument_cmbs4(nside, units='uK_CMB'):
+    # specifications taken from https://cmb-s4.org/wiki/index.php/Survey_Performance_Expectations
+    return {
+        'frequencies': np.array([20, 30, 40, 85, 95, 145, 155, 220, 270]),
+        'sens_I': np.array([16.66, 10.62, 10.07, 2.01, 1.59, 4.53, 4.53, 11.61, 15.84]),
+        'sens_P': np.array([13.6, 8.67, 8.22, 1.64, 1.30, 2.03, 2.03, 5.19, 7.08]),
+        'beams': np.array([11.0, 76.6, 57.5, 27.0, 24.2, 15.9, 14.8, 10.7, 8.5]),
+        'nside': nside,
+        'add_noise': True,
+        'noise_seed': 1234,
+        'use_bandpass': False,
+        'output_units': units,
+        'output_directory': '/dev/null',
+        'output_prefix': 'cmbs4',
+        'use_smoothing': False,
+    }
+
+
 def _dict_instrument_quijote_mfi(nside, units='uK_CMB'):
     return {
         'frequencies': np.array([11.0, 13.0, 17.0, 19.0]),
