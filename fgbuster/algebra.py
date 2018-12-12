@@ -39,6 +39,10 @@ import scipy as sp
 import numdifftools
 from functools import reduce
 
+
+__all__ = []  # Prevent wildcard import (names in algebra too generic)
+
+
 OPTIMIZE = False
 _EPSILON_LOGL_DB = 1e-6
 

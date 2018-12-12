@@ -3,8 +3,15 @@
 """
 import numpy as np
 import healpy as hp
-from .algebra import multi_comp_sep, comp_sep
+from . import algebra as alg
 from .mixingmatrix import MixingMatrix
+
+
+__all__ = [
+    'weighted_comp_sep',
+    'basic_comp_sep',
+]
+
 
 
 def weighted_comp_sep(components, instrument, data, cov, nside=0,
@@ -76,10 +83,10 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
     if nside:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
                                 hp.npix2nside(data.shape[-1]))[mask]
-        res = multi_comp_sep(A_ev, data_cs, invN, A_dB_ev, comp_of_param,
+        res = alg.multi_comp_sep(A_ev, data_cs, invN, A_dB_ev, comp_of_param,
                              patch_ids, x0, **minimize_kwargs)
     else:
-        res = comp_sep(A_ev, data_cs, invN, A_dB_ev, comp_of_param, x0,
+        res = alg.comp_sep(A_ev, data_cs, invN, A_dB_ev, comp_of_param, x0,
                        **minimize_kwargs)
 
     # Craft output
@@ -187,13 +194,12 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     if nside:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
                                 hp.npix2nside(data.shape[-1]))
-        res = multi_comp_sep(
+        res = alg.multi_comp_sep(
             A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, patch_ids,
             x0, **minimize_kwargs)
     else:
-        #import ipdb;ipdb.set_trace()
-        res = comp_sep(A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, x0,
-                       **minimize_kwargs)
+        res = alg.comp_sep(A_ev, prewhitened_data, None, A_dB_ev, comp_of_param,
+                           x0, **minimize_kwargs)
 
     # Craft output
     # 1) Apply the mask, if any

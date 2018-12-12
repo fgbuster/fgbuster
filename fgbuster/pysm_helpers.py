@@ -5,6 +5,13 @@ import numpy as np
 import pysm
 import healpy as hp
 
+
+__all__ = [
+    'get_sky',
+    'get_instrument',
+]
+
+
 def get_sky(nside, tag='c1d0s0'):
     """ Get a pre-defined PySM sky
 
