@@ -1,5 +1,11 @@
 import numpy as np
 
+
+__all__ = [
+    'MixingMatrix',
+]
+
+
 class MixingMatrix(tuple):
     """ Collection of Components
 

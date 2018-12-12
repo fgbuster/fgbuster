@@ -9,6 +9,11 @@ from .algebra import comp_sep, W_dBdB, W_dB, W, _mmm, _utmv, _mmv
 from .mixingmatrix import MixingMatrix
 
 
+__all__ = [
+    'xForecast',
+]
+
+
 CMB_CL_FILE = op.join(
      op.dirname(__file__), 'templates/Cls_Planck2018_%s.fits')
 
