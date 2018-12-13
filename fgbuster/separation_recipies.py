@@ -1,6 +1,7 @@
 """ High-level component separation routines
 
 """
+from six import string_types
 import numpy as np
 import healpy as hp
 from . import algebra as alg
@@ -294,13 +295,41 @@ def _intersect_mask(maps):
     return np.any(mask, axis=tuple(range(maps.ndim-1)))
 
 
-class _AttrDict(dict):
+# What the heck are _LowerCaseAttrDict and _force_keys_as_attributes?
+# Why are you so twisted?!? Because we decided that instrument can be eisther a
+# PySM.Instrument or a dictionary (especially the one used to construct a
+# PySM.Instrument).
+#
+# Suppose I want the frequencies.
+# * Pysm.Instrument 
+#     freqs = instrument.Frequencies
+# * the configuration dict of a Pysm.Instrument
+#     freqs = instrument['frequencies']
+# We force the former API in the dictionary case by
+# * setting all string keys to lower-case
+# * making dictionary entries accessible as attributes
+# * Catching upper-case attribute calls and returning the lower-case version
+# Shoot us any simpler idea. Maybe dropping the PySM.Instrument support...
+class _LowerCaseAttrDict(dict):
     def __init__(self, *args, **kwargs):
-        super(_AttrDict, self).__init__(*args, **kwargs)
+        super(_LowerCaseAttrDict, self).__init__(*args, **kwargs)
+        for key, item in self.items():
+            if isinstance(key, string_types):
+                str_key = str(key)
+                if str_key.lower() != str_key:
+                    self[str_key.lower()] = item
+                    del self[key]
         self.__dict__ = self
+
+    def __getattr__(self, key):
+        try:
+            return self[key.lower()]
+        except KeyError:
+            raise AttributeError("No attribute named '%s'" % key)
+
 
 def _force_keys_as_attributes(instrument):
     if hasattr(instrument, 'Frequencies'):
         return instrument
     else:
-        return _AttrDict(instrument)
+        return _LowerCaseAttrDict(instrument)

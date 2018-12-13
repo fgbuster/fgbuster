@@ -18,13 +18,16 @@ def get_sky(nside, tag='c1d0s0'):
     Parameters
     ----------
     tag: string
+        See `pysm.nominal
+        <https://github.com/bthorne93/PySM_public/blob/master/pysm/nominal.py>`_ 
+        for a complete list of available options.
         Default is 'c1d0s0', i.e. cmb (c1), dust with constant temperature and
         spectral index (d0), and synchrotron with constant spectral index (s0).
-        See pysm.nominal for a complete list of available options.
 
     Returns
     -------
-    sky: PySM.Sky
+    sky: dict
+        Configuration for a PySM.Sky
     """
     comp_names = {
         'a': 'ame',
@@ -37,24 +40,27 @@ def get_sky(nside, tag='c1d0s0'):
     for i in range(0, len(tag), 2):
         sky_config[comp_names[tag[i]]] = pysm.nominal.models(tag[i:i+2], nside)
 
-    return pysm.Sky(sky_config)
+    return sky_config
 
 
 def get_instrument(nside, tag, units='uK_CMB'):
-
-    """ Get pre-defined PySM Instrument
+    """ Get pre-defined instrumental configurations
 
     Parameters
     ----------
     tag: string
         name of the pre-defined experimental configurations. See the source or
         set tag to something random to have a list of the available
-        configurations. it can contain the name of multiple experiments
+        configurations. It can contain the name of multiple experiments
         separated by a space.
 
     Returns
     -------
-    sky: PySM.Instrument
+    sky: dict
+        It contains the experimetnal configuration of the desired instrument.
+        It can be used to construct a ``pysm.Instrument`` or as the
+        ``instrument`` argument for, e.g., :func:`basic_comp_sep` and
+        :func:`xForecast`
     """
     module = sys.modules[__name__]
     instruments = []
@@ -73,7 +79,7 @@ def get_instrument(nside, tag, units='uK_CMB'):
 
     instruments[0]['prefix'] = '__'.join(tag.split())
 
-    return pysm.Instrument(instruments[0])
+    return instruments[0]
 
 
 def _get_available_instruments():
@@ -148,10 +154,3 @@ def _dict_instrument_quijote_mfi(nside, units='uK_CMB'):
         'output_prefix': 'quijote_mfi',
         'use_smoothing': False,
     }
-
-def _dict_instrument_quijote_supermfi(nside, units='uK_CMB'):
-    mfi = _dict_instrument_quijote_mfi(nside, units)
-    mfi['sens_I'] /= 100
-    mfi['sens_P'] /= 100
-    mfi['output_prefix'] = 'quijote_supermfi'
-    return mfi
