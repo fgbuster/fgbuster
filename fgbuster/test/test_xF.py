@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 import unittest
 import numpy as np
-import healpy as hp
-from fgbuster.pysm_helpers import get_instrument, get_sky
-from fgbuster.cosmology import xForecast
 from numpy.testing import assert_allclose as aac
-from numpy.testing import assert_array_almost_equal as aaae
+import pysm
+from fgbuster.pysm_helpers import get_instrument, get_sky
+from fgbuster import xForecast, CMB, Dust, Synchrotron
 
 class TestXfCompSep(unittest.TestCase):
 
@@ -23,15 +22,14 @@ class TestXfCompSep(unittest.TestCase):
 
         nside = 16
         # define sky and foregrounds simulations
-        sky = get_sky(nside, 'd0s0')
+        sky = pysm.Sky(get_sky(nside, 'd0s0'))
         # define instrument
-        instrument = get_instrument(nside, 'litebird')
+        instrument = pysm.Instrument(get_instrument(nside, 'litebird'))
         # get noiseless frequency maps
         freq_maps = instrument.observe(sky, write_outputs=False)[0]
         # take only the Q and U maps
         freq_maps = freq_maps[:,1:]
         # define components used in the modeling
-        from fgbuster.component_model import CMB, Dust, Synchrotron
         components = [CMB(), Dust(150.), Synchrotron(150.)]
         # call for xForecast 
         res = xForecast(components, instrument, freq_maps, 2, 2*nside-1, 1.0, make_figure=False)

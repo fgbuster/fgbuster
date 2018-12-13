@@ -7,6 +7,7 @@ from numpy.testing import assert_allclose as aac
 from numpy.testing import assert_array_almost_equal as aaae
 from scipy.stats import kstest
 import healpy as hp
+import pysm
 from fgbuster.algebra import _mv
 from fgbuster.mixingmatrix import MixingMatrix
 from fgbuster.pysm_helpers import get_instrument
@@ -76,7 +77,7 @@ def _get_instrument(tag, nside=None):
 
             instrument['Cov_P'] = np.stack([instrument['Cov_N']]*2, axis=1)
     elif 'pysm' in tag:
-        instrument = get_instrument(nside, 'test')
+        instrument = pysm.Instrument(get_instrument(nside, 'test'))
     else:
         raise ValueError('Unsupported tag: %s'%tag)
     return instrument
@@ -301,8 +302,8 @@ if __name__ == '__main__':
     unittest.main()
     '''
     suite = unittest.TestSuite()
-    for method in dir(TestAdaptiveWeightedCompSepMeanPatch):
-        if method == "test_T_nside_signa_2_param_general":
-            suite.addTest(TestAdaptiveWeightedCompSepMeanPatch(method))
+    for method in dir(TestWeightedCompSep):
+        if 'the failing thest' in method:
+            suite.addTest(TestWeightedCompSep(method))
     unittest.TextTestRunner().run(suite)
     '''

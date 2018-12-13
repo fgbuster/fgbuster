@@ -7,6 +7,7 @@ import healpy as hp
 import scipy as sp
 from .algebra import comp_sep, W_dBdB, W_dB, W, _mmm, _utmv, _mmv
 from .mixingmatrix import MixingMatrix
+from .separation_recipies import _force_keys_as_attributes
 
 
 __all__ = [
@@ -75,9 +76,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
             - systematic residuals spectrum
          - noise-averaged cosmological likelihood
     """
-
-
     # Preliminaries
+    instrument = _force_keys_as_attributes(instrument)
     nside = hp.npix2nside(d_fgs.shape[-1])
     n_stokes = d_fgs.shape[1]
     n_freqs = d_fgs.shape[0]
