@@ -295,8 +295,8 @@ def _intersect_mask(maps):
     return np.any(mask, axis=tuple(range(maps.ndim-1)))
 
 
-# What the heck are _LowerCaseAttrDict and _force_keys_as_attributes?
-# Why are you so twisted?!? Because we decided that instrument can be eisther a
+# What the hell are _LowerCaseAttrDict and _force_keys_as_attributes?
+# Why are you so twisted?!? Because we decided that instrument can be either a
 # PySM.Instrument or a dictionary (especially the one used to construct a
 # PySM.Instrument).
 #
