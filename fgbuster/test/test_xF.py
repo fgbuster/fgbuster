@@ -5,6 +5,7 @@ from numpy.testing import assert_allclose as aac
 import pysm
 from fgbuster.pysm_helpers import get_instrument, get_sky
 from fgbuster import xForecast, CMB, Dust, Synchrotron
+from .test_end2end import suppress_stdout
 
 class TestXfCompSep(unittest.TestCase):
 
@@ -26,21 +27,21 @@ class TestXfCompSep(unittest.TestCase):
         # define instrument
         instrument = pysm.Instrument(get_instrument(nside, 'litebird'))
         # get noiseless frequency maps
-        freq_maps = instrument.observe(sky, write_outputs=False)[0]
+        with suppress_stdout():
+            freq_maps = instrument.observe(sky, write_outputs=False)[0]
         # take only the Q and U maps
         freq_maps = freq_maps[:,1:]
         # define components used in the modeling
         components = [CMB(), Dust(150.), Synchrotron(150.)]
         # call for xForecast 
-        res = xForecast(components, instrument, freq_maps, 2, 2*nside-1, 1.0, make_figure=False)
+        with suppress_stdout():
+            res = xForecast(components, instrument, freq_maps, 2, 2*nside-1, 1.0, make_figure=False)
         # list of checks
         aac(EXT_BETA, res.x, rtol=1e-03)
         aac(np.diag(EXT_SIGMA_BETA), np.diag(res.Sigma_inv), rtol=5e-02)
         aac(EXT_NOISE_POST_COMP_SEP[0], res.noise[0], rtol=1e-02)
         aac(EXT_BIAS_R, res.cosmo_params['r'][0][0], rtol=1e-02)
         aac(EXT_SIGMA_R, res.cosmo_params['r'][1][0], rtol=1e-02)
-
-        print res
 
 if __name__ == '__main__':
     unittest.main()
