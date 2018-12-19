@@ -344,22 +344,24 @@ div.nboutput div.output_area.stderr {
 <h1>Example of forecasting<a class="headerlink" href="#Example-of-forecasting" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
+<span></span>In [40]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
 <span class="o">%</span><span class="k">autoreload</span> 2
+
+<span class="kn">import</span> <span class="nn">pysm</span>
 <span class="kn">from</span> <span class="nn">fgbuster.pysm_helpers</span> <span class="k">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span>
 <span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">fgbuster.xForecast</span> <span class="k">import</span> <span class="n">xForecast</span>
+<span class="kn">from</span> <span class="nn">fgbuster.cosmology</span> <span class="k">import</span> <span class="n">xForecast</span>
 
-<span class="n">nside</span> <span class="o">=</span> <span class="mi">16</span>
+<span class="n">nside</span> <span class="o">=</span> <span class="mi">64</span>
 <span class="c1"># define sky and foregrounds simulations</span>
-<span class="n">sky</span> <span class="o">=</span> <span class="n">get_sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;d0s0&#39;</span><span class="p">)</span>
+<span class="n">sky</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Sky</span><span class="p">(</span><span class="n">get_sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;d0s0&#39;</span><span class="p">))</span>
 <span class="c1"># define instrument</span>
-<span class="n">instrument</span> <span class="o">=</span> <span class="n">get_instrument</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;litebird&#39;</span><span class="p">)</span>
+<span class="n">instrument</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Instrument</span><span class="p">(</span><span class="n">get_instrument</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;cmbs4&#39;</span><span class="p">))</span>
 <span class="c1"># get noiseless frequency maps</span>
 <span class="n">freq_maps</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">observe</span><span class="p">(</span><span class="n">sky</span><span class="p">,</span> <span class="n">write_outputs</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 <span class="c1"># take only the Q and U maps</span>
@@ -372,48 +374,66 @@ div.nboutput div.output_area.stderr {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
+The autoreload extension is already loaded. To reload it, use:
+  %reload_ext autoreload
 nu (GHz) | sigma_I (uK_CMB amin) | sigma_P (uK_CMB amin) | FWHM (arcmin)
 
-0040.00 | 25.60 | 36.10 | 00.00
-0050.00 | 13.90 | 19.60 | 00.00
-0060.00 | 14.33 | 20.20 | 00.00
-0068.40 | 08.01 | 11.30 | 00.00
-0078.00 | 07.30 | 10.30 | 00.00
-0088.50 | 05.96 | 08.40 | 00.00
-0100.00 | 04.96 | 07.00 | 00.00
-0118.90 | 04.11 | 05.80 | 00.00
-0140.00 | 03.33 | 04.70 | 00.00
-0166.00 | 04.96 | 07.00 | 00.00
-0195.00 | 04.11 | 05.80 | 00.00
-0234.90 | 05.67 | 08.00 | 00.00
-0280.00 | 06.45 | 09.10 | 00.00
-0337.40 | 08.09 | 11.40 | 00.00
-0402.10 | 13.90 | 19.60 | 00.00
+0020.00 | 16.66 | 13.60 | 00.00
+0030.00 | 10.62 | 08.67 | 00.00
+0040.00 | 10.07 | 08.22 | 00.00
+0085.00 | 02.01 | 01.64 | 00.00
+0095.00 | 01.59 | 01.30 | 00.00
+0145.00 | 04.53 | 02.03 | 00.00
+0155.00 | 04.53 | 02.03 | 00.00
+0220.00 | 11.61 | 05.19 | 00.00
+0270.00 | 15.84 | 07.08 | 00.00
 Instrument attribute &#39;pixel_indices&#39; not set.
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [44]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># create 3% circular sky mask</span>
+<span class="n">RA</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">-</span><span class="mf">70.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span>
+<span class="n">DEC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="mf">70.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span>
+<span class="n">radius</span> <span class="o">=</span> <span class="mi">34</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span>
+<span class="n">mask_circular</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">12</span><span class="o">*</span><span class="n">nside</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ipix</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="o">*</span><span class="n">nside</span><span class="o">**</span><span class="mi">2</span><span class="p">):</span>
+    <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">pix2ang</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">ipix</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(((</span><span class="n">phi</span> <span class="o">-</span> <span class="n">RA</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">theta</span> <span class="o">-</span> <span class="n">DEC</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">&lt;=</span> <span class="n">radius</span><span class="o">**</span><span class="mi">2</span><span class="p">)):</span>
+        <span class="n">mask_circular</span><span class="p">[</span><span class="n">ipix</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="k">if</span> <span class="p">(((</span><span class="n">phi</span> <span class="o">-</span> <span class="n">RA</span><span class="o">+</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">theta</span> <span class="o">-</span> <span class="n">DEC</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">&lt;=</span> <span class="n">radius</span><span class="o">**</span><span class="mi">2</span><span class="p">)):</span>
+        <span class="n">mask_circular</span><span class="p">[</span><span class="n">ipix</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="c1"># applying mask to observed frequency maps</span>
+<span class="n">freq_maps</span><span class="p">[</span><span class="o">...</span><span class="p">,</span><span class="n">mask_circular</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [49]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># define components used in the modeling</span>
 <span class="kn">from</span> <span class="nn">fgbuster.component_model</span> <span class="k">import</span> <span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span>
-<span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">CMB</span><span class="p">(),</span> <span class="n">Dust</span><span class="p">(</span><span class="mf">350.</span><span class="p">),</span> <span class="n">Synchrotron</span><span class="p">(</span><span class="mf">20.</span><span class="p">)]</span>
+<span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">CMB</span><span class="p">(),</span> <span class="n">Dust</span><span class="p">(</span><span class="mf">150.</span><span class="p">),</span> <span class="n">Synchrotron</span><span class="p">(</span><span class="mf">150.</span><span class="p">)]</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [52]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># call for xForecast</span>
-<span class="c1"># with lmin=2, lmax=2*nside-1, and Alens=0.6</span>
+<span class="c1"># with lmin=2, lmax=2*nside-1, and Alens=0.1</span>
 <span class="c1"># you can try with make_figure=True if you want to output angular power spectra and profile likelihood on r</span>
-<span class="n">res</span> <span class="o">=</span> <span class="n">xForecast</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">freq_maps</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">nside</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">make_figure</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">xForecast</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">freq_maps</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">nside</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">Alens</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">make_figure</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -422,33 +442,31 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-(&#39;fsky = &#39;, 1.0)
+(&#39;fsky = &#39;, 0.030192057291666668)
 ======= ESTIMATION OF SPECTRAL PARAMETERS =======
-(&#39;res.x = &#39;, array([  1.54,  20.  ,  -3.  ]))
+(&#39;res.x = &#39;, array([ 1.54, 20.  , -3.  ]))
 ======= ESTIMATION OF NOISE AFTER COMP SEP =======
 ======= COMPUTATION OF CL_FGS =======
 ======= ESTIMATION OF STAT AND SYS RESIDUALS =======
 ======= OPTIMIZATION OF COSMO LIKELIHOOD =======
-(&#39;bounds on r = &#39;, 0.00086851137375135298, &#39; / &#39;, 0.0013894954943731374)
-(&#39;starting point = &#39;, 0.0010985411419875584)
-(&#39;    ===&gt;&gt; fitted r = &#39;, array([ 0.001]))
+(&#39;bounds on r = &#39;, 0.0009862521794868784, &#39; / &#39;, 0.0010328281259410286)
+(&#39;starting point = &#39;, 0.0010092715146305707)
+(&#39;    ===&gt;&gt; fitted r = &#39;, array([0.00099999]))
 ======= ESTIMATION OF SIGMA(R) =======
 (&#39;ind_sr_min = &#39;, 1)
-(&#39;sr_grid[ind_sr_min-1] = &#39;, 0.0009999963717960943)
-(&#39;sr_grid[ind_sr_min+1] = &#39;, 0.001778273495741087)
-(&#39;sr_grid = &#39;, array([  9.99996372e-04,   1.33351680e-03,   1.77827350e-03,
-         2.37136618e-03,   3.16226810e-03,   4.21695292e-03,
-         5.62339795e-03,   7.49892282e-03,   9.99997581e-03,
-         1.33351841e-02,   1.77827565e-02,   2.37136905e-02,
-         3.16227192e-02,   4.21695802e-02,   5.62340475e-02,
-         7.49893189e-02,   9.99998791e-02,   1.33352002e-01,
-         1.77827780e-01,   2.37137191e-01,   3.16227575e-01,
-         4.21696312e-01,   5.62341155e-01,   7.49894096e-01,
-         1.00000000e+00]))
+(&#39;sr_grid[ind_sr_min-1] = &#39;, 0.000999994878862331)
+(&#39;sr_grid[ind_sr_min+1] = &#39;, 0.0017782710621246085)
+(&#39;sr_grid = &#39;, array([9.99994879e-04, 1.33351489e-03, 1.77827106e-03, 2.37136308e-03,
+       3.16226416e-03, 4.21694794e-03, 5.62339165e-03, 7.49891489e-03,
+       9.99996586e-03, 1.33351716e-02, 1.77827410e-02, 2.37136713e-02,
+       3.16226956e-02, 4.21695514e-02, 5.62340125e-02, 7.49892769e-02,
+       9.99998293e-02, 1.33351944e-01, 1.77827713e-01, 2.37137118e-01,
+       3.16227496e-01, 4.21696233e-01, 5.62341085e-01, 7.49894049e-01,
+       1.00000000e+00]))
 case # 3
-(&#39;bounds on sigma(r) = &#39;, 0.0009999963717960943, &#39; / &#39;, 0.001778273495741087)
-(&#39;starting point = &#39;, 0.0013335167954706248)
-(&#39;    ===&gt;&gt; sigma(r) = &#39;, array([ 0.00031682]))
+(&#39;bounds on sigma(r) = &#39;, 0.000999994878862331, &#39; / &#39;, 0.0017782710621246085)
+(&#39;starting point = &#39;, 0.0013335148875635722)
+(&#39;    ===&gt;&gt; sigma(r) = &#39;, array([0.00030872]))
 ======= GRIDDING COSMO LIKELIHOOD =======
 </pre></div></div>
 </div>
@@ -456,12 +474,12 @@ case # 3
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_xForecast_3_1.png" src="../_images/examples_xForecast_3_1.png" />
+<img alt="../_images/examples_xForecast_4_1.png" src="../_images/examples_xForecast_4_1.png" />
 </div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>

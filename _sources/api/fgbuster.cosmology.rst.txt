@@ -1,0 +1,22 @@
+fgbuster\.cosmology
+===================
+
+.. automodule:: fgbuster.cosmology
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      xForecast
+   
+   
+
+   
+   
+   
+
+   
+   
+   

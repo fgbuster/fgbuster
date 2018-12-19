@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="fgbuster.xForecast" href="fgbuster.xForecast.html" />
+    <link rel="next" title="fgbuster.cosmology" href="fgbuster.cosmology.html" />
     <link rel="prev" title="API" href="../api.html" /> 
 
   
@@ -86,7 +86,7 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">fgbuster.separation_recipies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="fgbuster.xForecast.html">fgbuster.xForecast</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.cosmology.html">fgbuster.cosmology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fgbuster.component_model.html">fgbuster.component_model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fgbuster.mixingmatrix.html">fgbuster.mixingmatrix</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fgbuster.algebra.html">fgbuster.algebra</a></li>
@@ -198,6 +198,57 @@
 </tbody>
 </table>
 <dl class="function">
+<dt id="fgbuster.separation_recipies.weighted_comp_sep">
+<code class="descclassname">fgbuster.separation_recipies.</code><code class="descname">weighted_comp_sep</code><span class="sig-paren">(</span><em>components</em>, <em>instrument</em>, <em>data</em>, <em>cov</em>, <em>nside=0</em>, <em>**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipies.html#weighted_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipies.weighted_comp_sep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Weighted component separation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>components</strong> (<em>list</em><em> or </em><em>tuple of lists</em>) – List storing the <cite>Components</cite> of the mixing matrix</li>
+<li><strong>instrument</strong> – <p>Instrument object used to define the mixing matrix.
+It can be any object that has what follows wither as a key or as an
+attribute (e.g. dictionary, PySM.Instrument)</p>
+<blockquote>
+<div><ul>
+<li>Frequencies</li>
+</ul>
+</div></blockquote>
+</li>
+<li><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Data vector to be separated. Shape <cite>(n_freq, …, n_pix)</cite>. <cite>…</cite> can be
+also absent.
+Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+neglected during the component separation process.</li>
+<li><strong>cov</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Covariance maps. It has to be broadcastable to <cite>data</cite>.
+Notice that you can not pass a pixel independent covariance as an array
+with shape <cite>(n_freq,)</cite>: it has to be <cite>(n_freq, …, 1)</cite> in order to be
+broadcastable (consider using <cite>basic_comp_sep</cite>, in this case).
+Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+neglected during the component separation process.</li>
+<li><strong>patch_ids</strong> (<em>array</em>) – For each pixel, the array stores the id of the region over which to
+perform component separation independently.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>result</strong> – See <cite>multi_comp_sep</cite> if <cite>nside</cite> is positive and <cite>comp_sep</cite> otherwise.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult (dict)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>During the component separation, a pixel is masked if at least one of
+its frequencies is masked, either in <cite>data</cite> or in <cite>cov</cite>.</li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="function">
 <dt id="fgbuster.separation_recipies.basic_comp_sep">
 <code class="descclassname">fgbuster.separation_recipies.</code><code class="descname">basic_comp_sep</code><span class="sig-paren">(</span><em>components</em>, <em>instrument</em>, <em>data</em>, <em>nside=0</em>, <em>**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipies.html#basic_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipies.basic_comp_sep" title="Permalink to this definition">¶</a></dt>
 <dd><p>Basic component separation</p>
@@ -262,57 +313,6 @@ res_P = basic_comp_sep(component_P, instrument, data[:, 1:], <a href="#id3"><spa
 </div>
 </dd></dl>
 
-<dl class="function">
-<dt id="fgbuster.separation_recipies.weighted_comp_sep">
-<code class="descclassname">fgbuster.separation_recipies.</code><code class="descname">weighted_comp_sep</code><span class="sig-paren">(</span><em>components</em>, <em>instrument</em>, <em>data</em>, <em>cov</em>, <em>nside=0</em>, <em>**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipies.html#weighted_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipies.weighted_comp_sep" title="Permalink to this definition">¶</a></dt>
-<dd><p>Weighted component separation</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>components</strong> (<em>list</em><em> or </em><em>tuple of lists</em>) – List storing the <cite>Components</cite> of the mixing matrix</li>
-<li><strong>instrument</strong> – <p>Instrument object used to define the mixing matrix.
-It can be any object that has what follows wither as a key or as an
-attribute (e.g. dictionary, PySM.Instrument)</p>
-<blockquote>
-<div><ul>
-<li>Frequencies</li>
-</ul>
-</div></blockquote>
-</li>
-<li><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Data vector to be separated. Shape <cite>(n_freq, …, n_pix)</cite>. <cite>…</cite> can be
-also absent.
-Values equal to hp.UNSEEN or, if MaskedArray, masked values are
-neglected during the component separation process.</li>
-<li><strong>cov</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Covariance maps. It has to be broadcastable to <cite>data</cite>.
-Notice that you can not pass a pixel independent covariance as an array
-with shape <cite>(n_freq,)</cite>: it has to be <cite>(n_freq, …, 1)</cite> in order to be
-broadcastable (consider using <cite>basic_comp_sep</cite>, in this case).
-Values equal to hp.UNSEEN or, if MaskedArray, masked values are
-neglected during the component separation process.</li>
-<li><strong>patch_ids</strong> (<em>array</em>) – For each pixel, the array stores the id of the region over which to
-perform component separation independently.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>result</strong> – See <cite>multi_comp_sep</cite> if <cite>nside</cite> is positive and <cite>comp_sep</cite> otherwise.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult (dict)</p>
-</td>
-</tr>
-</tbody>
-</table>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<ul class="last simple">
-<li>During the component separation, a pixel is masked if at least one of
-its frequencies is masked, either in <cite>data</cite> or in <cite>cov</cite>.</li>
-</ul>
-</div>
-</dd></dl>
-
 </div>
 
 
@@ -323,7 +323,7 @@ its frequencies is masked, either in <cite>data</cite> or in <cite>cov</cite>.</
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="fgbuster.xForecast.html" class="btn btn-neutral float-right" title="fgbuster.xForecast" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="fgbuster.cosmology.html" class="btn btn-neutral float-right" title="fgbuster.cosmology" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="../api.html" class="btn btn-neutral" title="API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

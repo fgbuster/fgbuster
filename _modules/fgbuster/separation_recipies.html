@@ -151,10 +151,18 @@
 <span></span><span class="sd">&quot;&quot;&quot; High-level component separation routines</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">six</span> <span class="k">import</span> <span class="n">string_types</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
-<span class="kn">from</span> <span class="nn">.algebra</span> <span class="k">import</span> <span class="n">multi_comp_sep</span><span class="p">,</span> <span class="n">comp_sep</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">algebra</span> <span class="k">as</span> <span class="n">alg</span>
 <span class="kn">from</span> <span class="nn">.mixingmatrix</span> <span class="k">import</span> <span class="n">MixingMatrix</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;weighted_comp_sep&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;basic_comp_sep&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+
 
 
 <div class="viewcode-block" id="weighted_comp_sep"><a class="viewcode-back" href="../../api/fgbuster.separation_recipies.html#fgbuster.separation_recipies.weighted_comp_sep">[docs]</a><span class="k">def</span> <span class="nf">weighted_comp_sep</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">nside</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -226,10 +234,10 @@
     <span class="k">if</span> <span class="n">nside</span><span class="p">:</span>
         <span class="n">patch_ids</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">hp</span><span class="o">.</span><span class="n">nside2npix</span><span class="p">(</span><span class="n">nside</span><span class="p">)),</span>
                                 <span class="n">hp</span><span class="o">.</span><span class="n">npix2nside</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))[</span><span class="n">mask</span><span class="p">]</span>
-        <span class="n">res</span> <span class="o">=</span> <span class="n">multi_comp_sep</span><span class="p">(</span><span class="n">A_ev</span><span class="p">,</span> <span class="n">data_cs</span><span class="p">,</span> <span class="n">invN</span><span class="p">,</span> <span class="n">A_dB_ev</span><span class="p">,</span> <span class="n">comp_of_param</span><span class="p">,</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">alg</span><span class="o">.</span><span class="n">multi_comp_sep</span><span class="p">(</span><span class="n">A_ev</span><span class="p">,</span> <span class="n">data_cs</span><span class="p">,</span> <span class="n">invN</span><span class="p">,</span> <span class="n">A_dB_ev</span><span class="p">,</span> <span class="n">comp_of_param</span><span class="p">,</span>
                              <span class="n">patch_ids</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="o">**</span><span class="n">minimize_kwargs</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">res</span> <span class="o">=</span> <span class="n">comp_sep</span><span class="p">(</span><span class="n">A_ev</span><span class="p">,</span> <span class="n">data_cs</span><span class="p">,</span> <span class="n">invN</span><span class="p">,</span> <span class="n">A_dB_ev</span><span class="p">,</span> <span class="n">comp_of_param</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">alg</span><span class="o">.</span><span class="n">comp_sep</span><span class="p">(</span><span class="n">A_ev</span><span class="p">,</span> <span class="n">data_cs</span><span class="p">,</span> <span class="n">invN</span><span class="p">,</span> <span class="n">A_dB_ev</span><span class="p">,</span> <span class="n">comp_of_param</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span>
                        <span class="o">**</span><span class="n">minimize_kwargs</span><span class="p">)</span>
 
     <span class="c1"># Craft output</span>
@@ -337,13 +345,12 @@
     <span class="k">if</span> <span class="n">nside</span><span class="p">:</span>
         <span class="n">patch_ids</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">hp</span><span class="o">.</span><span class="n">nside2npix</span><span class="p">(</span><span class="n">nside</span><span class="p">)),</span>
                                 <span class="n">hp</span><span class="o">.</span><span class="n">npix2nside</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
-        <span class="n">res</span> <span class="o">=</span> <span class="n">multi_comp_sep</span><span class="p">(</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">alg</span><span class="o">.</span><span class="n">multi_comp_sep</span><span class="p">(</span>
             <span class="n">A_ev</span><span class="p">,</span> <span class="n">prewhitened_data</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">A_dB_ev</span><span class="p">,</span> <span class="n">comp_of_param</span><span class="p">,</span> <span class="n">patch_ids</span><span class="p">,</span>
             <span class="n">x0</span><span class="p">,</span> <span class="o">**</span><span class="n">minimize_kwargs</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="c1">#import ipdb;ipdb.set_trace()</span>
-        <span class="n">res</span> <span class="o">=</span> <span class="n">comp_sep</span><span class="p">(</span><span class="n">A_ev</span><span class="p">,</span> <span class="n">prewhitened_data</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">A_dB_ev</span><span class="p">,</span> <span class="n">comp_of_param</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span>
-                       <span class="o">**</span><span class="n">minimize_kwargs</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">alg</span><span class="o">.</span><span class="n">comp_sep</span><span class="p">(</span><span class="n">A_ev</span><span class="p">,</span> <span class="n">prewhitened_data</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">A_dB_ev</span><span class="p">,</span> <span class="n">comp_of_param</span><span class="p">,</span>
+                           <span class="n">x0</span><span class="p">,</span> <span class="o">**</span><span class="n">minimize_kwargs</span><span class="p">)</span>
 
     <span class="c1"># Craft output</span>
     <span class="c1"># 1) Apply the mask, if any</span>
@@ -438,16 +445,44 @@
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">maps</span><span class="o">.</span><span class="n">ndim</span><span class="o">-</span><span class="mi">1</span><span class="p">)))</span>
 
 
-<span class="k">class</span> <span class="nc">_AttrDict</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+<span class="c1"># What are _LowerCaseAttrDict and _force_keys_as_attributes?</span>
+<span class="c1"># Why are you so twisted?!? Because we decided that instrument can be either a</span>
+<span class="c1"># PySM.Instrument or a dictionary (especially the one used to construct a</span>
+<span class="c1"># PySM.Instrument).</span>
+<span class="c1">#</span>
+<span class="c1"># Suppose I want the frequencies.</span>
+<span class="c1"># * Pysm.Instrument </span>
+<span class="c1">#     freqs = instrument.Frequencies</span>
+<span class="c1"># * the configuration dict of a Pysm.Instrument</span>
+<span class="c1">#     freqs = instrument[&#39;frequencies&#39;]</span>
+<span class="c1"># We force the former API in the dictionary case by</span>
+<span class="c1"># * setting all string keys to lower-case</span>
+<span class="c1"># * making dictionary entries accessible as attributes</span>
+<span class="c1"># * Catching upper-case attribute calls and returning the lower-case version</span>
+<span class="c1"># Shoot us any simpler idea. Maybe dropping the PySM.Instrument support...</span>
+<span class="k">class</span> <span class="nc">_LowerCaseAttrDict</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">_AttrDict</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">_LowerCaseAttrDict</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+                <span class="n">str_key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">str_key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="n">str_key</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="p">[</span><span class="n">str_key</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="n">item</span>
+                    <span class="k">del</span> <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span> <span class="o">=</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;No attribute named &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
+
 
 <span class="k">def</span> <span class="nf">_force_keys_as_attributes</span><span class="p">(</span><span class="n">instrument</span><span class="p">):</span>
     <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">instrument</span><span class="p">,</span> <span class="s1">&#39;Frequencies&#39;</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">instrument</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_AttrDict</span><span class="p">(</span><span class="n">instrument</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_LowerCaseAttrDict</span><span class="p">(</span><span class="n">instrument</span><span class="p">)</span>
 </pre></div>
 
            </div>

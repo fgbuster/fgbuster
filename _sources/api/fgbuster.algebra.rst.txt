@@ -9,6 +9,9 @@ fgbuster\.algebra
 
    .. autosummary::
    
+      D
+      P
+      P_dBdB
       W
       W_dB
       W_dBdB
