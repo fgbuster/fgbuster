@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Forecasting &mdash; FGBuster 0.1.1 documentation</title>
+  <title>Simple component separation &mdash; FGBuster 0.1.1 documentation</title>
   
 
   
@@ -28,8 +28,8 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Contributing" href="../contributing.html" />
-    <link rel="prev" title="Simple component separation" href="simple_separation.html" /> 
+    <link rel="next" title="Example of forecasting" href="xForecast.html" />
+    <link rel="prev" title="Intermediate component separation" href="intermediate_separation.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -86,10 +86,16 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="component_and_mixingmatrix.html">SED evaluation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="component_and_mixingmatrix.html">Usage of the <code class="docutils literal"><span class="pre">Component</span></code> and <code class="docutils literal"><span class="pre">MixingMatrix</span></code> classes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="intermediate_separation.html">Intermediate component separation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_separation.html">Simple component separation</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Forecasting</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Simple component separation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Simulate-your-frequency-maps">Simulate your frequency maps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Define-what-you-fit-for">Define what you fit for</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Component-separation">Component separation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Explore-the-results">Explore the results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="xForecast.html">Example of forecasting</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
@@ -140,13 +146,13 @@
         
           <li><a href="../examples.html">Examples</a> &raquo;</li>
         
-      <li>Forecasting</li>
+      <li>Simple component separation</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/examples/xForecast.ipynb.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/examples/simple_separation.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -342,9 +348,9 @@ div.nboutput div.output_area.stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="Forecasting">
-<h1>Forecasting<a class="headerlink" href="#Forecasting" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput docutils container">
+<div class="section" id="Simple-component-separation">
+<h1>Simple component separation<a class="headerlink" href="#Simple-component-separation" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
@@ -352,22 +358,35 @@ div.nboutput div.output_area.stderr {
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
 <span class="o">%</span><span class="k">autoreload</span> 2
+<span class="o">%</span><span class="k">matplotlib</span> inline
 
-<span class="kn">import</span> <span class="nn">pysm</span>
-<span class="kn">from</span> <span class="nn">fgbuster.pysm_helpers</span> <span class="k">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span>
 <span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">fgbuster.cosmology</span> <span class="k">import</span> <span class="n">xForecast</span>
+<span class="kn">import</span> <span class="nn">pysm</span>
 
-<span class="n">nside</span> <span class="o">=</span> <span class="mi">64</span>
-<span class="c1"># define sky and foregrounds simulations</span>
-<span class="n">sky</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Sky</span><span class="p">(</span><span class="n">get_sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;d0s0&#39;</span><span class="p">))</span>
-<span class="c1"># define instrument</span>
-<span class="n">instrument</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Instrument</span><span class="p">(</span><span class="n">get_instrument</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;cmbs4&#39;</span><span class="p">))</span>
-<span class="c1"># get noiseless frequency maps</span>
+<span class="kn">from</span> <span class="nn">fgbuster.pysm_helpers</span> <span class="k">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span>
+<span class="kn">from</span> <span class="nn">fgbuster.component_model</span> <span class="k">import</span> <span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span>
+<span class="kn">from</span> <span class="nn">fgbuster.separation_recipies</span> <span class="k">import</span> <span class="n">basic_comp_sep</span>
+<span class="kn">from</span> <span class="nn">fgbuster.visualization</span> <span class="k">import</span> <span class="n">corner_norm</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="Simulate-your-frequency-maps">
+<h2>Simulate your frequency maps<a class="headerlink" href="#Simulate-your-frequency-maps" title="Permalink to this headline">¶</a></h2>
+<p>You have some frequecy maps to clean, they can be either data or
+simulations. For example, you can use <code class="docutils literal"><span class="pre">pysm</span></code> to simulate microwave
+skys with different complexities. ForeGroundBuster adds a couple of
+functions that make the process even easier.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">nside</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">sky</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Sky</span><span class="p">(</span><span class="n">get_sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;c1d0s0&#39;</span><span class="p">))</span>
+<span class="n">instrument</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Instrument</span><span class="p">(</span><span class="n">get_instrument</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;litebird&#39;</span><span class="p">))</span>
 <span class="n">freq_maps</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">observe</span><span class="p">(</span><span class="n">sky</span><span class="p">,</span> <span class="n">write_outputs</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-<span class="c1"># take only the Q and U maps</span>
-<span class="n">freq_maps</span> <span class="o">=</span> <span class="n">freq_maps</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:]</span>
+<span class="n">freq_maps</span> <span class="o">=</span> <span class="n">freq_maps</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>  <span class="c1"># Select polarization</span>
 </pre></div>
 </div>
 </div>
@@ -378,121 +397,145 @@ div.nboutput div.output_area.stderr {
 <div class="highlight"><pre>
 nu (GHz) | sigma_I (uK_CMB amin) | sigma_P (uK_CMB amin) | FWHM (arcmin)
 
-0020.00 | 16.66 | 13.60 | 00.00
-0030.00 | 10.62 | 08.67 | 00.00
-0040.00 | 10.07 | 08.22 | 00.00
-0085.00 | 02.01 | 01.64 | 00.00
-0095.00 | 01.59 | 01.30 | 00.00
-0145.00 | 04.53 | 02.03 | 00.00
-0155.00 | 04.53 | 02.03 | 00.00
-0220.00 | 11.61 | 05.19 | 00.00
-0270.00 | 15.84 | 07.08 | 00.00
+0040.00 | 25.60 | 36.10 | 00.00
+0050.00 | 13.90 | 19.60 | 00.00
+0060.00 | 14.33 | 20.20 | 00.00
+0068.40 | 08.01 | 11.30 | 00.00
+0078.00 | 07.30 | 10.30 | 00.00
+0088.50 | 05.96 | 08.40 | 00.00
+0100.00 | 04.96 | 07.00 | 00.00
+0118.90 | 04.11 | 05.80 | 00.00
+0140.00 | 03.33 | 04.70 | 00.00
+0166.00 | 04.96 | 07.00 | 00.00
+0195.00 | 04.11 | 05.80 | 00.00
+0234.90 | 05.67 | 08.00 | 00.00
+0280.00 | 06.45 | 09.10 | 00.00
+0337.40 | 08.09 | 11.40 | 00.00
+0402.10 | 13.90 | 19.60 | 00.00
 Instrument attribute &#39;pixel_indices&#39; not set.
 </pre></div></div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
-</pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># create 3% circular sky mask</span>
-<span class="n">RA</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">-</span><span class="mf">70.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span>
-<span class="n">DEC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="mf">70.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span>
-<span class="n">radius</span> <span class="o">=</span> <span class="mi">34</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span>
-<span class="n">mask_circular</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">12</span><span class="o">*</span><span class="n">nside</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">ipix</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="o">*</span><span class="n">nside</span><span class="o">**</span><span class="mi">2</span><span class="p">):</span>
-    <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">pix2ang</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">ipix</span><span class="p">)</span>
-    <span class="k">if</span> <span class="p">(((</span><span class="n">phi</span> <span class="o">-</span> <span class="n">RA</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">theta</span> <span class="o">-</span> <span class="n">DEC</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">&lt;=</span> <span class="n">radius</span><span class="o">**</span><span class="mi">2</span><span class="p">)):</span>
-        <span class="n">mask_circular</span><span class="p">[</span><span class="n">ipix</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
-    <span class="k">if</span> <span class="p">(((</span><span class="n">phi</span> <span class="o">-</span> <span class="n">RA</span><span class="o">+</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">theta</span> <span class="o">-</span> <span class="n">DEC</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">&lt;=</span> <span class="n">radius</span><span class="o">**</span><span class="mi">2</span><span class="p">)):</span>
-        <span class="n">mask_circular</span><span class="p">[</span><span class="n">ipix</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
-<span class="c1"># applying mask to observed frequency maps</span>
-<span class="n">freq_maps</span><span class="p">[</span><span class="o">...</span><span class="p">,</span><span class="n">mask_circular</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
-</pre></div>
-</div>
-</div>
+<div class="section" id="Define-what-you-fit-for">
+<h2>Define what you fit for<a class="headerlink" href="#Define-what-you-fit-for" title="Permalink to this headline">¶</a></h2>
+<p>Create your sky model as a list of components</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># define components used in the modeling</span>
-<span class="kn">from</span> <span class="nn">fgbuster.component_model</span> <span class="k">import</span> <span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span>
-<span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">CMB</span><span class="p">(),</span> <span class="n">Dust</span><span class="p">(</span><span class="mf">150.</span><span class="p">),</span> <span class="n">Synchrotron</span><span class="p">(</span><span class="mf">150.</span><span class="p">)]</span>
+<span></span><span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">CMB</span><span class="p">(),</span> <span class="n">Dust</span><span class="p">(</span><span class="mf">150.</span><span class="p">),</span> <span class="n">Synchrotron</span><span class="p">(</span><span class="mf">20.</span><span class="p">)]</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput docutils container">
+</div>
+<div class="section" id="Component-separation">
+<h2>Component separation<a class="headerlink" href="#Component-separation" title="Permalink to this headline">¶</a></h2>
+<p>The tools inside ForeGroundBuster allow for very flexible and diverse
+component separation approaches. However, we also provide a set of
+predefined function that perform component separation out of the box.
+They suit most common use cases.</p>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># call for xForecast</span>
-<span class="c1"># with lmin=2, lmax=2*nside-1, and Alens=0.1</span>
-<span class="c1"># you can try with make_figure=True if you want to output angular power spectra and profile likelihood on r</span>
-<span class="n">res</span> <span class="o">=</span> <span class="n">xForecast</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">freq_maps</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">nside</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">Alens</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">make_figure</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span></span><span class="n">result</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">freq_maps</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
+</div>
+<div class="section" id="Explore-the-results">
+<h2>Explore the results<a class="headerlink" href="#Explore-the-results" title="Permalink to this headline">¶</a></h2>
+<p>You have just solved for both the spectral parameters of your components
+and their amplitudes.</p>
+<p>Get the spectral parameters name and values with</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-(&#39;fsky = &#39;, 0.030192057291666668)
-======= ESTIMATION OF SPECTRAL PARAMETERS =======
-(&#39;res.x = &#39;, array([  1.54,  20.  ,  -3.  ]))
-======= ESTIMATION OF NOISE AFTER COMP SEP =======
-======= COMPUTATION OF CL_FGS =======
+[&#39;Dust.beta_d&#39;, &#39;Dust.temp&#39;, &#39;Synchrotron.beta_pl&#39;]
+[  1.54  20.    -3.  ]
 </pre></div></div>
+</div>
+<p>You can also have a look at their semi-analytic covariance, but remember
+that it is accurate only the high signal-to-noise regime</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">corner_norm</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">Sigma</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_simple_separation_11_0.png" src="../_images/examples_simple_separation_11_0.png" />
+</div>
+</div>
+<p>The amplitudes of the components are stacked in the <code class="docutils literal"><span class="pre">s</span></code> attribute and
+they are in the same format of the input frequency maps: Q and U healpix
+maps, in this case.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;CMB&#39;</span><span class="p">)</span>
+<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Dust&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">)</span>
+<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Synchrotron&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-/Users/dpoletti/software/fgbuster/fgbuster/algebra.py:788: RuntimeWarning: invalid value encountered in divide
-  / np.linalg.norm(As_dB_i, axis=-1))
+/Users/dpoletti/Library/Python/2.7/lib/python/site-packages/healpy/projaxes.py:859: MaskedArrayFutureWarning: setting an item on a masked array which has a shared mask will not copy the mask and also change the original mask array in the future.
+Check the NumPy 1.11 release notes for more information.
+  result[np.isinf(val.data)] = -np.inf
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-======= ESTIMATION OF STAT AND SYS RESIDUALS =======
-======= OPTIMIZATION OF COSMO LIKELIHOOD =======
-(&#39;bounds on r = &#39;, 0.00098625217948687845, &#39; / &#39;, 0.0010328281259410286)
-(&#39;starting point = &#39;, 0.0010092715146305707)
-(&#39;    ===&gt;&gt; fitted r = &#39;, array([ 0.00099999]))
-======= ESTIMATION OF SIGMA(R) =======
-(&#39;ind_sr_min = &#39;, 1)
-(&#39;sr_grid[ind_sr_min-1] = &#39;, 0.00099999485890078376)
-(&#39;sr_grid[ind_sr_min+1] = &#39;, 0.0017782710295854861)
-(&#39;sr_grid = &#39;, array([  9.99994859e-04,   1.33351486e-03,   1.77827103e-03,
-         2.37136304e-03,   3.16226411e-03,   4.21694787e-03,
-         5.62339157e-03,   7.49891479e-03,   9.99996573e-03,
-         1.33351715e-02,   1.77827408e-02,   2.37136710e-02,
-         3.16226953e-02,   4.21695510e-02,   5.62340121e-02,
-         7.49892764e-02,   9.99998286e-02,   1.33351943e-01,
-         1.77827712e-01,   2.37137117e-01,   3.16227495e-01,
-         4.21696232e-01,   5.62341084e-01,   7.49894049e-01,
-         1.00000000e+00]))
-case # 3
-(&#39;bounds on sigma(r) = &#39;, 0.00099999485890078376, &#39; / &#39;, 0.0017782710295854861)
-(&#39;starting point = &#39;, 0.0013335148620535473)
-(&#39;    ===&gt;&gt; sigma(r) = &#39;, array([ 0.00030872]))
-======= GRIDDING COSMO LIKELIHOOD =======
-</pre></div></div>
+<img alt="../_images/examples_simple_separation_13_1.png" src="../_images/examples_simple_separation_13_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_simple_separation_13_2.png" src="../_images/examples_simple_separation_13_2.png" />
+</div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_xForecast_4_3.png" src="../_images/examples_xForecast_4_3.png" />
+<img alt="../_images/examples_simple_separation_13_3.png" src="../_images/examples_simple_separation_13_3.png" />
+</div>
 </div>
 </div>
 </div>
@@ -505,10 +548,10 @@ case # 3
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../contributing.html" class="btn btn-neutral float-right" title="Contributing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="xForecast.html" class="btn btn-neutral float-right" title="Example of forecasting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="simple_separation.html" class="btn btn-neutral" title="Simple component separation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="intermediate_separation.html" class="btn btn-neutral" title="Intermediate component separation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

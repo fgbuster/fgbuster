@@ -1,0 +1,1053 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>SED evaluation &mdash; FGBuster 0.1.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Intermediate component separation" href="intermediate_separation.html" />
+    <link rel="prev" title="Examples" href="../examples.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> FGBuster
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">SED evaluation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#AnalyticComponenet"><code class="docutils literal"><span class="pre">AnalyticComponenet</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Construction">Construction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Evaluation">Evaluation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Derivatives">Derivatives</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Predefined-Components">Predefined Components</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Mixing-Matrix">Mixing Matrix</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="intermediate_separation.html">Intermediate component separation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_separation.html">Simple component separation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="xForecast.html">Forecasting</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">FGBuster</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+        
+      <li>SED evaluation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/examples/component_and_mixingmatrix.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput div.prompt,
+div.nbinput div.input_area,
+div.nbinput div[class*=highlight],
+div.nbinput div[class*=highlight] pre,
+div.nboutput,
+div.nbinput div.prompt,
+div.nbinput div.output_area,
+div.nboutput div[class*=highlight],
+div.nboutput div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput,
+    div.nboutput {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput div.prompt pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput div.prompt pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+@media (max-width: 540px) {
+    div.nbinput div.prompt,
+    div.nboutput div.prompt {
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput div.prompt.empty {
+        padding: 0;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput div.prompt pre,
+div.nboutput div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput div.input_area,
+    div.nboutput div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput div.input_area {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="SED-evaluation">
+<h1>SED evaluation<a class="headerlink" href="#SED-evaluation" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
+<span class="o">%</span><span class="k">matplotlib</span> inline
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">constants</span>
+<span class="kn">import</span> <span class="nn">pylab</span> <span class="k">as</span> <span class="nn">pl</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">rcParams</span><span class="p">,</span> <span class="n">cm</span>
+<span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">8</span>
+
+<span class="c1"># Imports needed for component separation</span>
+<span class="kn">from</span> <span class="nn">fgbuster</span> <span class="k">import</span> <span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span><span class="p">,</span> <span class="n">AnalyticComponent</span><span class="p">,</span> <span class="n">MixingMatrix</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="AnalyticComponenet">
+<h2><code class="docutils literal"><span class="pre">AnalyticComponenet</span></code><a class="headerlink" href="#AnalyticComponenet" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">component_model</span></code> module collects classes for SED evaluation. It
+has mainly two classes:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">Component</span></code>, abstract class which defines the shared API<ul>
+<li>Evaluation of the SED as well as its first and second order
+derivatives with respect to the free parameters</li>
+<li>Keep track of the free parameters</li>
+</ul>
+</li>
+<li><code class="docutils literal"><span class="pre">AnalyticComponent</span></code><ul>
+<li>Construct a <code class="docutils literal"><span class="pre">Component</span></code> from an analytic expression</li>
+</ul>
+</li>
+</ul>
+<p>We’ll now focus on the latter. An <code class="docutils literal"><span class="pre">AnalyticComponent</span></code> can be
+constructed from anything that can be parsed by <code class="docutils literal"><span class="pre">sympy</span></code>, which include
+all the most common mathematical functions. A variable called <code class="docutils literal"><span class="pre">nu</span></code> has
+to be used to expresses the frequency dependence.</p>
+<div class="section" id="Construction">
+<h3>Construction<a class="headerlink" href="#Construction" title="Permalink to this headline">¶</a></h3>
+<p>As an example, consider the SED of a modified back body</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">analytic_expr</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;(nu / nu0)**(1 + beta_d) *&#39;</span>
+                 <span class="s1">&#39;(exp(nu0 / temp * h_over_k) -1)&#39;</span>
+                 <span class="s1">&#39;/ (exp(nu / temp * h_over_k) - 1)&#39;</span>
+                 <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">comp</span> <span class="o">=</span> <span class="n">AnalyticComponent</span><span class="p">(</span><span class="n">analytic_expr</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The free parameters are automatically detected</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">comp</span><span class="o">.</span><span class="n">params</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[5]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>[&#39;beta_d&#39;, &#39;h_over_k&#39;, &#39;nu0&#39;, &#39;temp&#39;]
+</pre></div>
+</div>
+</div>
+<p>As in this case, some of them are not really free but we did not want to
+clutter the expression by hardcoding the value. Their value can be
+specified at construction time.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">h_over_k_val</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">h</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">constants</span><span class="o">.</span><span class="n">k</span>  <span class="c1"># Assumes frequencies in GHz</span>
+<span class="n">nu0_val</span> <span class="o">=</span> <span class="mf">353.</span>
+
+<span class="n">comp</span> <span class="o">=</span> <span class="n">AnalyticComponent</span><span class="p">(</span><span class="n">analytic_expr</span><span class="p">,</span>  <span class="c1"># Same as before</span>
+                         <span class="n">h_over_k</span><span class="o">=</span><span class="n">h_over_k_val</span><span class="p">,</span> <span class="n">nu0</span><span class="o">=</span><span class="n">nu0_val</span><span class="p">)</span>  <span class="c1"># but now keyword arguments fix some variables</span>
+</pre></div>
+</div>
+</div>
+<p>and they are no longer free parameters</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">comp</span><span class="o">.</span><span class="n">params</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>[&#39;beta_d&#39;, &#39;temp&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Evaluation">
+<h3>Evaluation<a class="headerlink" href="#Evaluation" title="Permalink to this headline">¶</a></h3>
+<p>Efficient evaluators of the analytic expression are created at
+construction time. The expression can be evaluated both for a single
+value and for an array of values. (Note that the free parameters are
+passed in the same order they appear in <code class="docutils literal"><span class="pre">comp.params</span></code>)</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">nu_scalar</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">beta_scalar</span> <span class="o">=</span> <span class="mf">1.6</span>
+<span class="n">temp_scalar</span> <span class="o">=</span> <span class="mf">16.</span>
+
+<span class="n">comp</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu_scalar</span><span class="p">,</span> <span class="n">beta_scalar</span><span class="p">,</span> <span class="n">temp_scalar</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[8]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>0.072270750461117764
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">nu_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+
+<span class="n">sed</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">beta_scalar</span><span class="p">,</span> <span class="n">temp_scalar</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Output shape is :&#39;</span><span class="p">,</span> <span class="n">sed</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&#39;Output shape is :&#39;, (20,))
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">sed</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_component_and_mixingmatrix_16_0.png" src="../_images/examples_component_and_mixingmatrix_16_0.png" />
+</div>
+</div>
+<p>Also the free parameters can be arrays</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">beta_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">1.2</span><span class="p">,</span> <span class="mf">2.2</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">temp_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">27</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+
+<span class="n">seds</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">beta_vector</span><span class="p">,</span> <span class="n">temp_vector</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Output shape is :&#39;</span><span class="p">,</span> <span class="n">seds</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&#39;Output shape is :&#39;, (4, 20))
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">colors_map</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">ScalarMappable</span><span class="p">()</span>
+<span class="n">colors_map</span><span class="o">.</span><span class="n">set_array</span><span class="p">(</span><span class="n">beta_vector</span><span class="p">)</span>
+<span class="n">colors_map</span><span class="o">.</span><span class="n">autoscale</span><span class="p">()</span>
+<span class="n">colors</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">colors_map</span><span class="o">.</span><span class="n">to_rgba</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">sed</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">temp</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">seds</span><span class="p">,</span> <span class="n">beta_vector</span><span class="p">,</span> <span class="n">temp_vector</span><span class="p">):</span>
+    <span class="n">pl</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">sed</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">colors</span><span class="p">(</span><span class="n">beta</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Temp: </span><span class="si">%.0f</span><span class="s1">   Beta: </span><span class="si">%.1f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">beta</span><span class="p">))</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_component_and_mixingmatrix_19_0.png" src="../_images/examples_component_and_mixingmatrix_19_0.png" />
+</div>
+</div>
+<p>They can be anything that is bradcating-compatible</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">sedss</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">beta_vector</span><span class="p">,</span> <span class="n">temp_vector</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Output shape is :&#39;</span><span class="p">,</span> <span class="n">sedss</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&#39;Output shape is :&#39;, (4, 4, 20))
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">linewidths</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">temp_vector</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="mf">4.</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="c1"># Legend kludge</span>
+<span class="k">for</span> <span class="n">temp</span> <span class="ow">in</span> <span class="n">temp_vector</span><span class="p">:</span>
+    <span class="n">pl</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mf">353.</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.001</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="n">linewidths</span><span class="p">(</span><span class="n">temp</span><span class="p">),</span>
+              <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Temp: </span><span class="si">%.0f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">temp</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">beta</span> <span class="ow">in</span> <span class="n">beta_vector</span><span class="p">:</span>
+    <span class="n">pl</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mf">353.</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.001</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="n">colors</span><span class="p">(</span><span class="n">beta</span><span class="p">),</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+              <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Beta: </span><span class="si">%.1f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">beta</span><span class="p">)</span>
+<span class="c1"># Plotting</span>
+<span class="k">for</span> <span class="n">temp</span><span class="p">,</span> <span class="n">seds</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">temp_vector</span><span class="p">,</span> <span class="n">sedss</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">beta</span><span class="p">,</span> <span class="n">sed</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">beta_vector</span><span class="p">,</span> <span class="n">seds</span><span class="p">):</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">sed</span><span class="p">,</span>
+                  <span class="n">c</span><span class="o">=</span><span class="n">colors</span><span class="p">(</span><span class="n">beta</span><span class="p">),</span> <span class="n">lw</span><span class="o">=</span><span class="n">linewidths</span><span class="p">(</span><span class="n">temp</span><span class="p">))</span>
+
+<span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_component_and_mixingmatrix_22_0.png" src="../_images/examples_component_and_mixingmatrix_22_0.png" />
+</div>
+</div>
+<p>Evaluation is reasonably quick. For example, evaluating a
+pixel-dependent SED over 5 frequency bands at <code class="docutils literal"><span class="pre">nside=1024</span></code> takes few
+seconds.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">comp</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">[::</span><span class="mi">4</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">2.</span><span class="p">,</span> <span class="mi">12</span><span class="o">*</span><span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span> <span class="mf">20.</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[15]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>(12582912, 5)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Derivatives">
+<h3>Derivatives<a class="headerlink" href="#Derivatives" title="Permalink to this headline">¶</a></h3>
+<p>Another important feature of the <code class="docutils literal"><span class="pre">AnalyticComponent</span></code>s is that the
+derivatives with respect to the parameters are computed analytically at
+construction time and evaluate with respect to all the parameters using</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">diffs</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="mf">1.6</span><span class="p">,</span> <span class="mf">20.</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">for</span> <span class="n">diff</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">diffs</span><span class="p">,</span> <span class="n">comp</span><span class="o">.</span><span class="n">params</span><span class="p">):</span>
+    <span class="n">pl</span><span class="o">.</span><span class="n">semilogx</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">diff</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">param</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_component_and_mixingmatrix_27_0.png" src="../_images/examples_component_and_mixingmatrix_27_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Predefined-Components">
+<h3>Predefined Components<a class="headerlink" href="#Predefined-Components" title="Permalink to this headline">¶</a></h3>
+<p>Popular analytic SEDs are ready to be used. For example, we construct
+the very same <code class="docutils literal"><span class="pre">Component</span></code> we have been using above with</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dust</span> <span class="o">=</span> <span class="n">Dust</span><span class="p">(</span><span class="mf">353.</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;K_RJ&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">dust</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;beta_d&#39;, &#39;temp&#39;]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">comp</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">beta_vector</span><span class="p">,</span> <span class="n">temp_vector</span><span class="p">),</span>
+            <span class="n">dust</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">beta_vector</span><span class="p">,</span> <span class="n">temp_vector</span><span class="p">)</span>
+           <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[19]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>True
+</pre></div>
+</div>
+</div>
+<p>As for the components, parameters can be fixed at construction time</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dust_fixed_temp</span> <span class="o">=</span> <span class="n">Dust</span><span class="p">(</span><span class="mf">353.</span><span class="p">,</span> <span class="n">temp</span><span class="o">=</span><span class="n">temp_scalar</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;K_RJ&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">dust_fixed_temp</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;beta_d&#39;]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">comp</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">beta_vector</span><span class="p">,</span> <span class="n">temp_scalar</span><span class="p">),</span>
+            <span class="n">dust_fixed_temp</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">beta_vector</span><span class="p">)</span>
+           <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[21]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>True
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Mixing-Matrix">
+<h2>Mixing Matrix<a class="headerlink" href="#Mixing-Matrix" title="Permalink to this headline">¶</a></h2>
+<p>The mixing matrix allows to collect components and evaluate them</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">mixing_matrix</span> <span class="o">=</span> <span class="n">MixingMatrix</span><span class="p">(</span><span class="n">Dust</span><span class="p">(</span><span class="mf">353.</span><span class="p">),</span> <span class="n">CMB</span><span class="p">(),</span> <span class="n">Synchrotron</span><span class="p">(</span><span class="mf">70.</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">mixing_matrix</span><span class="o">.</span><span class="n">params</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[23]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>[&#39;Dust.beta_d&#39;, &#39;Dust.temp&#39;, &#39;Synchrotron.beta_pl&#39;]
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">mixing_matrix</span><span class="o">.</span><span class="n">components</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[24]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>[&#39;Dust&#39;, &#39;CMB&#39;, &#39;Synchrotron&#39;]
+</pre></div>
+</div>
+</div>
+<p>As the <code class="docutils literal"><span class="pre">Component</span></code>s, the SED and its derivative can be easily
+evaluated</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">mm_val</span> <span class="o">=</span> <span class="n">mixing_matrix</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="mf">1.6</span><span class="p">,</span> <span class="mf">20.</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Output shape is :&#39;</span><span class="p">,</span> <span class="n">mm_val</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&#39;Output shape is :&#39;, (20, 3))
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">for</span> <span class="n">sed</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mm_val</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">mixing_matrix</span><span class="o">.</span><span class="n">components</span><span class="p">):</span>
+    <span class="n">pl</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">sed</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_component_and_mixingmatrix_40_0.png" src="../_images/examples_component_and_mixingmatrix_40_0.png" />
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">mm_diffs</span> <span class="o">=</span> <span class="n">mixing_matrix</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="mf">1.6</span><span class="p">,</span> <span class="mf">20.</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">for</span> <span class="n">mm_diff</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mm_diffs</span><span class="p">,</span> <span class="n">mixing_matrix</span><span class="o">.</span><span class="n">params</span><span class="p">):</span>
+    <span class="n">plot</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="n">mm_diff</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">param</span><span class="p">)</span>
+    <span class="n">pl</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">nu_vector</span><span class="p">,</span> <span class="o">-</span><span class="n">mm_diff</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">plot</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_color</span><span class="p">())</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_component_and_mixingmatrix_42_0.png" src="../_images/examples_component_and_mixingmatrix_42_0.png" />
+</div>
+</div>
+<p>Note that only the column affected by the derivative is reported in the
+output.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [29]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">mm_diffs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[29]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>(20, 1)
+</pre></div>
+</div>
+</div>
+<p>For each parameter, the index of the column affected can be retrieved
+from the <code class="docutils literal"><span class="pre">comp_of_dB</span></code> attribute.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>In [30]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">mixing_matrix</span><span class="o">.</span><span class="n">comp_of_dB</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none"><div class="highlight"><pre>
+<span></span>Out[30]:
+</pre></div>
+</div>
+<div class="output_area highlight-none"><div class="highlight"><pre>
+<span></span>[(Ellipsis, 0), (Ellipsis, 0), (Ellipsis, 2)]
+</pre></div>
+</div>
+</div>
+<p>The entry can be used to index a component vector before applying the
+component matrix. The presence of the <code class="docutils literal"><span class="pre">Ellipsis</span></code> allows to have
+arbitrary dimensions preceding the component one in the components
+vector.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="intermediate_separation.html" class="btn btn-neutral float-right" title="Intermediate component separation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../examples.html" class="btn btn-neutral" title="Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'../',
+              VERSION:'0.1.1',
+              LANGUAGE:'en',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
