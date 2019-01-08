@@ -8,7 +8,7 @@ def read(fname):
 setup(
     name = 'fgbuster',
     version = '0.0.1',
-    author = 'Davide Poletti, Josquin Errard',
+    author = 'Davide Poletti, Josquin Errard and the FGBuster developers',
     author_email = 'davide.pole@gmail.com, josquin@apc.in2p3.fr',
     description = ('Handy parametric component separation tools'),
     license = 'MIT',
