@@ -1,3 +1,19 @@
+# FGBuster
+# Copyright (C) 2019 Davide Poletti, Josquin Errard and the FGBuster developers
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 """ Provide handy access to pysm ojects
 """
 import sys
@@ -136,6 +152,23 @@ def _dict_instrument_litebird(nside, units='uK_CMB'):
         'output_units': units,
         'output_directory': '/dev/null',
         'output_prefix': 'litebird',
+        'use_smoothing': False,
+    }
+
+
+def _dict_instrument_pico(nside, units='uK_CMB'):
+    return {
+        'frequencies': np.array([21.0, 25.0, 30.0, 36.0, 43.2, 51.8, 62.2, 74.6, 89.6, 107.5, 129.0, 154.8, 185.8, 222.9, 267.5, 321.0, 385.2, 462.2, 554.7, 665.6, 798.7]),
+        'sens_I': np.array([16.9, 11.8, 8.1, 5.7, 5.8, 4.1, 3.8, 2.9, 2.0, 1.6, 1.6, 1.3, 2.6, 3.0, 2.1, 2.9, 3.5, 7.4, 34.6, 143.7, 896.4]) / 1.41,
+        'sens_P': np.array([16.9, 11.8, 8.1, 5.7, 5.8, 4.1, 3.8, 2.9, 2.0, 1.6, 1.6, 1.3, 2.6, 3.0, 2.1, 2.9, 3.5, 7.4, 34.6, 143.7, 896.4]),
+        'beams': np.array([40.9, 34.1, 28.4, 23.7, 19.7, 16.4, 13.7, 11.4, 9.5, 7.9, 6.6, 5.5, 4.6, 3.8, 3.2, 2.7, 2.2, 1.8, 1.5, 1.3, 1.1]),
+        'nside': nside,
+        'add_noise': True,
+        'noise_seed': 1234,
+        'use_bandpass': False,
+        'output_units': units,
+        'output_directory': '/dev/null',
+        'output_prefix': 'pico',
         'use_smoothing': False,
     }
 
