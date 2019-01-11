@@ -148,7 +148,23 @@
            <div itemprop="articleBody">
             
   <h1>Source code for fgbuster.separation_recipies</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot; High-level component separation routines</span>
+<span></span><span class="c1"># FGBuster</span>
+<span class="c1"># Copyright (C) 2019 Davide Poletti, Josquin Errard and the FGBuster developers</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software: you can redistribute it and/or modify</span>
+<span class="c1"># it under the terms of the GNU General Public License as published by</span>
+<span class="c1"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1"># (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c1"># GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># You should have received a copy of the GNU General Public License</span>
+<span class="c1"># along with this program. If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot; High-level component separation routines</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">six</span> <span class="k">import</span> <span class="n">string_types</span>
@@ -159,8 +175,8 @@
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s1">&#39;weighted_comp_sep&#39;</span><span class="p">,</span>
     <span class="s1">&#39;basic_comp_sep&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;weighted_comp_sep&#39;</span><span class="p">,</span>
 <span class="p">]</span>
 
 
@@ -172,37 +188,54 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    components: list or tuple of lists</span>
-<span class="sd">        List storing the `Components` of the mixing matrix</span>
+<span class="sd">        List storing the :class:`Component` s of the mixing matrix</span>
 <span class="sd">    instrument:</span>
-<span class="sd">        Instrument object used to define the mixing matrix.</span>
-<span class="sd">        It can be any object that has what follows wither as a key or as an</span>
-<span class="sd">        attribute (e.g. dictionary, PySM.Instrument)</span>
-<span class="sd">         - Frequencies</span>
+<span class="sd">        Instrument used to define the mixing matrix.</span>
+<span class="sd">        It can be any object that has what follows either as a key or as an</span>
+<span class="sd">        attribute (e.g. `dict`, `PySM.Instrument`)</span>
+
+<span class="sd">        - **Frequencies**</span>
+
 <span class="sd">    data: ndarray or MaskedArray</span>
-<span class="sd">        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be</span>
+<span class="sd">        Data vector to be separated. Shape *(n_freq, ..., n_pix)*. *...* can be</span>
 <span class="sd">        also absent.</span>
-<span class="sd">        Values equal to hp.UNSEEN or, if MaskedArray, masked values are</span>
+<span class="sd">        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are</span>
 <span class="sd">        neglected during the component separation process.</span>
 <span class="sd">    cov: ndarray or MaskedArray</span>
-<span class="sd">        Covariance maps. It has to be broadcastable to `data`.</span>
+<span class="sd">        Covariance maps. It has to be broadcastable to *data*.</span>
 <span class="sd">        Notice that you can not pass a pixel independent covariance as an array</span>
-<span class="sd">        with shape `(n_freq,)`: it has to be `(n_freq, ..., 1)` in order to be</span>
-<span class="sd">        broadcastable (consider using `basic_comp_sep`, in this case).</span>
-<span class="sd">        Values equal to hp.UNSEEN or, if MaskedArray, masked values are</span>
+<span class="sd">        with shape *(n_freq,)*: it has to be *(n_freq, ..., 1)* in order to be</span>
+<span class="sd">        broadcastable (consider using :func:`basic_comp_sep`, in this case).</span>
+<span class="sd">        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are</span>
 <span class="sd">        neglected during the component separation process.</span>
+<span class="sd">    nside:</span>
+<span class="sd">        For each pixel of a HEALPix map with this nside, the non-linear</span>
+<span class="sd">        parameters are estimated independently</span>
 <span class="sd">    patch_ids: array</span>
 <span class="sd">        For each pixel, the array stores the id of the region over which to</span>
 <span class="sd">        perform component separation independently.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    result : scipy.optimze.OptimizeResult (dict)</span>
-<span class="sd">        See `multi_comp_sep` if `nside` is positive and `comp_sep` otherwise.</span>
+<span class="sd">    result: dict</span>
+<span class="sd">	It includes</span>
+
+<span class="sd">	- **param**: *(list)* - Names of the parameters fitted</span>
+<span class="sd">	- **x**: *(ndarray)* - ``x[i]`` is the best-fit (map of) the *i*-th</span>
+<span class="sd">          parameter</span>
+<span class="sd">        - **Sigma**: *(ndarray)* - ``Sigma[i, j]`` is the (map of) the</span>
+<span class="sd">          semi-analytic covariance between the *i*-th and the *j*-th parameter</span>
+<span class="sd">          It is meaningful only in the high signal-to-noise regime and when the</span>
+<span class="sd">          *cov* is the true covariance of the data</span>
+<span class="sd">        - **s**: *(ndarray)* - Component amplitude maps</span>
+<span class="sd">        - **mask_good**: *(ndarray)* - mask of the entries actually used in the</span>
+<span class="sd">          component separation</span>
 
 <span class="sd">    Note</span>
 <span class="sd">    ----</span>
-<span class="sd">      * During the component separation, a pixel is masked if at least one of</span>
-<span class="sd">        its frequencies is masked, either in `data` or in `cov`.</span>
+<span class="sd">    During the component separation, a pixel is masked if at least one of</span>
+<span class="sd">    its frequencies is masked, either in *data* or in *cov*.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">instrument</span> <span class="o">=</span> <span class="n">_force_keys_as_attributes</span><span class="p">(</span><span class="n">instrument</span><span class="p">)</span>
     <span class="c1"># Make sure that cov has the frequency dimension and is equal to n_freq</span>
@@ -279,23 +312,25 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    components: list</span>
-<span class="sd">        List storing the `Components` of the mixing matrix</span>
+<span class="sd">        List storing the :class:`Component` s of the mixing matrix</span>
 <span class="sd">    instrument</span>
 <span class="sd">        Instrument object used to define the mixing matrix.</span>
 <span class="sd">        It can be any object that has what follows either as a key or as an</span>
-<span class="sd">        attribute (e.g. ``dict``, ``PySM.Instrument``)</span>
+<span class="sd">        attribute (e.g. `dict`, `PySM.Instrument`)</span>
 
-<span class="sd">         * ``Frequencies``</span>
-<span class="sd">         * ``Sens_I`` or ``Sens_P`` (optional, frequencies are inverse-noise</span>
-<span class="sd">           weighted according to these noise levels)</span>
+<span class="sd">        - **Frequencies**</span>
+<span class="sd">        - **Sens_I** or **Sens_P** (optional, frequencies are inverse-noise</span>
+<span class="sd">          weighted according to these noise levels)</span>
 
 <span class="sd">    data: ndarray or MaskedArray</span>
-<span class="sd">        Data vector to be separated. Shape ``(n_freq, ..., n_pix)``.</span>
-<span class="sd">        ``...`` can be</span>
-<span class="sd">          - absent or 1: temperature maps</span>
-<span class="sd">          - 2: polarization maps</span>
-<span class="sd">          - 3: temperature and polarization maps (see note)</span>
-<span class="sd">        Values equal to hp.UNSEEN or, if MaskedArray, masked values are</span>
+<span class="sd">        Data vector to be separated. Shape *(n_freq, ..., n_pix).*</span>
+<span class="sd">        *...* can be</span>
+
+<span class="sd">        - absent or 1: temperature maps</span>
+<span class="sd">        - 2: polarization maps</span>
+<span class="sd">        - 3: temperature and polarization maps (see note)</span>
+
+<span class="sd">        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are</span>
 <span class="sd">        neglected during the component separation process.</span>
 <span class="sd">    nside:</span>
 <span class="sd">        For each pixel of a HEALPix map with this nside, the non-linear</span>
@@ -303,20 +338,32 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    result : scipy.optimze.OptimizeResult (dict)</span>
-<span class="sd">        See `multi_comp_sep` if `nside` is positive and `comp_sep` otherwise.</span>
+<span class="sd">    result: dict</span>
+<span class="sd">	It includes</span>
+
+<span class="sd">	- **param**: *(list)* - Names of the parameters fitted</span>
+<span class="sd">	- **x**: *(ndarray)* - ``x[i]`` is the best-fit (map of) the *i*-th</span>
+<span class="sd">          parameter</span>
+<span class="sd">        - **Sigma**: *(ndarray)* - ``Sigma[i, j]`` is the (map of) the</span>
+<span class="sd">          semi-analytic covariance between the *i*-th and the *j*-th parameter.</span>
+<span class="sd">          It is meaningful only in the high signal-to-noise regime and when the</span>
+<span class="sd">          *cov* is the true covariance of the data</span>
+<span class="sd">        - **s**: *(ndarray)* - Component amplitude maps</span>
+<span class="sd">        - **mask_good**: *(ndarray)* - mask of the entries actually used in the</span>
+<span class="sd">          component separation</span>
 
 <span class="sd">    Note</span>
 <span class="sd">    ----</span>
-<span class="sd">      * During the component separation, a pixel is masked if at least one of</span>
-<span class="sd">        its frequencies is masked.</span>
-<span class="sd">      * If you provide temperature and polarization maps, they will constrain the</span>
-<span class="sd">        **same** set of parameters. In particular, separation is **not** done</span>
-<span class="sd">        independently for temperature and polarization. If you want an</span>
-<span class="sd">        independent fitting for temperature and polarization, please launch</span>
 
-<span class="sd">         res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)</span>
-<span class="sd">         res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)</span>
+<span class="sd">    * During the component separation, a pixel is masked if at least one of</span>
+<span class="sd">      its frequencies is masked.</span>
+<span class="sd">    * If you provide temperature and polarization maps, they will constrain the</span>
+<span class="sd">      **same** set of parameters. In particular, separation is **not** done</span>
+<span class="sd">      independently for temperature and polarization. If you want an</span>
+<span class="sd">      independent fitting for temperature and polarization, please launch</span>
+
+<span class="sd">      &gt;&gt;&gt; res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)</span>
+<span class="sd">      &gt;&gt;&gt; res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">instrument</span> <span class="o">=</span> <span class="n">_force_keys_as_attributes</span><span class="p">(</span><span class="n">instrument</span><span class="p">)</span>
@@ -370,6 +417,8 @@
         <span class="n">res</span><span class="o">.</span><span class="n">Sigma</span><span class="p">[</span><span class="n">x_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">UNSEEN</span>
         <span class="n">res</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">T</span>
         <span class="n">res</span><span class="o">.</span><span class="n">Sigma</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">Sigma</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="n">res</span><span class="o">.</span><span class="n">mask_good</span> <span class="o">=</span> <span class="o">~</span><span class="n">mask</span>
     <span class="k">return</span> <span class="n">res</span></div>
 
 
@@ -383,6 +432,7 @@
 <span class="sd">        It is expected to be `(n_freq, n_stokes, n_pix)`. `n_stokes` is used to</span>
 <span class="sd">        define if sens_I or sens_P (or both) should be used to compute the</span>
 <span class="sd">        factors.</span>
+
 <span class="sd">        - If `n_stokes` is absent or `n_stokes == 1`, use sens_I.</span>
 <span class="sd">        - If `n_stokes == 2`, use sens_P.</span>
 <span class="sd">        - If `n_stokes == 3`, the factors will have shape (3, n_freq). Sens_I is</span>
@@ -495,7 +545,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Davide Poletti, Josquin Errard
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>

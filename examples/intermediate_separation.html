@@ -29,7 +29,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Simple component separation" href="simple_separation.html" />
-    <link rel="prev" title="Usage of the Component and MixingMatrix classes" href="component_and_mixingmatrix.html" /> 
+    <link rel="prev" title="SED evaluation" href="component_and_mixingmatrix.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -86,7 +86,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="component_and_mixingmatrix.html">Usage of the <code class="docutils literal"><span class="pre">Component</span></code> and <code class="docutils literal"><span class="pre">MixingMatrix</span></code> classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="component_and_mixingmatrix.html">SED evaluation</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Intermediate component separation</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#Input-frequency-maps">Input frequency maps</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#Simple-case">Simple case</a></li>
@@ -98,7 +98,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="simple_separation.html">Simple component separation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="xForecast.html">Example of forecasting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="xForecast.html">Forecasting</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
@@ -371,13 +371,13 @@ div.nboutput div.output_area.stderr {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">pylab</span> <span class="k">import</span> <span class="n">rcParams</span>
-<span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">16</span>
+<span></span><span class="kn">import</span> <span class="nn">pylab</span>
+<span class="n">pylab</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">16</span>
 
 <span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
 <span class="kn">import</span> <span class="nn">pysm</span>
 
-<span class="kn">from</span> <span class="nn">fgbuster.pysm_helpers</span> <span class="k">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span>  <span class="c1"># Predefined instrumental and sky-creation configurations</span>
+<span class="kn">from</span> <span class="nn">fgbuster.observation_helpers</span> <span class="k">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span>  <span class="c1"># Predefined instrumental and sky-creation configurations</span>
 <span class="kn">from</span> <span class="nn">fgbuster.visualization</span> <span class="k">import</span> <span class="n">corner_norm</span>
 
 <span class="c1"># Imports needed for component separation</span>
@@ -402,7 +402,7 @@ couple of functions that make the process even easier.</p>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">NSIDE</span> <span class="o">=</span> <span class="mi">64</span>
 <span class="n">sky_conf_simple</span> <span class="o">=</span> <span class="n">get_sky</span><span class="p">(</span><span class="n">NSIDE</span><span class="p">,</span> <span class="s1">&#39;c1d0s0&#39;</span><span class="p">)</span>
-<span class="n">instrument</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Instrument</span><span class="p">(</span><span class="n">get_instrument</span><span class="p">(</span><span class="n">NSIDE</span><span class="p">,</span> <span class="s1">&#39;cmbs4&#39;</span><span class="p">))</span>
+<span class="n">instrument</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Instrument</span><span class="p">(</span><span class="n">get_instrument</span><span class="p">(</span><span class="s1">&#39;cmbs4&#39;</span><span class="p">,</span> <span class="n">NSIDE</span><span class="p">))</span>
 <span class="n">freq_maps_simple</span><span class="p">,</span> <span class="n">noise</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">observe</span><span class="p">(</span><span class="n">pysm</span><span class="o">.</span><span class="n">Sky</span><span class="p">(</span><span class="n">sky_conf_simple</span><span class="p">),</span> <span class="n">write_outputs</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -441,7 +441,7 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 <div class="section" id="Spatially-varying-spectral-indices">
 <h3>Spatially varying spectral indices<a class="headerlink" href="#Spatially-varying-spectral-indices" title="Permalink to this headline">¶</a></h3>
 <p>Let’s prepare also maps with spatially varying spectral indices.
-Similarly to the simple case above we run the following (notice
+Similarly to the simple case above, we run the following (notice
 <code class="docutils literal"><span class="pre">d1s1</span></code>)</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
@@ -472,6 +472,8 @@ nside over which the spectral indices are allowed to vary</p>
 </pre></div>
 </div>
 </div>
+<p>Here is how they look like in constant and varying case. The rightmost
+plot shows the full resolution <code class="docutils literal"><span class="pre">pysm</span></code> template.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
@@ -490,9 +492,10 @@ nside over which the spectral indices are allowed to vary</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_intermediate_separation_12_0.png" src="../_images/examples_intermediate_separation_12_0.png" />
+<img alt="../_images/examples_intermediate_separation_13_0.png" src="../_images/examples_intermediate_separation_13_0.png" />
 </div>
 </div>
+<p>And now we generate the maps and select polarization</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
@@ -560,7 +563,7 @@ types these are already implemented.</p>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">result</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">freq_maps_simple</span><span class="p">,</span>
-                        <span class="n">options</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">disp</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                        <span class="n">options</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">disp</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>  <span class="c1"># verbose output</span>
                         <span class="p">)</span>
 </pre></div>
 </div>
@@ -571,28 +574,27 @@ types these are already implemented.</p>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Minimization started
-Iter 1  x = [  1.4398246   21.99769057  -2.89355266]    First -logL = -16985940133.598921       N Eval = 3      Iter sec = 0.13 Cum sec = 0.13
-Iter 2  x = [  1.50989349  21.99884214  -2.98531374]    Delta(-logL) = -1057701.731264  N Eval = 5      Iter sec = 0.09 Cum sec = 0.22
-Iter 3  x = [  1.55090498  19.34011115  -2.98761519]    Delta(-logL) = -7896.035358     N Eval = 28     Iter sec = 0.85 Cum sec = 1.07
-Iter 4  x = [  1.55429671  19.12649969  -2.98794622]    Delta(-logL) = -225.203945      N Eval = 31     Iter sec = 0.11 Cum sec = 1.18
-Iter 5  x = [  1.55488811  19.1665438   -2.99317353]    Delta(-logL) = -7575.652357     N Eval = 34     Iter sec = 0.11 Cum sec = 1.28
-Iter 6  x = [  1.55604803  19.19925028  -3.00062835]    Delta(-logL) = -3999.849150     N Eval = 35     Iter sec = 0.03 Cum sec = 1.32
-Iter 7  x = [  1.55446186  19.28303095  -3.00078797]    Delta(-logL) = -40.972956       N Eval = 37     Iter sec = 0.07 Cum sec = 1.39
-Iter 8  x = [  1.5514909   19.43188588  -3.00082058]    Delta(-logL) = -74.497911       N Eval = 38     Iter sec = 0.04 Cum sec = 1.42
-Iter 9  x = [  1.5454242   19.73141515  -3.00063124]    Delta(-logL) = -118.354937      N Eval = 39     Iter sec = 0.04 Cum sec = 1.46
-Iter 10 x = [  1.53762921  20.11698791  -3.00006902]    Delta(-logL) = -32.499920       N Eval = 40     Iter sec = 0.03 Cum sec = 1.49
-Iter 11 x = [  1.54051523  19.97496807  -3.00009466]    Delta(-logL) = -14.259115       N Eval = 41     Iter sec = 0.04 Cum sec = 1.53
-Iter 12 x = [  1.5400465   19.99815897  -3.00002228]    Delta(-logL) = -0.717403        N Eval = 42     Iter sec = 0.04 Cum sec = 1.57
-Iter 13 x = [  1.5399583   20.00239065  -3.00000052]    Delta(-logL) = -0.037292        N Eval = 43     Iter sec = 0.04 Cum sec = 1.60
-Iter 14 x = [  1.53997189  20.00160449  -2.99999947]    Delta(-logL) = -0.002001        N Eval = 44     Iter sec = 0.03 Cum sec = 1.64
-Iter 15 x = [  1.53999905  20.0000565   -2.99999964]    Delta(-logL) = -0.001417        N Eval = 45     Iter sec = 0.03 Cum sec = 1.67
-Iter 16 x = [  1.54000003  19.99999871  -2.99999994]    Delta(-logL) = -0.000010        N Eval = 46     Iter sec = 0.03 Cum sec = 1.70
-Iter 17 x = [  1.54000002  19.99999915  -2.99999997]    Delta(-logL) = 0.000000 N Eval = 50     Iter sec = 0.14 Cum sec = 1.84
+Iter 1  x = [  1.4398246   21.99769057  -2.89355266]    First -logL = -16985940133.598915       N Eval = 3      Iter sec = 0.10 Cum sec = 0.10
+Iter 2  x = [  1.50989349  21.99884214  -2.98531374]    Delta(-logL) = -1057701.731276  N Eval = 5      Iter sec = 0.06 Cum sec = 0.16
+Iter 3  x = [  1.55090498  19.34011115  -2.98761519]    Delta(-logL) = -7896.035353     N Eval = 28     Iter sec = 0.71 Cum sec = 0.87
+Iter 4  x = [  1.55429671  19.12649969  -2.98794622]    Delta(-logL) = -225.203930      N Eval = 31     Iter sec = 0.09 Cum sec = 0.97
+Iter 5  x = [  1.55488811  19.1665438   -2.99317352]    Delta(-logL) = -7575.651993     N Eval = 34     Iter sec = 0.09 Cum sec = 1.06
+Iter 6  x = [  1.55604803  19.19925027  -3.00062835]    Delta(-logL) = -3999.849524     N Eval = 35     Iter sec = 0.03 Cum sec = 1.09
+Iter 7  x = [  1.55446186  19.28303095  -3.00078797]    Delta(-logL) = -40.972961       N Eval = 37     Iter sec = 0.06 Cum sec = 1.15
+Iter 8  x = [  1.5514909   19.4318859   -3.00082058]    Delta(-logL) = -74.497927       N Eval = 38     Iter sec = 0.03 Cum sec = 1.18
+Iter 9  x = [  1.5454242   19.73141524  -3.00063124]    Delta(-logL) = -118.354954      N Eval = 39     Iter sec = 0.03 Cum sec = 1.21
+Iter 10 x = [  1.53762922  20.11698786  -3.00006902]    Delta(-logL) = -32.499887       N Eval = 40     Iter sec = 0.03 Cum sec = 1.25
+Iter 11 x = [  1.54051523  19.9749681   -3.00009466]    Delta(-logL) = -14.259138       N Eval = 41     Iter sec = 0.03 Cum sec = 1.28
+Iter 12 x = [  1.5400465   19.99815898  -3.00002228]    Delta(-logL) = -0.717363        N Eval = 42     Iter sec = 0.03 Cum sec = 1.31
+Iter 13 x = [  1.5399583   20.00239066  -3.00000052]    Delta(-logL) = -0.037298        N Eval = 43     Iter sec = 0.03 Cum sec = 1.34
+Iter 14 x = [  1.53997189  20.00160449  -2.99999947]    Delta(-logL) = -0.002024        N Eval = 44     Iter sec = 0.03 Cum sec = 1.37
+Iter 15 x = [  1.53999905  20.0000565   -2.99999964]    Delta(-logL) = -0.001410        N Eval = 45     Iter sec = 0.03 Cum sec = 1.40
+Iter 16 x = [  1.54000003  19.99999871  -2.99999994]    Delta(-logL) = -0.000006        N Eval = 46     Iter sec = 0.03 Cum sec = 1.43
 Warning: Desired error not necessarily achieved due to precision loss.
          Current function value: -16987017813.413958
-         Iterations: 17
-         Function evaluations: 51
-         Gradient evaluations: 50
+         Iterations: 16
+         Function evaluations: 85
+         Gradient evaluations: 74
 </pre></div></div>
 </div>
 <p>The input spectral parameters are recovered to numerical accuracy</p>
@@ -602,14 +604,15 @@ Warning: Desired error not necessarily achieved due to precision loss.
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">sky_conf_simple</span><span class="p">[</span><span class="n">comp</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">param</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="n">inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">sky_conf_simple</span><span class="p">[</span><span class="n">comp</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">param</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
           <span class="k">for</span> <span class="n">comp</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="p">[(</span><span class="s1">&#39;dust&#39;</span><span class="p">,</span> <span class="s1">&#39;spectral_index&#39;</span><span class="p">),</span>
                               <span class="p">(</span><span class="s1">&#39;dust&#39;</span><span class="p">,</span> <span class="s1">&#39;temp&#39;</span><span class="p">),</span>
                               <span class="p">(</span><span class="s1">&#39;synchrotron&#39;</span><span class="p">,</span> <span class="s1">&#39;spectral_index&#39;</span><span class="p">)]</span>
          <span class="p">]</span>
-
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%-20s</span><span class="se">\t</span><span class="si">%s</span><span class="se">\t</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;Estimated&#39;</span><span class="p">,</span> <span class="s1">&#39;Input&#39;</span><span class="p">))</span>
 <span class="k">for</span> <span class="n">param</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">ref</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="se">\t</span><span class="si">%f</span><span class="se">\t</span><span class="si">%f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">ref</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%-20s</span><span class="se">\t</span><span class="si">%f</span><span class="se">\t</span><span class="si">%f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">ref</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -618,8 +621,9 @@ Warning: Desired error not necessarily achieved due to precision loss.
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Dust.beta_d     1.540000        1.540000
-Dust.temp       19.999999       20.000000
+                        Estimated       Input
+Dust.beta_d             1.540000        1.540000
+Dust.temp               19.999999       20.000000
 Synchrotron.beta_pl     -3.000000       -3.000000
 </pre></div></div>
 </div>
@@ -639,12 +643,13 @@ accurate only in the high signal-to-noise regime</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_intermediate_separation_22_0.png" src="../_images/examples_intermediate_separation_22_0.png" />
+<img alt="../_images/examples_intermediate_separation_24_0.png" src="../_images/examples_intermediate_separation_24_0.png" />
 </div>
 </div>
 <p>The amplitudes of the components are stacked in the <code class="docutils literal"><span class="pre">s</span></code> attribute and
 they are in the same format of the input frequency maps: Q and U healpix
-maps, in this case.</p>
+maps, in this case. Here is the U Stokes parameter for each of the
+components.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
@@ -671,20 +676,22 @@ Check the NumPy 1.11 release notes for more information.
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_intermediate_separation_24_1.png" src="../_images/examples_intermediate_separation_24_1.png" />
+<img alt="../_images/examples_intermediate_separation_26_1.png" src="../_images/examples_intermediate_separation_26_1.png" />
 </div>
 </div>
+<p>By taking the difference with the input template, we see that the error
+in the reconstruction is negligible.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span>
-            <span class="n">sky_conf_simple</span><span class="p">[</span><span class="s1">&#39;dust&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;A_U&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pysm</span><span class="o">.</span><span class="n">convert_units</span><span class="p">(</span><span class="s1">&#39;K_RJ&#39;</span><span class="p">,</span> <span class="s1">&#39;K_CMB&#39;</span><span class="p">,</span> <span class="mf">353.</span><span class="p">),</span>
+<span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+            <span class="o">-</span> <span class="n">sky_conf_simple</span><span class="p">[</span><span class="s1">&#39;dust&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;A_U&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pysm</span><span class="o">.</span><span class="n">convert_units</span><span class="p">(</span><span class="s1">&#39;K_RJ&#39;</span><span class="p">,</span> <span class="s1">&#39;K_CMB&#39;</span><span class="p">,</span> <span class="mf">353.</span><span class="p">),</span>
             <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Dust&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
-<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span>
-            <span class="n">sky_conf_simple</span><span class="p">[</span><span class="s1">&#39;synchrotron&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;A_U&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pysm</span><span class="o">.</span><span class="n">convert_units</span><span class="p">(</span><span class="s1">&#39;K_RJ&#39;</span><span class="p">,</span> <span class="s1">&#39;K_CMB&#39;</span><span class="p">,</span> <span class="mf">23.</span><span class="p">),</span>
+<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+            <span class="o">-</span> <span class="n">sky_conf_simple</span><span class="p">[</span><span class="s1">&#39;synchrotron&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;A_U&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pysm</span><span class="o">.</span><span class="n">convert_units</span><span class="p">(</span><span class="s1">&#39;K_RJ&#39;</span><span class="p">,</span> <span class="s1">&#39;K_CMB&#39;</span><span class="p">,</span> <span class="mf">23.</span><span class="p">),</span>
             <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Synchrotron&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -693,7 +700,7 @@ Check the NumPy 1.11 release notes for more information.
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_intermediate_separation_25_0.png" src="../_images/examples_intermediate_separation_25_0.png" />
+<img alt="../_images/examples_intermediate_separation_28_0.png" src="../_images/examples_intermediate_separation_28_0.png" />
 </div>
 </div>
 </div>
@@ -712,9 +719,8 @@ corresponding to healpix pixels with a given nside</p>
 </pre></div>
 </div>
 </div>
-<p>The amplitudes of the components are stacked in the <code class="docutils literal"><span class="pre">s</span></code> attribute and
-they are in the same format of the input frequency maps: Q and U healpix
-maps, in this case.</p>
+<p>As in the previous case, the amplitudes of the components are stacked in
+the <code class="docutils literal"><span class="pre">s</span></code>.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
@@ -731,10 +737,14 @@ maps, in this case.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_intermediate_separation_29_0.png" src="../_images/examples_intermediate_separation_29_0.png" />
+<img alt="../_images/examples_intermediate_separation_32_0.png" src="../_images/examples_intermediate_separation_32_0.png" />
 </div>
 </div>
-<p>The amplitudes are recovered to high accuracy</p>
+<p>When we take the difference with the input templates, the residuals are
+patchy. This is because the independent fit of the non-liner parameters
+has a different level of numerical accuracy for different patches.
+However, note that in all cases residuals are negligible: also this
+multi-patch cleaning has very high accuracy.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
@@ -754,10 +764,11 @@ maps, in this case.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_intermediate_separation_31_0.png" src="../_images/examples_intermediate_separation_31_0.png" />
+<img alt="../_images/examples_intermediate_separation_34_0.png" src="../_images/examples_intermediate_separation_34_0.png" />
 </div>
 </div>
-<p>and also the spectral parameters</p>
+<p>The same is true for the non-linear parameters. Here are their
+reconstructed maps.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
@@ -773,9 +784,10 @@ maps, in this case.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_intermediate_separation_33_0.png" src="../_images/examples_intermediate_separation_33_0.png" />
+<img alt="../_images/examples_intermediate_separation_36_0.png" src="../_images/examples_intermediate_separation_36_0.png" />
 </div>
 </div>
+<p>And here is the difference with the input templates.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [20]:
@@ -798,7 +810,7 @@ maps, in this case.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_intermediate_separation_34_0.png" src="../_images/examples_intermediate_separation_34_0.png" />
+<img alt="../_images/examples_intermediate_separation_38_0.png" src="../_images/examples_intermediate_separation_38_0.png" />
 </div>
 </div>
 </div>
@@ -815,7 +827,7 @@ maps, in this case.</p>
         <a href="simple_separation.html" class="btn btn-neutral float-right" title="Simple component separation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="component_and_mixingmatrix.html" class="btn btn-neutral" title="Usage of the Component and MixingMatrix classes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="component_and_mixingmatrix.html" class="btn btn-neutral" title="SED evaluation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -824,7 +836,7 @@ maps, in this case.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Davide Poletti, Josquin Errard
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>

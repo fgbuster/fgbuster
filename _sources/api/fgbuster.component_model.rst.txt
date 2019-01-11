@@ -5,6 +5,12 @@ fgbuster\.component\_model
 
    
    
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      lambdify
+   
    
 
    
@@ -21,7 +27,6 @@ fgbuster\.component\_model
       FreeFree
       ModifiedBlackBody
       PowerLaw
-      PowerLawCurv
       Synchrotron
    
    

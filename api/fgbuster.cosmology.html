@@ -217,13 +217,12 @@ It is required to have:</p>
 <li>frequencies</li>
 </ul>
 </div></blockquote>
-<dl class="docutils">
-<dt>however, also the following are taken into account, if provided</dt>
-<dd><ul class="first last">
+<p>however, also the following are taken into account, if provided</p>
+<blockquote>
+<div><ul>
 <li>sens_P (define the frequency inverse noise)</li>
 </ul>
-</dd>
-</dl>
+</div></blockquote>
 </li>
 <li><strong>d_fgs</strong> (<em>ndarray</em>) – The foreground maps. No CMB. Shape <cite>(n_freq, n_stokes, n_pix)</cite>.
 If some pixels have to be masked, set them to zero.
@@ -244,25 +243,17 @@ then 1, without exagereting (a difference of 1e-4 is useless).
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>xFres</strong> –</p>
-<dl class="docutils">
-<dt>xForecast result. It includes</dt>
-<dd><ul class="first last simple">
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>xFres</strong> – xForecast result. It includes</p>
+<ul class="simple">
 <li>the fitted spectral parameters</li>
-<li><dl class="first docutils">
-<dt>noise-averaged post-component separation CMB power spectrum</dt>
-<dd><ul class="first last">
+<li>noise-averaged post-component separation CMB power spectrum<ul>
 <li>noise spectrum</li>
 <li>statistical residuals spectrum</li>
 <li>systematic residuals spectrum</li>
 </ul>
-</dd>
-</dl>
 </li>
 <li>noise-averaged cosmological likelihood</li>
 </ul>
-</dd>
-</dl>
 </p>
 </td>
 </tr>
@@ -295,7 +286,7 @@ then 1, without exagereting (a difference of 1e-4 is useless).
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Davide Poletti, Josquin Errard
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>

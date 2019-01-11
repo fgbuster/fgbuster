@@ -148,7 +148,23 @@
            <div itemprop="articleBody">
             
   <h1>Source code for fgbuster.cosmology</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot; Forecasting toolbox</span>
+<span></span><span class="c1"># FGBuster</span>
+<span class="c1"># Copyright (C) 2019 Davide Poletti, Josquin Errard and the FGBuster developers</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software: you can redistribute it and/or modify</span>
+<span class="c1"># it under the terms of the GNU General Public License as published by</span>
+<span class="c1"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1"># (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c1"># GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># You should have received a copy of the GNU General Public License</span>
+<span class="c1"># along with this program. If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot; Forecasting toolbox</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">op</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -189,9 +205,13 @@
 <span class="sd">        Instrument object used to define the mixing matrix and the</span>
 <span class="sd">        frequency-dependent noise weight.</span>
 <span class="sd">        It is required to have:</span>
+
 <span class="sd">         - frequencies</span>
+
 <span class="sd">        however, also the following are taken into account, if provided</span>
+
 <span class="sd">         - sens_P (define the frequency inverse noise)</span>
+
 <span class="sd">    d_fgs: ndarray</span>
 <span class="sd">        The foreground maps. No CMB. Shape `(n_freq, n_stokes, n_pix)`.</span>
 <span class="sd">        If some pixels have to be masked, set them to zero.</span>
@@ -219,12 +239,16 @@
 <span class="sd">    -------</span>
 <span class="sd">    xFres: dict</span>
 <span class="sd">        xForecast result. It includes</span>
-<span class="sd">         - the fitted spectral parameters</span>
-<span class="sd">         - noise-averaged post-component separation CMB power spectrum</span>
-<span class="sd">            - noise spectrum</span>
-<span class="sd">            - statistical residuals spectrum</span>
-<span class="sd">            - systematic residuals spectrum</span>
-<span class="sd">         - noise-averaged cosmological likelihood</span>
+
+<span class="sd">        - the fitted spectral parameters</span>
+<span class="sd">        - noise-averaged post-component separation CMB power spectrum</span>
+
+<span class="sd">          - noise spectrum</span>
+<span class="sd">          - statistical residuals spectrum</span>
+<span class="sd">          - systematic residuals spectrum</span>
+
+<span class="sd">        - noise-averaged cosmological likelihood</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Preliminaries</span>
     <span class="n">instrument</span> <span class="o">=</span> <span class="n">_force_keys_as_attributes</span><span class="p">(</span><span class="n">instrument</span><span class="p">)</span>
@@ -501,7 +525,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Davide Poletti, Josquin Errard
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>

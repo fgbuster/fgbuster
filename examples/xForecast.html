@@ -354,16 +354,16 @@ div.nboutput div.output_area.stderr {
 <span class="o">%</span><span class="k">autoreload</span> 2
 
 <span class="kn">import</span> <span class="nn">pysm</span>
-<span class="kn">from</span> <span class="nn">fgbuster.pysm_helpers</span> <span class="k">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span>
+<span class="kn">from</span> <span class="nn">fgbuster.observation_helpers</span> <span class="k">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span>
 <span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">fgbuster.cosmology</span> <span class="k">import</span> <span class="n">xForecast</span>
+<span class="kn">from</span> <span class="nn">fgbuster</span> <span class="k">import</span> <span class="n">xForecast</span><span class="p">,</span> <span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span>
 
 <span class="n">nside</span> <span class="o">=</span> <span class="mi">64</span>
 <span class="c1"># define sky and foregrounds simulations</span>
 <span class="n">sky</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Sky</span><span class="p">(</span><span class="n">get_sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;d0s0&#39;</span><span class="p">))</span>
 <span class="c1"># define instrument</span>
-<span class="n">instrument</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Instrument</span><span class="p">(</span><span class="n">get_instrument</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;cmbs4&#39;</span><span class="p">))</span>
+<span class="n">instrument</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Instrument</span><span class="p">(</span><span class="n">get_instrument</span><span class="p">(</span><span class="s1">&#39;cmbs4&#39;</span><span class="p">,</span> <span class="n">nside</span><span class="p">))</span>
 <span class="c1"># get noiseless frequency maps</span>
 <span class="n">freq_maps</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">observe</span><span class="p">(</span><span class="n">sky</span><span class="p">,</span> <span class="n">write_outputs</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 <span class="c1"># take only the Q and U maps</span>
@@ -419,7 +419,6 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># define components used in the modeling</span>
-<span class="kn">from</span> <span class="nn">fgbuster.component_model</span> <span class="k">import</span> <span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span>
 <span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">CMB</span><span class="p">(),</span> <span class="n">Dust</span><span class="p">(</span><span class="mf">150.</span><span class="p">),</span> <span class="n">Synchrotron</span><span class="p">(</span><span class="mf">150.</span><span class="p">)]</span>
 </pre></div>
 </div>
@@ -454,7 +453,7 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-/Users/dpoletti/software/fgbuster/fgbuster/algebra.py:788: RuntimeWarning: invalid value encountered in divide
+/Users/dpoletti/software/fgbuster/fgbuster/algebra.py:804: RuntimeWarning: invalid value encountered in divide
   / np.linalg.norm(As_dB_i, axis=-1))
 </pre></div></div>
 </div>
@@ -517,7 +516,7 @@ case # 3
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Davide Poletti, Josquin Errard
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>

@@ -198,57 +198,6 @@
 </tbody>
 </table>
 <dl class="function">
-<dt id="fgbuster.separation_recipies.weighted_comp_sep">
-<code class="descclassname">fgbuster.separation_recipies.</code><code class="descname">weighted_comp_sep</code><span class="sig-paren">(</span><em>components</em>, <em>instrument</em>, <em>data</em>, <em>cov</em>, <em>nside=0</em>, <em>**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipies.html#weighted_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipies.weighted_comp_sep" title="Permalink to this definition">¶</a></dt>
-<dd><p>Weighted component separation</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>components</strong> (<em>list</em><em> or </em><em>tuple of lists</em>) – List storing the <cite>Components</cite> of the mixing matrix</li>
-<li><strong>instrument</strong> – <p>Instrument object used to define the mixing matrix.
-It can be any object that has what follows wither as a key or as an
-attribute (e.g. dictionary, PySM.Instrument)</p>
-<blockquote>
-<div><ul>
-<li>Frequencies</li>
-</ul>
-</div></blockquote>
-</li>
-<li><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Data vector to be separated. Shape <cite>(n_freq, …, n_pix)</cite>. <cite>…</cite> can be
-also absent.
-Values equal to hp.UNSEEN or, if MaskedArray, masked values are
-neglected during the component separation process.</li>
-<li><strong>cov</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Covariance maps. It has to be broadcastable to <cite>data</cite>.
-Notice that you can not pass a pixel independent covariance as an array
-with shape <cite>(n_freq,)</cite>: it has to be <cite>(n_freq, …, 1)</cite> in order to be
-broadcastable (consider using <cite>basic_comp_sep</cite>, in this case).
-Values equal to hp.UNSEEN or, if MaskedArray, masked values are
-neglected during the component separation process.</li>
-<li><strong>patch_ids</strong> (<em>array</em>) – For each pixel, the array stores the id of the region over which to
-perform component separation independently.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>result</strong> – See <cite>multi_comp_sep</cite> if <cite>nside</cite> is positive and <cite>comp_sep</cite> otherwise.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult (dict)</p>
-</td>
-</tr>
-</tbody>
-</table>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<ul class="last simple">
-<li>During the component separation, a pixel is masked if at least one of
-its frequencies is masked, either in <cite>data</cite> or in <cite>cov</cite>.</li>
-</ul>
-</div>
-</dd></dl>
-
-<dl class="function">
 <dt id="fgbuster.separation_recipies.basic_comp_sep">
 <code class="descclassname">fgbuster.separation_recipies.</code><code class="descname">basic_comp_sep</code><span class="sig-paren">(</span><em>components</em>, <em>instrument</em>, <em>data</em>, <em>nside=0</em>, <em>**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipies.html#basic_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipies.basic_comp_sep" title="Permalink to this definition">¶</a></dt>
 <dd><p>Basic component separation</p>
@@ -257,28 +206,24 @@ its frequencies is masked, either in <cite>data</cite> or in <cite>cov</cite>.</
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>components</strong> (<em>list</em>) – List storing the <cite>Components</cite> of the mixing matrix</li>
+<li><strong>components</strong> (<em>list</em>) – List storing the <code class="xref py py-class docutils literal"><span class="pre">Component</span></code> s of the mixing matrix</li>
 <li><strong>instrument</strong> – <p>Instrument object used to define the mixing matrix.
 It can be any object that has what follows either as a key or as an
-attribute (e.g. <code class="docutils literal"><span class="pre">dict</span></code>, <code class="docutils literal"><span class="pre">PySM.Instrument</span></code>)</p>
-<blockquote>
-<div><ul>
-<li><code class="docutils literal"><span class="pre">Frequencies</span></code></li>
-<li><code class="docutils literal"><span class="pre">Sens_I</span></code> or <code class="docutils literal"><span class="pre">Sens_P</span></code> (optional, frequencies are inverse-noise
+attribute (e.g. <cite>dict</cite>, <cite>PySM.Instrument</cite>)</p>
+<ul>
+<li><strong>Frequencies</strong></li>
+<li><strong>Sens_I</strong> or <strong>Sens_P</strong> (optional, frequencies are inverse-noise
 weighted according to these noise levels)</li>
 </ul>
-</div></blockquote>
 </li>
-<li><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – <p>Data vector to be separated. Shape <code class="docutils literal"><span class="pre">(n_freq,</span> <span class="pre">...,</span> <span class="pre">n_pix)</span></code>.
-<code class="docutils literal"><span class="pre">...</span></code> can be</p>
-<blockquote>
-<div><ul>
+<li><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – <p>Data vector to be separated. Shape <em>(n_freq, …, n_pix).</em>
+<em>…</em> can be</p>
+<ul>
 <li>absent or 1: temperature maps</li>
 <li>2: polarization maps</li>
 <li>3: temperature and polarization maps (see note)</li>
 </ul>
-</div></blockquote>
-<p>Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+<p>Values equal to <cite>hp.UNSEEN</cite> or, if <cite>MaskedArray</cite>, masked values are
 neglected during the component separation process.</p>
 </li>
 <li><strong>nside</strong> – For each pixel of a HEALPix map with this nside, the non-linear
@@ -286,10 +231,23 @@ parameters are estimated independently</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>result</strong> – See <cite>multi_comp_sep</cite> if <cite>nside</cite> is positive and <cite>comp_sep</cite> otherwise.</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>result</strong> – It includes</p>
+<ul class="simple">
+<li><strong>param</strong>: <em>(list)</em> - Names of the parameters fitted</li>
+<li><strong>x</strong>: <em>(ndarray)</em> - <code class="docutils literal"><span class="pre">x[i]</span></code> is the best-fit (map of) the <em>i</em>-th
+parameter</li>
+<li><strong>Sigma</strong>: <em>(ndarray)</em> - <code class="docutils literal"><span class="pre">Sigma[i,</span> <span class="pre">j]</span></code> is the (map of) the
+semi-analytic covariance between the <em>i</em>-th and the <em>j</em>-th parameter.
+It is meaningful only in the high signal-to-noise regime and when the
+<em>cov</em> is the true covariance of the data</li>
+<li><strong>s</strong>: <em>(ndarray)</em> - Component amplitude maps</li>
+<li><strong>mask_good</strong>: <em>(ndarray)</em> - mask of the entries actually used in the
+component separation</li>
+</ul>
+</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult (dict)</p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
 </td>
 </tr>
 </tbody>
@@ -304,12 +262,74 @@ its frequencies is masked.</p>
 <strong>same</strong> set of parameters. In particular, separation is <strong>not</strong> done
 independently for temperature and polarization. If you want an
 independent fitting for temperature and polarization, please launch</p>
-<blockquote>
-<div><p>res_T = basic_comp_sep(component_T, instrument, data[:, 0], <a href="#id1"><span class="problematic" id="id2">**</span></a>kwargs)
-res_P = basic_comp_sep(component_P, instrument, data[:, 1:], <a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs)</p>
-</div></blockquote>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">res_T</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">component_T</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">res_P</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">component_P</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
 </li>
 </ul>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.separation_recipies.weighted_comp_sep">
+<code class="descclassname">fgbuster.separation_recipies.</code><code class="descname">weighted_comp_sep</code><span class="sig-paren">(</span><em>components</em>, <em>instrument</em>, <em>data</em>, <em>cov</em>, <em>nside=0</em>, <em>**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipies.html#weighted_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipies.weighted_comp_sep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Weighted component separation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>components</strong> (<em>list</em><em> or </em><em>tuple of lists</em>) – List storing the <code class="xref py py-class docutils literal"><span class="pre">Component</span></code> s of the mixing matrix</li>
+<li><strong>instrument</strong> – <p>Instrument used to define the mixing matrix.
+It can be any object that has what follows either as a key or as an
+attribute (e.g. <cite>dict</cite>, <cite>PySM.Instrument</cite>)</p>
+<ul>
+<li><strong>Frequencies</strong></li>
+</ul>
+</li>
+<li><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Data vector to be separated. Shape <em>(n_freq, …, n_pix)</em>. <em>…</em> can be
+also absent.
+Values equal to <cite>hp.UNSEEN</cite> or, if <cite>MaskedArray</cite>, masked values are
+neglected during the component separation process.</li>
+<li><strong>cov</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Covariance maps. It has to be broadcastable to <em>data</em>.
+Notice that you can not pass a pixel independent covariance as an array
+with shape <em>(n_freq,)</em>: it has to be <em>(n_freq, …, 1)</em> in order to be
+broadcastable (consider using <a class="reference internal" href="#fgbuster.separation_recipies.basic_comp_sep" title="fgbuster.separation_recipies.basic_comp_sep"><code class="xref py py-func docutils literal"><span class="pre">basic_comp_sep()</span></code></a>, in this case).
+Values equal to <cite>hp.UNSEEN</cite> or, if <cite>MaskedArray</cite>, masked values are
+neglected during the component separation process.</li>
+<li><strong>nside</strong> – For each pixel of a HEALPix map with this nside, the non-linear
+parameters are estimated independently</li>
+<li><strong>patch_ids</strong> (<em>array</em>) – For each pixel, the array stores the id of the region over which to
+perform component separation independently.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>result</strong> – It includes</p>
+<ul class="simple">
+<li><strong>param</strong>: <em>(list)</em> - Names of the parameters fitted</li>
+<li><strong>x</strong>: <em>(ndarray)</em> - <code class="docutils literal"><span class="pre">x[i]</span></code> is the best-fit (map of) the <em>i</em>-th
+parameter</li>
+<li><strong>Sigma</strong>: <em>(ndarray)</em> - <code class="docutils literal"><span class="pre">Sigma[i,</span> <span class="pre">j]</span></code> is the (map of) the
+semi-analytic covariance between the <em>i</em>-th and the <em>j</em>-th parameter
+It is meaningful only in the high signal-to-noise regime and when the
+<em>cov</em> is the true covariance of the data</li>
+<li><strong>s</strong>: <em>(ndarray)</em> - Component amplitude maps</li>
+<li><strong>mask_good</strong>: <em>(ndarray)</em> - mask of the entries actually used in the
+component separation</li>
+</ul>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">During the component separation, a pixel is masked if at least one of
+its frequencies is masked, either in <em>data</em> or in <em>cov</em>.</p>
 </div>
 </dd></dl>
 
@@ -335,7 +355,7 @@ res_P = basic_comp_sep(component_P, instrument, data[:, 1:], <a href="#id3"><spa
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Davide Poletti, Josquin Errard
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>

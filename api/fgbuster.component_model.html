@@ -187,6 +187,18 @@
 analytic expressions, see the <a class="reference internal" href="#fgbuster.component_model.AnalyticComponent" title="fgbuster.component_model.AnalyticComponent"><code class="xref py py-class docutils literal"><span class="pre">AnalyticComponent</span></code></a>. For components
 frequently used (e.g. power law, gray body, CMB) these are already
 prepared.</p>
+<p class="rubric">Functions</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">lambdify</span></code>(x,&nbsp;y)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Classes</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -215,13 +227,10 @@ prepared.</p>
 <tr class="row-odd"><td><a class="reference internal" href="#fgbuster.component_model.ModifiedBlackBody" title="fgbuster.component_model.ModifiedBlackBody"><code class="xref py py-obj docutils literal"><span class="pre">ModifiedBlackBody</span></code></a>(nu0[,&nbsp;temp,&nbsp;beta_d,&nbsp;units])</td>
 <td>Modified Black body</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-obj docutils literal"><span class="pre">PowerLaw</span></code></a>(nu0[,&nbsp;beta_pl,&nbsp;units])</td>
+<tr class="row-even"><td><a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-obj docutils literal"><span class="pre">PowerLaw</span></code></a>(nu0[,&nbsp;beta_pl,&nbsp;nu_pivot,&nbsp;running,&nbsp;…])</td>
 <td>Power law</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.component_model.PowerLawCurv" title="fgbuster.component_model.PowerLawCurv"><code class="xref py py-obj docutils literal"><span class="pre">PowerLawCurv</span></code></a>(nu0,&nbsp;nu_pivot[,&nbsp;beta_pl,&nbsp;…])</td>
-<td>Power law with curvature</td>
-</tr>
-<tr class="row-even"><td><a class="reference internal" href="#fgbuster.component_model.Synchrotron" title="fgbuster.component_model.Synchrotron"><code class="xref py py-obj docutils literal"><span class="pre">Synchrotron</span></code></a>(nu0[,&nbsp;beta_pl,&nbsp;units])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.component_model.Synchrotron" title="fgbuster.component_model.Synchrotron"><code class="xref py py-obj docutils literal"><span class="pre">Synchrotron</span></code></a>(nu0[,&nbsp;beta_pl,&nbsp;nu_pivot,&nbsp;…])</td>
 <td>Alias of <a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-class docutils literal"><span class="pre">PowerLaw</span></code></a></td>
 </tr>
 </tbody>
@@ -321,7 +330,7 @@ frequency is assumed to be <code class="docutils literal"><span class="pre">nu</
 clashes with <a class="reference external" href="https://docs.sympy.org/latest/modules/functions/index.html">sympy</a> definitions (e.g, <a class="reference external" href="https://docs.sympy.org/latest/modules/functions/index.html">functions</a>).
 Notable forbidden names are <em>beta</em>, <em>gamma</em>.</li>
 <li><strong>**fixed_params</strong> (<em>float</em>) – Fix the value of the desired variables. If a variable is not specified
-or is set eaual to <code class="docutils literal"><span class="pre">None</span></code>, it will be a free parameters.</li>
+or is set equal to <code class="docutils literal"><span class="pre">None</span></code>, it will be a free parameters.</li>
 </ul>
 </td>
 </tr>
@@ -346,7 +355,9 @@ derivatives with respect to a specific parameter</li>
 setting <code class="docutils literal"><span class="pre">component_model.lambdify</span></code> to
 <code class="docutils literal"><span class="pre">sympy.utilities.autowrap.ufuncify</span></code>.
 After constructing the anlytic component you can revert back the change by
-setting <code class="docutils literal"><span class="pre">component_model.lambdify</span></code> back to <code class="docutils literal"><span class="pre">sympy.lambdify</span></code>.</li>
+setting <code class="docutils literal"><span class="pre">component_model.lambdify</span></code> back to <code class="docutils literal"><span class="pre">sympy.lambdify</span></code>.
+The gain can negligible or considerable depending on the analytic
+expression.</li>
 </ul>
 </div>
 </dd></dl>
@@ -372,6 +383,53 @@ setting <code class="docutils literal"><span class="pre">component_model.lambdif
 </dd></dl>
 
 <dl class="class">
+<dt id="fgbuster.component_model.Synchrotron">
+<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">Synchrotron</code><span class="sig-paren">(</span><em>nu0</em>, <em>beta_pl=None</em>, <em>nu_pivot=None</em>, <em>running=0.0</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#Synchrotron"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Synchrotron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias of <a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-class docutils literal"><span class="pre">PowerLaw</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="fgbuster.component_model.ModifiedBlackBody">
+<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">ModifiedBlackBody</code><span class="sig-paren">(</span><em>nu0</em>, <em>temp=None</em>, <em>beta_d=None</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#ModifiedBlackBody"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.ModifiedBlackBody" title="Permalink to this definition">¶</a></dt>
+<dd><p>Modified Black body</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>nu0</strong> (<em>float</em>) – Reference frequency</li>
+<li><strong>temp</strong> (<em>float</em>) – Black body temperature</li>
+<li><strong>beta_d</strong> (<em>float</em>) – Spectral index</li>
+<li><strong>units</strong> – Output units (K_CMB and K_RJ available)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="fgbuster.component_model.PowerLaw">
+<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">PowerLaw</code><span class="sig-paren">(</span><em>nu0</em>, <em>beta_pl=None</em>, <em>nu_pivot=None</em>, <em>running=0.0</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#PowerLaw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.PowerLaw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Power law</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>nu0</strong> (<em>float</em>) – Reference frequency</li>
+<li><strong>beta_pl</strong> (<em>float</em>) – Spectral index</li>
+<li><strong>nu_pivot</strong> (<em>float</em>) – Pivot frequency for the running</li>
+<li><strong>running</strong> (<em>float</em>) – Curvature of the power law</li>
+<li><strong>units</strong> – Output units (K_CMB and K_RJ available)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
 <dt id="fgbuster.component_model.FreeFree">
 <em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">FreeFree</code><span class="sig-paren">(</span><em>logEM=None</em>, <em>Te=None</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#FreeFree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.FreeFree" title="Permalink to this definition">¶</a></dt>
 <dd><p>Free-free</p>
@@ -391,72 +449,6 @@ line of sight in cm^-3 pc</li>
 </tr>
 </tbody>
 </table>
-</dd></dl>
-
-<dl class="class">
-<dt id="fgbuster.component_model.ModifiedBlackBody">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">ModifiedBlackBody</code><span class="sig-paren">(</span><em>nu0</em>, <em>temp=None</em>, <em>beta_d=None</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#ModifiedBlackBody"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.ModifiedBlackBody" title="Permalink to this definition">¶</a></dt>
-<dd><p>Modified Black body</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>nu0</strong> (<em>float</em>) – Reference frequency</li>
-<li><strong>temp</strong> – Black body temperature</li>
-<li><strong>beta_d</strong> (<em>float</em>) – Spectral index</li>
-<li><strong>units</strong> – Output units (K_CMB and K_RJ available)</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="class">
-<dt id="fgbuster.component_model.PowerLaw">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">PowerLaw</code><span class="sig-paren">(</span><em>nu0</em>, <em>beta_pl=None</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#PowerLaw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.PowerLaw" title="Permalink to this definition">¶</a></dt>
-<dd><p>Power law</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>nu0</strong> (<em>float</em>) – Reference frequency</li>
-<li><strong>beta_pl</strong> (<em>float</em>) – Spectral index</li>
-<li><strong>units</strong> – Output units (K_CMB and K_RJ available)</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="class">
-<dt id="fgbuster.component_model.PowerLawCurv">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">PowerLawCurv</code><span class="sig-paren">(</span><em>nu0</em>, <em>nu_pivot</em>, <em>beta_pl=None</em>, <em>running=None</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#PowerLawCurv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.PowerLawCurv" title="Permalink to this definition">¶</a></dt>
-<dd><p>Power law with curvature</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>nu0</strong> (<em>float</em>) – Reference frequency</li>
-<li><strong>nu_pivot</strong> (<em>float</em>) – Pivot frequency for the running</li>
-<li><strong>beta_pl</strong> (<em>float</em>) – Spectral index</li>
-<li><strong>running</strong> (<em>float</em>) – Curvature of the Synchrotron</li>
-<li><strong>units</strong> – Output units (K_CMB and K_RJ available)</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="class">
-<dt id="fgbuster.component_model.Synchrotron">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">Synchrotron</code><span class="sig-paren">(</span><em>nu0</em>, <em>beta_pl=None</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#Synchrotron"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Synchrotron" title="Permalink to this definition">¶</a></dt>
-<dd><p>Alias of <a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-class docutils literal"><span class="pre">PowerLaw</span></code></a></p>
 </dd></dl>
 
 </div>
@@ -481,7 +473,7 @@ line of sight in cm^-3 pc</li>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Davide Poletti, Josquin Errard
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>
