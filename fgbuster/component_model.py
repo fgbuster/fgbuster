@@ -38,13 +38,13 @@ import pysm
 __all__ = [
     'Component',
     'AnalyticComponent',
-    'AME',
     'CMB',
     'Dust',
-    'FreeFree',
+    'Synchrotron',
     'ModifiedBlackBody',
     'PowerLaw',
-    'Synchrotron',
+    'AME',
+    'FreeFree',
 ]
 
 
@@ -247,7 +247,7 @@ class AnalyticComponent(Component):
         Notable forbidden names are *beta*, *gamma*.
     **fixed_params: float
         Fix the value of the desired variables. If a variable is not specified
-        or is set eaual to ``None``, it will be a free parameters.
+        or is set equal to ``None``, it will be a free parameters.
 
     Note
     ----
@@ -269,6 +269,8 @@ class AnalyticComponent(Component):
       ``sympy.utilities.autowrap.ufuncify``.
       After constructing the anlytic component you can revert back the change by
       setting ``component_model.lambdify`` back to ``sympy.lambdify``.
+      The gain can negligible or considerable depending on the analytic
+      expression.
 
     .. _functions: https://docs.sympy.org/latest/modules/functions/index.html
     .. _sympy: https://docs.sympy.org/latest/modules/functions/index.html
@@ -310,7 +312,7 @@ class ModifiedBlackBody(AnalyticComponent):
     ----------
     nu0: float
         Reference frequency
-    temp:
+    temp: float
         Black body temperature
     beta_d: float
         Spectral index

@@ -25,8 +25,8 @@ from .mixingmatrix import MixingMatrix
 
 
 __all__ = [
-    'weighted_comp_sep',
     'basic_comp_sep',
+    'weighted_comp_sep',
 ]
 
 
@@ -38,39 +38,53 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
     Parameters
     ----------
     components: list or tuple of lists
-        List storing the `Components` of the mixing matrix
+        List storing the :class:`Component` s of the mixing matrix
     instrument:
-        Instrument object used to define the mixing matrix.
-        It can be any object that has what follows wither as a key or as an
-        attribute (e.g. dictionary, PySM.Instrument)
+        Instrument used to define the mixing matrix.
+        It can be any object that has what follows either as a key or as an
+        attribute (e.g. `dict`, `PySM.Instrument`)
 
-        - Frequencies
+        - **Frequencies**
 
     data: ndarray or MaskedArray
-        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
+        Data vector to be separated. Shape *(n_freq, ..., n_pix)*. *...* can be
         also absent.
-        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
         neglected during the component separation process.
     cov: ndarray or MaskedArray
-        Covariance maps. It has to be broadcastable to `data`.
+        Covariance maps. It has to be broadcastable to *data*.
         Notice that you can not pass a pixel independent covariance as an array
-        with shape `(n_freq,)`: it has to be `(n_freq, ..., 1)` in order to be
-        broadcastable (consider using `basic_comp_sep`, in this case).
-        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        with shape *(n_freq,)*: it has to be *(n_freq, ..., 1)* in order to be
+        broadcastable (consider using :func:`basic_comp_sep`, in this case).
+        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
         neglected during the component separation process.
+    nside:
+        For each pixel of a HEALPix map with this nside, the non-linear
+        parameters are estimated independently
     patch_ids: array
         For each pixel, the array stores the id of the region over which to
         perform component separation independently.
 
     Returns
     -------
-    result : scipy.optimze.OptimizeResult (dict)
-        See `multi_comp_sep` if `nside` is positive and `comp_sep` otherwise.
+    result: dict
+	It includes
+
+	- **param**: *(list)* - Names of the parameters fitted
+	- **x**: *(ndarray)* - ``x[i]`` is the best-fit (map of) the *i*-th
+          parameter
+        - **Sigma**: *(ndarray)* - ``Sigma[i, j]`` is the (map of) the
+          semi-analytic covariance between the *i*-th and the *j*-th parameter
+          It is meaningful only in the high signal-to-noise regime and when the
+          *cov* is the true covariance of the data
+        - **s**: *(ndarray)* - Component amplitude maps
+        - **mask_good**: *(ndarray)* - mask of the entries actually used in the
+          component separation
 
     Note
     ----
     During the component separation, a pixel is masked if at least one of
-    its frequencies is masked, either in `data` or in `cov`.
+    its frequencies is masked, either in *data* or in *cov*.
 
     """
     instrument = _force_keys_as_attributes(instrument)
@@ -148,25 +162,25 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     Parameters
     ----------
     components: list
-        List storing the `Components` of the mixing matrix
+        List storing the :class:`Component` s of the mixing matrix
     instrument
         Instrument object used to define the mixing matrix.
         It can be any object that has what follows either as a key or as an
-        attribute (e.g. ``dict``, ``PySM.Instrument``)
+        attribute (e.g. `dict`, `PySM.Instrument`)
 
-        * ``Frequencies``
-        * ``Sens_I`` or ``Sens_P`` (optional, frequencies are inverse-noise
+        - **Frequencies**
+        - **Sens_I** or **Sens_P** (optional, frequencies are inverse-noise
           weighted according to these noise levels)
 
     data: ndarray or MaskedArray
-        Data vector to be separated. Shape ``(n_freq, ..., n_pix)``.
-        ``...`` can be
+        Data vector to be separated. Shape *(n_freq, ..., n_pix).*
+        *...* can be
 
         - absent or 1: temperature maps
         - 2: polarization maps
         - 3: temperature and polarization maps (see note)
 
-        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
         neglected during the component separation process.
     nside:
         For each pixel of a HEALPix map with this nside, the non-linear
@@ -174,8 +188,19 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
     Returns
     -------
-    result : scipy.optimze.OptimizeResult (dict)
-        See `multi_comp_sep` if `nside` is positive and `comp_sep` otherwise.
+    result: dict
+	It includes
+
+	- **param**: *(list)* - Names of the parameters fitted
+	- **x**: *(ndarray)* - ``x[i]`` is the best-fit (map of) the *i*-th
+          parameter
+        - **Sigma**: *(ndarray)* - ``Sigma[i, j]`` is the (map of) the
+          semi-analytic covariance between the *i*-th and the *j*-th parameter.
+          It is meaningful only in the high signal-to-noise regime and when the
+          *cov* is the true covariance of the data
+        - **s**: *(ndarray)* - Component amplitude maps
+        - **mask_good**: *(ndarray)* - mask of the entries actually used in the
+          component separation
 
     Note
     ----
@@ -242,6 +267,8 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         res.Sigma[x_mask] = hp.UNSEEN
         res.x = res.x.T
         res.Sigma = res.Sigma.T
+
+    res.mask_good = ~mask
     return res
 
 
