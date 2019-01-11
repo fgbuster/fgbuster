@@ -197,20 +197,3 @@ def _dict_instrument_cmbs4(nside=None, units='uK_CMB'):
         'output_prefix': 'cmbs4',
         'use_smoothing': False,
     }
-
-
-def _dict_instrument_quijote_mfi(nside=None, units='uK_CMB'):
-    return {
-        'frequencies': np.array([11.0, 13.0, 17.0, 19.0]),
-        'sens_I': np.array([2100, 2100, 2100, 2100]) / 1.41,
-        'sens_P': np.array([2100, 2100, 2100, 2100]),
-        'beams': np.array([55.2, 55.2, 36.0, 36.0]),
-        'nside': nside,
-        'add_noise': True,
-        'noise_seed': 1234,
-        'use_bandpass': False,
-        'output_units': units,
-        'output_directory': '/dev/null',
-        'output_prefix': 'quijote_mfi',
-        'use_smoothing': False,
-    }
