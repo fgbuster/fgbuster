@@ -27,7 +27,7 @@ prepared.
 import os.path as op
 import numpy as np
 import sympy
-from sympy import lambdify
+import sympy
 from sympy.parsing.sympy_parser import parse_expr
 import scipy
 from scipy import constants
@@ -47,6 +47,8 @@ __all__ = [
     'Synchrotron',
 ]
 
+
+lambdify = lambda x, y: sympy.lambdify(x, y, 'numpy')
 
 H_OVER_K = constants.h * 1e9 / constants.k
 
@@ -286,12 +288,12 @@ class AnalyticComponent(Component):
         self._params.pop(0)
 
         # Create lambda functions
-        self._lambda = lambdify(symbols, self._expr, 'numpy')
+        self._lambda = lambdify(symbols, self._expr)
         lambdify_diff_param = lambda param: lambdify(
-            symbols, self._expr.diff(param), 'numpy')
+            symbols, self._expr.diff(param))
         self._lambda_diff = [lambdify_diff_param(p) for p in self._params]
         lambdify_diff_diff_params = lambda param1, param2: lambdify(
-            symbols, self._expr.diff(param1, param2), 'numpy')
+            symbols, self._expr.diff(param1, param2))
         self._lambda_diff_diff = []
         for p1 in self._params:
             self._lambda_diff_diff.append(
