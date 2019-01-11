@@ -88,7 +88,7 @@ class TestAlgebraRandom(unittest.TestCase):
 class TestAlgebraPhysical(unittest.TestCase):
 
     def setUp(self):
-        self.DX = 1e-4  # NOTE: this is a bit fine-tuned
+        self.DX = 5e-4  # NOTE: this is a bit fine-tuned
         np.random.seed(0)
         self.n_freq = 6
         self.nu = np.logspace(1, 2.5, self.n_freq)

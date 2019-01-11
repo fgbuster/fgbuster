@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 from numpy.testing import assert_allclose as aac
 import pysm
-from fgbuster.pysm_helpers import get_instrument, get_sky
+from fgbuster.observation_helpers import get_instrument, get_sky
 from fgbuster import xForecast, CMB, Dust, Synchrotron
 from .test_end2end import suppress_stdout
 
@@ -25,7 +25,7 @@ class TestXfCompSep(unittest.TestCase):
         # define sky and foregrounds simulations
         sky = pysm.Sky(get_sky(nside, 'd0s0'))
         # define instrument
-        instrument = pysm.Instrument(get_instrument(nside, 'litebird'))
+        instrument = pysm.Instrument(get_instrument('litebird', nside))
         # get noiseless frequency maps
         with suppress_stdout():
             freq_maps = instrument.observe(sky, write_outputs=False)[0]

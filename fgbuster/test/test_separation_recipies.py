@@ -4,13 +4,12 @@ import unittest
 from parameterized import parameterized
 import numpy as np
 from numpy.testing import assert_allclose as aac
-from numpy.testing import assert_array_almost_equal as aaae
 from scipy.stats import kstest
 import healpy as hp
 import pysm
 from fgbuster.algebra import _mv
 from fgbuster.mixingmatrix import MixingMatrix
-from fgbuster.pysm_helpers import get_instrument
+from fgbuster.observation_helpers import get_instrument
 import fgbuster.component_model as cm
 from fgbuster.separation_recipies import (basic_comp_sep, weighted_comp_sep,
                                           _force_keys_as_attributes)
@@ -77,7 +76,7 @@ def _get_instrument(tag, nside=None):
 
             instrument['Cov_P'] = np.stack([instrument['Cov_N']]*2, axis=1)
     elif 'pysm' in tag:
-        instrument = pysm.Instrument(get_instrument(nside, 'test'))
+        instrument = pysm.Instrument(get_instrument('test', nside))
     else:
         raise ValueError('Unsupported tag: %s'%tag)
     return instrument
@@ -130,6 +129,14 @@ def _get_sky(tag):
     return data.T, s.T, x0
 
 
+def _make_tag(stokes, nside, nsidepar, components, mask, instrument):
+    sky_tag = '%s__nside_%i__nsidepar_%i__%s__%s__%s' % (
+        stokes, nside, nsidepar, components, mask, instrument)
+    comp_sep_tag = '%s__%s__nsidepar_%s' % (
+        components, instrument, nsidepar)
+    return '___%s___%s' % (sky_tag, comp_sep_tag)
+
+
 class TestBasicCompSep(unittest.TestCase):
     stokess = 'IPN'
     nsides = [2]
@@ -140,31 +147,24 @@ class TestBasicCompSep(unittest.TestCase):
     instruments = ['dict_homo', 'pysm']
 
     tags = []
-    def make_tag(stokes, nside, nsidepar, components, mask, instrument):
-        sky_tag = '%s__nside_%i__nsidepar_%i__%s__%s__%s' % (
-            stokes, nside, nsidepar, components, mask, instrument)
-        comp_sep_tag = '%s__%s__nsidepar_%s' % (
-            components, instrument, nsidepar)
-        return 'test___%s___%s' % (sky_tag, comp_sep_tag)
-
-    tags += [make_tag(*args) for args in product(stokess[:], nsides[:1],
-                                                 nsidepars[:1], componentss[:1],
-                                                 masks[:1], instruments[:1])]
-    tags += [make_tag(*args) for args in product(stokess[:1], nsides[:],
-                                                 nsidepars[:1], componentss[:1],
-                                                 masks[:1], instruments[:1])]
-    tags += [make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                 nsidepars[:], componentss[:1],
-                                                 masks[:1], instruments[:1])]
-    tags += [make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                 nsidepars[:1], componentss[:],
-                                                 masks[:1], instruments[:1])]
-    tags += [make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                 nsidepars[:1], componentss[:1],
-                                                 masks[:], instruments[:1])]
-    tags += [make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                 nsidepars[:1], componentss[:1],
-                                                 masks[:1], instruments[:])]
+    tags += [_make_tag(*args) for args in product(stokess[:], nsides[:1],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:], componentss[:1],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:1], componentss[:],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:1], instruments[:])]
 
     @parameterized.expand(tags)
     def test(self, tag):
@@ -199,31 +199,24 @@ class TestWeightedCompSep(unittest.TestCase):
     instruments = ['dict_vary', 'dict_homo', 'pysm']
 
     tags = []
-    def make_tag(stokes, nside, nsidepar, components, mask, instrument):
-        sky_tag = '%s__nside_%i__nsidepar_%i__%s__%s__%s' % (
-            stokes, nside, nsidepar, components, mask, instrument)
-        comp_sep_tag = '%s__%s__nsidepar_%s' % (
-            components, instrument, nsidepar)
-        return '___%s___%s' % (sky_tag, comp_sep_tag)
-
-    tags += [make_tag(*args) for args in product(stokess[:], nsides[:1],
-                                                 nsidepars[:1], componentss[:1],
-                                                 masks[:1], instruments[:1])]
-    tags += [make_tag(*args) for args in product(stokess[:1], nsides[:],
-                                                 nsidepars[:1], componentss[:1],
-                                                 masks[:1], instruments[:1])]
-    tags += [make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                 nsidepars[:], componentss[:1],
-                                                 masks[:1], instruments[:1])]
-    tags += [make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                 nsidepars[:1], componentss[:],
-                                                 masks[:1], instruments[:1])]
-    tags += [make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                 nsidepars[:1], componentss[:1],
-                                                 masks[:], instruments[:1])]
-    tags += [make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                 nsidepars[:1], componentss[:1],
-                                                 masks[:1], instruments[:])]
+    tags += [_make_tag(*args) for args in product(stokess[:], nsides[:1],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:], componentss[:1],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:1], componentss[:],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:1], instruments[:])]
 
     @parameterized.expand(tags)
     def test(self, tag):

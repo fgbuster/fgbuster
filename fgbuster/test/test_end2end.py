@@ -7,7 +7,7 @@ from numpy.testing import assert_allclose as aac
 from numpy.testing import assert_array_almost_equal as aaae
 from scipy.stats import kstest
 import healpy as hp
-from fgbuster.pysm_helpers import get_instrument, get_sky
+from fgbuster.observation_helpers import get_instrument, get_sky
 from fgbuster.algebra import _mtv
 import fgbuster.component_model as cm
 from fgbuster.separation_recipies import basic_comp_sep
@@ -37,7 +37,7 @@ class TestEnd2EndNoiselessPhysical(unittest.TestCase):
         INSTRUMENT = 'litebird'
         X0_FACTOR = 0.99
         sky = pysm.Sky(get_sky(NSIDE, MODEL))
-        self.instrument = pysm.Instrument(get_instrument(NSIDE, INSTRUMENT))
+        self.instrument = pysm.Instrument(get_instrument(INSTRUMENT, NSIDE))
         with suppress_stdout():
             self.freq_maps, self.noise = self.instrument.observe(
                 sky, write_outputs=False)
@@ -74,7 +74,7 @@ class TestEnd2EndNoisy(unittest.TestCase):
         INSTRUMENT = 'litebird'
         sky = pysm.Sky(get_sky(NSIDE, MODEL))
         instrument = pysm.Instrument(
-            get_instrument(NSIDE, INSTRUMENT, units='uK_RJ'))
+            get_instrument(INSTRUMENT, NSIDE, units='uK_RJ'))
         components100 = [cm.CMB(units='K_RJ'),
                          cm.Synchrotron(100., units='K_RJ')]
         components10 = [cm.CMB(units='K_RJ'),
@@ -96,7 +96,7 @@ class TestEnd2EndNoisy(unittest.TestCase):
         MODEL = 'c1s0'
         INSTRUMENT = 'litebird'
         sky = pysm.Sky(get_sky(NSIDE, MODEL))
-        instrument = pysm.Instrument(get_instrument(NSIDE, INSTRUMENT))
+        instrument = pysm.Instrument(get_instrument(INSTRUMENT, NSIDE))
         components100 = [cm.CMB(), cm.Synchrotron(100.)]
         components10 = [cm.CMB(), cm.Synchrotron(10.)]
 
@@ -119,7 +119,7 @@ class TestEnd2EndNoisy(unittest.TestCase):
         INSTRUMENT = 'litebird'
         SIGNAL_TO_NOISE = 20
         sky = pysm.Sky(get_sky(NSIDE, MODEL))
-        instrument = pysm.Instrument(get_instrument(NSIDE, INSTRUMENT))
+        instrument = pysm.Instrument(get_instrument(INSTRUMENT, NSIDE))
         components = [cm.Synchrotron(100.)]
         ref = []
         for component in components:
@@ -144,7 +144,7 @@ class TestEnd2EndNoisy(unittest.TestCase):
         INSTRUMENT = 'litebird'
         SIGNAL_TO_NOISE = 10
         sky = pysm.Sky(get_sky(NSIDE, MODEL))
-        instrument = pysm.Instrument(get_instrument(NSIDE, INSTRUMENT))
+        instrument = pysm.Instrument(get_instrument(INSTRUMENT, NSIDE))
         components = [cm.Dust(100., temp=20.)]
         ref = []
         for component in components:
@@ -172,7 +172,7 @@ class TestEnd2EndNoisy(unittest.TestCase):
         INSTRUMENT = 'litebird'
         SIGNAL_TO_NOISE = 10000
         sky = pysm.Sky(get_sky(NSIDE, MODEL))
-        instrument = pysm.Instrument(get_instrument(NSIDE, INSTRUMENT))
+        instrument = pysm.Instrument(get_instrument(INSTRUMENT, NSIDE))
         components = [cm.Dust(150.)]
         ref = []
         for component in components:
@@ -204,7 +204,7 @@ class TestEnd2EndNoisy(unittest.TestCase):
         UNITS = 'uK_CMB'
         sky = pysm.Sky(get_sky(NSIDE, MODEL))
         instrument = pysm.Instrument(
-            get_instrument(NSIDE, INSTRUMENT, units=UNITS))
+            get_instrument(INSTRUMENT, NSIDE, units=UNITS))
         components = [cm.Dust(150., temp=20., units=UNITS),
                       cm.Synchrotron(150., units=UNITS)]
         ref = []
