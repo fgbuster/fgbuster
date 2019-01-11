@@ -37,7 +37,7 @@ def _get_component(tag):
         components =  [cm.PowerLaw(nu0=30)]
         components[0].defaults = [1.5]
     elif tag == 'curvedpowerlaw':
-        components = [cm.PowerLawCurv(nu0=30, nu_pivot=40)]
+        components = [cm.PowerLaw(nu0=30, nu_pivot=40, running=None)]
         components[0].defaults = [-1.5, 1.8]
     else:
         raise ValueError('Unsupported tag: %s'%tag)
@@ -61,11 +61,11 @@ def _get_instrument(tag, nside=None):
         instrument = {}
         instrument['Frequencies'] = np.arange(10., 300, 30.)
         if 'homo' in tag:
-            instrument['Sens_I'] = (np.linspace(20., 40., 10.) - 30)**2
+            instrument['Sens_I'] = (np.linspace(20., 40., 10) - 30)**2
             instrument['Sens_P'] = instrument['Sens_I']
         elif 'vary' in tag:
             np.random.seed(0)
-            instrument['Cov_N'] = (np.linspace(20., 40., 10.) - 30)**4
+            instrument['Cov_N'] = (np.linspace(20., 40., 10) - 30)**4
             instrument['Cov_N'] /= hp.nside2resol(nside, arcmin=True)**2
             shape = (instrument['Frequencies'].size, hp.nside2npix(nside))
             factor = 10**np.random.uniform(-1, 1, size=np.prod(shape))

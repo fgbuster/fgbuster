@@ -44,7 +44,6 @@ __all__ = [
     'FreeFree',
     'ModifiedBlackBody',
     'PowerLaw',
-    'PowerLawCurv',
     'Synchrotron',
 ]
 
@@ -176,6 +175,14 @@ class Component(object):
         """
         return len(self._params)
 
+    def _set_default_of_free_symbols(self, **kwargs):
+        # Note that
+        # - kwargs can contain also keys that are not free symbols
+        # - only values of the free symbols are considered
+        # - these values are stored in the right order
+        self.defaults = [kwargs[symbol] for symbol in self.params]
+
+
     @property
     def defaults(self):
         """ Default values of the free parameters
@@ -183,7 +190,8 @@ class Component(object):
         try:
             assert len(self._defaults) == self.n_param
         except (AttributeError, AssertionError):
-            print("Component: uninitialized defaults requested, returning ones")
+            print("Component: unexpected number of or uninitialized defaults, "
+                  "returning ones")
             return [1.] * self.n_param
         return self._defaults
 
@@ -333,11 +341,8 @@ class ModifiedBlackBody(AnalyticComponent):
 
         super(ModifiedBlackBody, self).__init__(analytic_expr, **kwargs)
 
-        if beta_d is None:
-            self._defaults.append(self._REF_BETA)
-
-        if temp is None:
-            self._defaults.append(self._REF_TEMP)
+        self._set_default_of_free_symbols(
+            beta_d=self._REF_BETA, temp=self._REF_TEMP)
 
 
 class PowerLaw(AnalyticComponent):
@@ -349,50 +354,23 @@ class PowerLaw(AnalyticComponent):
         Reference frequency
     beta_pl: float
         Spectral index
+    nu_pivot: float
+        Pivot frequency for the running
+    running: float
+        Curvature of the power law
     units:
         Output units (K_CMB and K_RJ available)
     """
     _REF_BETA = -3
-
-    def __init__(self, nu0, beta_pl=None, units='K_CMB'):
-        # Prepare the analytic expression
-        analytic_expr = ('(nu / nu0)**(beta_pl)')
-        if 'K_CMB' in units:
-            analytic_expr += ' * ' + K_RJ2K_CMB_NU0
-        elif 'K_RJ' in units:
-            pass
-        else:
-            raise ValueError("Unsupported units: %s"%units)
-
-        kwargs = {'nu0': nu0, 'beta_pl': beta_pl}
-
-        super(PowerLaw, self).__init__(analytic_expr, **kwargs)
-
-        if beta_pl is None:
-            self._defaults.append(self._REF_BETA)
-
-
-class PowerLawCurv(AnalyticComponent):
-    """ Power law with curvature
-
-    Parameters
-    ----------
-    nu0: float
-        Reference frequency
-    nu_pivot: float
-        Pivot frequency for the running
-    beta_pl: float
-        Spectral index
-    running: float
-        Curvature of the Synchrotron
-    units:
-        Output units (K_CMB and K_RJ available)
-    """
-    _REF_BETA = -3.
     _REF_RUN = 0.
+    _REF_NU_PIVOT = 70.
 
-    def __init__(self, nu0, nu_pivot, beta_pl=None, running=None,
+    def __init__(self, nu0, beta_pl=None, nu_pivot=None, running=0.,
                  units='K_CMB'):
+        if nu_pivot == running == None:
+            print('Warning: are you sure you want both nu_pivot and the running'
+                  'to be free parameters?')
+
         # Prepare the analytic expression
         analytic_expr = '(nu / nu0)**(beta_pl + running * log(nu / nu_pivot))'
         if 'K_CMB' in units:
@@ -405,13 +383,10 @@ class PowerLawCurv(AnalyticComponent):
         kwargs = {'nu0': nu0, 'nu_pivot': nu_pivot,
                   'beta_pl': beta_pl, 'running': running}
 
-        super(PowerLawCurv, self).__init__(analytic_expr, **kwargs)
+        super(PowerLaw, self).__init__(analytic_expr, **kwargs)
 
-        if beta_pl is None:
-            self._defaults.append(self._REF_BETA)
-
-        if running is None:
-            self._defaults.append(self._REF_RUN)
+        self._set_default_of_free_symbols(
+            beta_pl=self._REF_BETA, running=self._REF_RUN, nu_pivot=self._REF_NU_PIVOT)
 
 
 class CMB(AnalyticComponent):
@@ -480,11 +455,8 @@ class FreeFree(AnalyticComponent):
 
         super(FreeFree, self).__init__(analytic_expr, **kwargs)
 
-        if logEM is None:
-            self._defaults.append(self._REF_LOGEM)
-
-        if Te is None:
-            self._defaults.append(self._REF_TE)
+        self._set_default_of_free_symbols(
+            logEM=self._REF_LOGEM, Te=self._REF_TE)
 
 
 class AME(Component):
