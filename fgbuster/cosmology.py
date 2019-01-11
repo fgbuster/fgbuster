@@ -55,9 +55,13 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         Instrument object used to define the mixing matrix and the
         frequency-dependent noise weight.
         It is required to have:
+
          - frequencies
+
         however, also the following are taken into account, if provided
+
          - sens_P (define the frequency inverse noise)
+
     d_fgs: ndarray
         The foreground maps. No CMB. Shape `(n_freq, n_stokes, n_pix)`.
         If some pixels have to be masked, set them to zero.
@@ -85,12 +89,16 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     -------
     xFres: dict
         xForecast result. It includes
-         - the fitted spectral parameters
-         - noise-averaged post-component separation CMB power spectrum
-            - noise spectrum
-            - statistical residuals spectrum
-            - systematic residuals spectrum
-         - noise-averaged cosmological likelihood
+
+        - the fitted spectral parameters
+        - noise-averaged post-component separation CMB power spectrum
+
+          - noise spectrum
+          - statistical residuals spectrum
+          - systematic residuals spectrum
+
+        - noise-averaged cosmological likelihood
+
     """
     # Preliminaries
     instrument = _force_keys_as_attributes(instrument)

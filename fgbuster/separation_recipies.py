@@ -43,7 +43,9 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
         Instrument object used to define the mixing matrix.
         It can be any object that has what follows wither as a key or as an
         attribute (e.g. dictionary, PySM.Instrument)
-         - Frequencies
+
+        - Frequencies
+
     data: ndarray or MaskedArray
         Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
         also absent.
@@ -67,8 +69,9 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
 
     Note
     ----
-      * During the component separation, a pixel is masked if at least one of
-        its frequencies is masked, either in `data` or in `cov`.
+    During the component separation, a pixel is masked if at least one of
+    its frequencies is masked, either in `data` or in `cov`.
+
     """
     instrument = _force_keys_as_attributes(instrument)
     # Make sure that cov has the frequency dimension and is equal to n_freq
@@ -151,16 +154,18 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         It can be any object that has what follows either as a key or as an
         attribute (e.g. ``dict``, ``PySM.Instrument``)
 
-         * ``Frequencies``
-         * ``Sens_I`` or ``Sens_P`` (optional, frequencies are inverse-noise
-           weighted according to these noise levels)
+        * ``Frequencies``
+        * ``Sens_I`` or ``Sens_P`` (optional, frequencies are inverse-noise
+          weighted according to these noise levels)
 
     data: ndarray or MaskedArray
         Data vector to be separated. Shape ``(n_freq, ..., n_pix)``.
         ``...`` can be
-          - absent or 1: temperature maps
-          - 2: polarization maps
-          - 3: temperature and polarization maps (see note)
+
+        - absent or 1: temperature maps
+        - 2: polarization maps
+        - 3: temperature and polarization maps (see note)
+
         Values equal to hp.UNSEEN or, if MaskedArray, masked values are
         neglected during the component separation process.
     nside:
@@ -174,15 +179,16 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
     Note
     ----
-      * During the component separation, a pixel is masked if at least one of
-        its frequencies is masked.
-      * If you provide temperature and polarization maps, they will constrain the
-        **same** set of parameters. In particular, separation is **not** done
-        independently for temperature and polarization. If you want an
-        independent fitting for temperature and polarization, please launch
 
-         res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)
-         res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
+    * During the component separation, a pixel is masked if at least one of
+      its frequencies is masked.
+    * If you provide temperature and polarization maps, they will constrain the
+      **same** set of parameters. In particular, separation is **not** done
+      independently for temperature and polarization. If you want an
+      independent fitting for temperature and polarization, please launch
+
+      >>> res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)
+      >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
 
     """
     instrument = _force_keys_as_attributes(instrument)
@@ -249,6 +255,7 @@ def _get_prewhiten_factors(instrument, data_shape, nside):
         It is expected to be `(n_freq, n_stokes, n_pix)`. `n_stokes` is used to
         define if sens_I or sens_P (or both) should be used to compute the
         factors.
+
         - If `n_stokes` is absent or `n_stokes == 1`, use sens_I.
         - If `n_stokes == 2`, use sens_P.
         - If `n_stokes == 3`, the factors will have shape (3, n_freq). Sens_I is
