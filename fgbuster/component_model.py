@@ -68,18 +68,18 @@ class Component(object):
     It defines the API.
     """
 
-    def _add_last_dimension_if_not_scalar(self, param):
-        if isinstance(param, np.ndarray) and len(param) > 1:
+    def _add_last_dimension_if_ndarray(self, param):
+        try:
             # Lambdified expressions always output an ndarray with shape
             # (param_dim_1, ..., param_dim_n, n_freq). However, parameters and
             # frequencies are both symbols with (no special meaning). In order
             # to impose the shape of the output, we append a dimension to the
             # parameters and let the broadcasting inside the lambdified
             # expressions do the rest
-            # TODO: Can replace this with a try/except?
             return param[..., np.newaxis]
-        # param is an scalar value, no special treatment is required
-        return param
+        except TypeError:
+            # param is an scalar value, no special treatment is required
+            return param
 
     def eval(self, nu, *params):
         """ Evaluate the SED
@@ -95,15 +95,21 @@ class Component(object):
         Returns
         -------
         result: ndarray
-            SED. The shape is
-            * the same of `nu` the parameters are all scalar. 
-            * `np.broadcast(*params).shape + nu.shape` otherwise
+            SED. The shape is always ``np.broadcast(*params).shape + nu.shape``.
+            In particular, if the parameters are all floats, the shape is the
+            same `nu`.
+
         """
         assert len(params) == self.n_param
+        if params and np.broadcast(*params).ndim == 0:
+            # Parameters are all scalars.
+            # This case is frequent and easy, thus leave early
+            return self._lambda(nu, *params)
+
         # Make sure that broadcasting rules will apply correctly when passing
         # the parameters to the lambdified functions:
         # last axis has to be nu, but that axis is missing in the parameters
-        new_params = map(self._add_last_dimension_if_not_scalar, params)
+        new_params = [self._add_last_dimension_if_ndarray(p) for p in params]
         return self._lambda(nu, *new_params)
 
     def diff(self, nu, *params):
@@ -127,7 +133,7 @@ class Component(object):
         assert len(params) == self.n_param
         if not params:
             return []
-        elif len(np.broadcast(*params).shape) <= 1:
+        elif np.broadcast(*params).ndim == 0:
             # Parameters are all scalars.
             # This case is frequent and easy, thus leave early
             return [self._lambda_diff[i_p](nu, *params)
@@ -136,7 +142,7 @@ class Component(object):
         # Make sure that broadcasting rules will apply correctly when passing
         # the parameters to the lambdified functions:
         # last axis has to be nu, but that axis is missing in the parameters
-        new_params = map(self._add_last_dimension_if_not_scalar, params)
+        new_params = [self._add_last_dimension_if_ndarray(p) for p in params]
 
         res = []
         for i_p in range(self.n_param):
@@ -146,8 +152,8 @@ class Component(object):
     def diff_diff(self, nu, *params):
         assert len(params) == self.n_param
         if not params:
-            return []
-        elif len(np.broadcast(*params).shape) <= 1:
+            return [[]]
+        elif np.broadcast(*params).ndim == 0:
             # Parameters are all scalars.
             # This case is frequent and easy, thus leave early
             return [[self._lambda_diff_diff[i_p][j_p](nu, *params)
@@ -157,7 +163,7 @@ class Component(object):
         # Make sure that broadcasting rules will apply correctly when passing
         # the parameters to the lambdified functions:
         # last axis has to be nu, but that axis is missing in the parameters
-        new_params = map(self._add_last_dimension_if_not_scalar, params)
+        new_params = [self._add_last_dimension_if_ndarray(p) for p in params]
 
         res = []
         for i_p in range(self.n_param):
