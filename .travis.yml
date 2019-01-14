@@ -5,10 +5,12 @@ python:
   - 3.6
 
 install:
-  - pip install .
-  - pip install -r requirements.txt
+  - pip install . --process-dependency-links
 
 script:
   - python setup.py test          
-#  travis-sphinx -n build
-#after_success: travis-sphinx deploy
+
+after_success: 
+    - pip install travis-sphinx nbsphinx sphinx_rtd_theme jupyter_client
+    - travis-sphinx build -n
+    - travis-sphinx deploy

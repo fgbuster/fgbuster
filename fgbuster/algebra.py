@@ -1,5 +1,28 @@
-""" Recurrent algebraic functions in component separation
+# FGBuster
+# Copyright (C) 2019 Davide Poletti, Josquin Errard and the FGBuster developers
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+""" Low-level component separation functions
+
+All the routines in this module do NOT support ``numpy.ma.MaskedArray``.
+In that case, you have two options
+
+1) Index `masked_array` with a mask so that you get a standard `np.array`
+   containing only unmasked values
+2) Whenever it is possible, you can pass `masked_array.data` and handle the
+   masked values by setting the corresponding entries of *invN* to zero
 """
 
 # Note for developpers
@@ -16,12 +39,13 @@
 #    index in L, the matrix can be passed as a (K, 1, M/K, M/K) ndarray, without
 #    repeating equal blocks.
 # 4) Vectors are just like matrices, without the domain dimension
-# 5) Many functions come in pairs foo(A, invN, ...) and _foo_svd(u_e_v, ...)
-#    In _foo_svd does what foo is supposed to, but:
+# 5) Many functions come in pairs foo(A, invN, ...) and _foo_svd(u_e_v, ...).
+#    _foo_svd does what foo is supposed to, but:
 #     - instead of providing A you provide its SVD, u_e_v
 #     - the domain of input and outputs matrices and vectors is prewhitend with
 #       sqrt(invN)
-#     - toto can return the SVD, which can then be reused in _bar_svd(...)
+#     - _foo_svd doesn't perform all the checks that foo is required to do
+#     - foo can return the SVD, which can then be reused in _bar_svd(...)
 
 import inspect
 from time import time
@@ -29,6 +53,25 @@ import six
 import numpy as np
 import scipy as sp
 import numdifftools
+from functools import reduce
+
+
+__all__ = [
+    'comp_sep',
+    'multi_comp_sep',
+    'logL',
+    'logL_dB',
+    'invAtNA',
+    'P',
+    'P_dBdB',
+    'D',
+    'W',
+    'W_dB',
+    'W_dBdB',
+    'Wd',
+    'fisher_logL_dB_dB',
+]
+
 
 OPTIMIZE = False
 _EPSILON_LOGL_DB = 1e-6
@@ -41,6 +84,10 @@ def _inv(m):
 
 def _mv(m, v):
     return np.einsum('...ij,...j->...i', m, v, optimize=OPTIMIZE)
+
+
+def _utmv(u, m, v):
+    return np.einsum('...i,...ij,...j', u, m, v, optimize=OPTIMIZE)
 
 
 def _mtv(m, v):
@@ -79,16 +126,24 @@ def _T(x):
     except ValueError:
         return x
 
+
 def _svd_sqrt_invN_A(A, invN=None, L=None):
     """ SVD of A and Cholesky factor of invN
 
-    Prewhiten `A` according to `invN` (if either `invN` of `L` is provided) and
-    return both its SVD and the Cholesky factor of `invN`.
+    Prewhiten *A* according to *invN* (if either *invN* or *L* is provided) and
+    return both its SVD and the Cholesky factor of *invN*.
     If you provide the Cholesky factor L, invN is ignored.
+    It correctly handles blocks for invN equal to zero
     """
-
     if L is None and invN is not None:
-        L = np.linalg.cholesky(invN)
+        try:
+            L = np.linalg.cholesky(invN)
+        except np.linalg.LinAlgError:
+            L = np.zeros_like(invN)
+            mask = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
+                                   axis=-1))
+            if np.any(mask):
+                L[mask] = np.linalg.cholesky(invN[mask])
 
     if L is not None:
         A = _mtm(L, A)
@@ -167,11 +222,296 @@ def W(A, invN=None, return_svd=False):
     return res
 
 
+def _P_svd(u_e_v):
+    u, e, v = u_e_v
+    return _mm(u, _T(u))
+
+
+def P(A, invN=None, return_svd=False):
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is None:
+        res = _P_svd(u_e_v)
+    else:
+        res = _mm(_P_svd(u_e_v), _T(L))
+        res = sp.linalg.solve_triangular(L, res, lower=True,
+                                         overwrite_b=True, trans='T')
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
+def _D_svd(u_e_v):
+    u, e, v = u_e_v
+    return np.eye(u.shape[-2]) - _mm(u, _T(u))
+
+
+def D(A, invN=None, return_svd=False):
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is None:
+        res = _D_svd(u_e_v)
+    else:
+        res = _mm(_D_svd(u_e_v), _T(L))
+        res = sp.linalg.solve_triangular(L, res, lower=True,
+                                         overwrite_b=True, trans='T')
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
+def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
+    u, e, v = u_e_v
+    res = []
+    for comp_of_dB_i, A_dB_i in zip(comp_of_dB, A_dB):
+        # res = v^t e^-2 v A_dB (1 - u u^t) - v^t e^-1 u^t A_dB v^t e^-1 u^t
+        inve_v = v / e[..., np.newaxis]
+        slice_inve_v = _T(_T(inve_v)[comp_of_dB_i+(slice(None),)])
+        res_i = _mm(_mtm(inve_v, slice_inve_v), _T(A_dB_i))
+        res_i -= _mmm(res_i, u, _T(u))
+        res_i -= _mmm(_mmm(_T(inve_v), _T(u), A_dB_i), _T(slice_inve_v), _T(u))
+        res.append(res_i)
+    return np.array(res)
+
+
+def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
+    """ Derivative of W
+
+    which could be particularly useful for the computation of residuals
+    through the first order development of the map-making equation
+
+    Parameters
+    ----------
+    A: ndarray
+        Mixing matrix. Shape *(..., n_freq, n_comp)*
+    invN: ndarray or None
+        The inverse noise matrix. Shape *(..., n_freq, n_freq)*.
+    A_dB : ndarray or list of ndarray
+        The derivative of the mixing matrix. If list, each entry is the
+        derivative with respect to a different parameter.
+    comp_of_dB: index or list of indices
+        It allows to provide in *A_dB* only the non-zero columns *A*.
+        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
+        If a list is provided, also *A_dB* has to be a list and
+        ``A_dB[i]`` is assumed to be the derivative of ``A[comp_of_dB[i]]``.
+
+    Returns
+    -------
+    res : array
+        Derivative of W. If *A_dB* is a list, ``res[i]``
+        is computed from ``A_dB[i]``.
+    """
+    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
+
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
+    res = _W_dB_svd(u_e_v, A_dB, comp_of_dB)
+
+    if L is not None:
+        res = _mm(res, _T(L))
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
+def _P_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
+    u, e, v = u_e_v
+    n_dB = len(A_dB)
+
+    # Expand A_dB and A_dBdB to full shape
+    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
+                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
+    A_dB_full = np.zeros((n_dB,)+u.shape)
+    A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
+    for i in range(n_dB):
+        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+        for j in range(n_dB):
+            A_dBdB_full[(i, j)+comp_of_dB_A[i]] = A_dBdB[i][j]
+
+    # Apply diag(e^(-1)) * v to the domain of the components
+    # In this basis A' = u and (A'^t A') = 1
+    inve_v = v / e[..., np.newaxis]
+    A_dB = _mm(A_dB_full, _T(inve_v))
+    A_dBdB = _mm(A_dBdB_full, _T(inve_v))
+
+    # Aliases that improve readability
+    A = u
+    A_dBj = A_dB
+    A_dBi = A_dBj[:, np.newaxis, ...]
+    mm = lambda *args: reduce(np.matmul, args)
+    D = _D_svd(u_e_v)
+
+    # Computation
+    P_dBdB = (+ mm(D, A_dBj, _T(A_dBi), D)
+              - mm(A, _T(A_dBj), A, _T(A_dBi), D)
+              + mm(A, _T(A_dBdB), D)
+              - mm(A, _T(A_dBi), A, _T(A_dBj), D)
+              - mm(A, _T(A_dBi), D, A_dBj, _T(A))
+             )
+    P_dBdB += _T(P_dBdB)
+
+    return P_dBdB
+
+
+def P_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
+    """ Second Derivative of P
+
+    which could be useful for the computation of
+    curvature of the log likelihood for any point and data vector
+
+    Parameters
+    ----------
+    A : ndarray
+        Mixing matrix. Shape *(..., n_freq, n_comp)*
+    invN: ndarray or None
+        The inverse noise matrix. Shape *(..., n_freq, n_freq)*.
+    A_dB : ndarray or list of ndarray
+        The derivative of the mixing matrix. If list, each entry is the
+        derivative with respect to a different parameter.
+    A_dBdB : ndarray or list of list of ndarray
+        The second derivative of the mixing matrix. If list, each entry is the
+        derivative of A_dB with respect to a different parameter.
+    comp_of_dB: index or list of indices
+        It allows to provide in *A_dB* only the non-zero columns *A*.
+        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
+        If a list is provided, also *A_dB* and *A_dBdB* have to be a lists,
+        ``A_dB[i]`` and ``A_dBdB[i][j]`` (for any j) are assumed to be the
+        derivatives of ``A[comp_of_dB[i]]``.
+
+    Returns
+    -------
+    res : array
+        Second Derivative of P.
+    """
+    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
+    if not isinstance(A_dBdB, list):
+        A_dBdB = [[A_dBdB]]
+    assert len(A_dBdB) == len(A_dB)
+    for A_dBdB_i in A_dBdB:
+        assert len(A_dBdB_i) == len(A_dB)
+
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
+        A_dBdB = [[_mtm(L, A_dBdB_ij)
+                   for A_dBdB_ij in A_dBdB_i] for A_dBdB_i in A_dBdB]
+
+    res = _P_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB)
+
+    if L is not None:
+        invLt = np.linalg.inv(_T(L))
+        res = _mmm(invLt, res, _T(L))
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
+def _W_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
+    u, e, v = u_e_v
+    n_dB = len(A_dB)
+
+    # Expand A_dB and A_dBdB to full shape
+    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
+                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
+    A_dB_full = np.zeros((n_dB,)+u.shape)
+    A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
+    for i in range(n_dB):
+        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+        for j in range(n_dB):
+            A_dBdB_full[(i, j)+comp_of_dB_A[i]] = A_dBdB[i][j]
+
+    # Apply diag(e^(-1)) * v to the domain of the components
+    # In this basis A' = u and (A'^t A') = 1
+    inve_v = v / e[..., np.newaxis]
+    A_dB = _mm(A_dB_full, _T(inve_v))
+    A_dBdB = _mm(A_dBdB_full, _T(inve_v))
+
+    # Aliases that improve readability
+    A = u
+    A_dBj = A_dB
+    A_dBi = A_dBj[:, np.newaxis, ...]
+
+    # Compute the derivatives of M = (A^t A)^(-1)
+    M_dBj = - _mtm(A_dBj, A)
+    M_dBj += _T(M_dBj)
+    M_dBi = M_dBj[:, np.newaxis, ...]
+
+    M_dBdB = (- _mmm(M_dBj, _T(A_dBi), A)
+              - _mtm(A_dBdB, A)
+              - _mtm(A_dBi, A_dBj)
+              - _mmm(_T(A_dBi), A, M_dBj))
+    M_dBdB += _T(M_dBdB)
+
+    W_dBdB = (_mm(M_dBdB, _T(A))
+              + _mm(M_dBi, _T(A_dBj))
+              + _mm(M_dBj, _T(A_dBi))
+              + _T(A_dBdB))
+
+    # Move back to the original basis
+    W_dBdB = _mtm(inve_v, W_dBdB)
+
+    return W_dBdB
+
+
+def W_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
+    """ Second Derivative of W
+
+    which could be particularly useful for the computation of
+    *statistical* residuals through the second order development
+    of the map-making equation
+
+    Parameters
+    ----------
+    A : ndarray
+        Mixing matrix. Shape *(..., n_freq, n_comp)*
+    invN: ndarray or None
+        The inverse noise matrix. Shape *(..., n_freq, n_freq)*.
+    A_dB : ndarray or list of ndarray
+        The derivative of the mixing matrix. If list, each entry is the
+        derivative with respect to a different parameter.
+    A_dBdB : ndarray or list of list of ndarray
+        The second derivative of the mixing matrix. If list, each entry is the
+        derivative of A_dB with respect to a different parameter.
+    comp_of_dB: index or list of indices
+        It allows to provide in *A_dB* only the non-zero columns *A*.
+        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
+        If a list is provided, also *A_dB* and *A_dBdB* have to be a lists,
+        ``A_dB[i]`` and ``A_dBdB[i][j]`` (for any *j*) are assumed to be the
+        derivatives of ``A[comp_of_dB[i]]``.
+
+    Returns
+    -------
+    res : array
+        Second Derivative of W.
+    """
+    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
+    if not isinstance(A_dBdB, list):
+        A_dBdB = [[A_dBdB]]
+    assert len(A_dBdB) == len(A_dB)
+    for A_dBdB_i in A_dBdB:
+        assert len(A_dBdB_i) == len(A_dB)
+
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
+        A_dBdB = [[_mtm(L, A_dBdB_ij)
+                   for A_dBdB_ij in A_dBdB_i] for A_dBdB_i in A_dBdB]
+
+    res = _W_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB)
+
+    if L is not None:
+        res = _mm(res, _T(L))
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
 def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     u, e, v = u_e_v
     utd = _mtv(u, d)
     Dd = d - _mv(u, utd)
-    s = _mtv(v, utd / e)
+    with np.errstate(divide='ignore'):
+        s = _mtv(v, utd / e)
+    s[~np.isfinite(s)] = 0.
 
     n_param = len(A_dB)
     diff = np.empty(n_param)
@@ -179,7 +519,6 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
         freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
         diff[i] = np.sum(_mv(A_dB[i], s[comp_of_dB[i]])
                          * Dd[freq_of_dB])
-
     return diff
 
 
@@ -188,30 +527,30 @@ def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
 
     Parameters
     ----------
-    A : ndarray
-        Mixing matrix. Shape `(..., n_freq, n_comp)`
+    A: ndarray
+        Mixing matrix. Shape *(..., n_freq, n_comp)*
     d: ndarray
-        The data vector. Shape `(..., n_freq)`.
+        The data vector. Shape *(..., n_freq)*.
     invN: ndarray or None
-        The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
+        The inverse noise matrix. Shape *(..., n_freq, n_freq)*.
     A_dB : ndarray or list of ndarray
         The derivative of the mixing matrix. If list, each entry is the
         derivative with respect to a different parameter.
     comp_of_dB: IndexExpression or list of IndexExpression
-        It allows to provide in `A_dB` only the non-zero columns `A`.
-        `A_dB` is assumed to be the derivative of `A[comp_of_dB]`.
-        If a list is provided, also `A_dB` has to be a list and
-        `A_dB[i]` is assumed to be the derivative of `A[comp_of_dB[i]]`.
+        It allows to provide in *A_dB* only the non-zero columns *A*.
+        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
+        If a list is provided, also *A_dB* has to be a list and
+        ``A_dB[i]`` is assumed to be the derivative of ``A[comp_of_dB[i]]``.
 
     Returns
     -------
     diff : array
-        Derivative of the spectral likelihood. If `A_dB` is a list, `diff[i]`
-        is computed from `A_dB[i]`.
+        Derivative of the spectral likelihood. If *A_dB* is a list, ``diff[i]``
+        is computed from ``A_dB[i]``.
 
     Note
     ----
-    The `...` in the shape of the arguments denote any extra set of dimentions.
+    The *...* in the shape of the arguments denote any extra set of dimensions.
     They have to be compatible among different arguments in the `numpy`
     broadcasting sense.
     """
@@ -276,17 +615,22 @@ def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
 
 def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
     u, _, _ = u_e_v
-    x = []
-    for i in range(len(A_dB)):
-        D_A_dB_s = np.zeros(s.shape[:-1] + u.shape[-2:-1])  # Full shape
-        comp_freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
-        comp_freq_of_dB += comp_of_dB[i][-1:]
-        A_dB_s = _mv(A_dB[i], s[comp_of_dB[i]])  # Compressed shape
-        D_A_dB_s[comp_freq_of_dB[:-1]] = (
-            A_dB_s - _mv(u[comp_freq_of_dB], _mtv(u[comp_freq_of_dB], A_dB_s)))
-        x.append(D_A_dB_s)
 
-    return np.array([[np.sum(x_i*x_j) for x_i in x] for x_j in x])
+    # Expand A_dB
+    n_dB = len(A_dB)
+    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
+                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
+    A_dB_full = np.zeros((n_dB,)+u.shape)
+    A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
+    for i in range(n_dB):
+        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+
+    D_A_dB_s = []
+    for i in range(len(A_dB)):
+        A_dB_s = _mv(A_dB_full[i], s)
+        D_A_dB_s.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
+
+    return np.array([[np.sum(i*j) for i in D_A_dB_s] for j in D_A_dB_s])
 
 
 def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
@@ -314,14 +658,12 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
     x_old = [None]
     u_e_v_old = [None]
     A_dB_old = [None]
-    inv_e_old = [None]
     pw_d = [None]
 
     def _update_old(x):
         # If x is different from the last one, update the SVD
         if not np.all(x == x_old[0]):
             u_e_v_old[0], L[0] = _svd_sqrt_invN_A(A_ev(x), invN, L[0])
-            inv_e_old[0] = 1. / u_e_v_old[0][1]
             if A_dB_ev is not None:
                 if L[0] is None:
                     A_dB_old[0] = A_dB_ev(x)
@@ -335,7 +677,11 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
                     pw_d[0] = _mtv(L[0], d)
 
     def _inv_logL(x):
-        _update_old(x)
+        try:
+            _update_old(x)
+        except np.linalg.linalg.LinAlgError:
+            print('SVD of A failed -> logL = -inf')
+            return np.inf
         return - _logL_svd(u_e_v_old[0], pw_d[0])
 
     if A_dB_ev is None:
@@ -343,7 +689,10 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
             return sp.optimize.approx_fprime(x, _inv_logL, _EPSILON_LOGL_DB)
     else:
         def _inv_logL_dB(x):
-            _update_old(x)
+            try:
+                _update_old(x)
+            except np.linalg.linalg.LinAlgError:
+                print('SVD of A failed -> logL_dB not updated')
             return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
                                   A_dB_old[0], comp_of_dB)
 
@@ -363,31 +712,31 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     A_ev : function
         The evaluator of the mixing matrix. It takes a float or an array as
         argument and returns the mixing matrix, a ndarray with shape
-        `(..., n_freq, n_comp)`
+        *(..., n_freq, n_comp)*
     d: ndarray
-        The data vector. Shape `(..., n_freq)`.
+        The data vector. Shape *(..., n_freq)*.
     invN: ndarray or None
-        The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
+        The inverse noise matrix. Shape *(..., n_freq, n_freq)*.
     A_dB_ev : function
         The evaluator of the derivative of the mixing matrix.
         It returns a list, each entry is the derivative with respect to a
         different parameter.
     comp_of_dB: list of IndexExpression
-        It allows to provide as output of `A_dB_ev` only the non-zero columns
-        `A`. `A_dB_ev(x)[i]` is assumed to be the derivative of
-        `A[comp_of_dB[i]]`.
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[comp_of_dB[i]]``.
     minimize_args: list
         Positional arguments to be passed to `scipy.optimize.minimize`.
-        At this moment it just contains `x0`, the initial guess for the spectral
+        At this moment it just contains *x0*, the initial guess for the spectral
         parameters
     minimize_kwargs: dict
         Keyword arguments to be passed to `scipy.optimize.minimize`.
         A good choice for most cases is
-        `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
+        ``minimize_kwargs = {'tol': 1, options: {'disp': True}}``. *tol* depends
         on both the solver and your signal to noise: it should ensure that the
         difference between the best fit -logL and and the minimum is well less
         then 1, without exagereting (a difference of 1e-4 is useless).
-        `disp` also triggers a verbose callback that monitors the convergence.
+        *disp* also triggers a verbose callback that monitors the convergence.
 
     Returns
     -------
@@ -395,27 +744,41 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
         Result of the spectral likelihood maximisation
         It is the output of `scipy.optimize.minimize`, plus some extra.
         It includes
-        - x : (array)
-            Maximum likelihood spectral parameters
-        - Sigma : (ndarray)
-            Covariance of the spectral parameters,
-            with the addition of some extra information
-        - s : (ndarray)
-            Separated components. Shape `(..., n_comp)`
-        - invAtNA : (ndarray)
-            Covariance of the separated components.
-                Shape `(..., n_comp, n_comp)`
+
+	- **x**: *(ndarray)* - the best-fit spectra indices
+        - **Sigma**: *(ndarray)* - the semi-analytic covariance of the best-fit
+          spectra indices patch.
+        - **s**: *(ndarray)* - Separated components, Shape *(..., n_comp)*
+        - **invAtNA** : *(ndarray)* - Covariance of the separated components.
+          Shape *(..., n_comp, n_comp)*
 
     Note
     ----
-    The `...` in the arguments denote any extra set of dimention. They have to
+    The *...* in the arguments denote any extra set of dimension. They have to
     be compatible among different arguments in the `numpy` broadcasting sense.
     """
-    # Checks input
+    # If mixing matrix is fixed, separate and return
+    if isinstance(A_ev, np.ndarray):
+        res = sp.optimize.OptimizeResult()
+        res.s, (u_e_v, L) = Wd(A_ev, d, invN, True)
+        res.invAtNA = _invAtNA_svd(u_e_v)
+        if L is not None:
+            d = _mtv(L, d)
+        res.chi = d - _As_svd(u_e_v, res.s)
+        return res
+    else:
+        # Mixing matrix has free paramters: check that x0 was provided
+        assert minimize_args
+        assert len(minimize_args[0])
+
+    # Check input
     if A_dB_ev is not None:
         A_dB_ev, comp_of_dB = _A_dB_ev_and_comp_of_dB_as_compatible_list(
             A_dB_ev, comp_of_dB, minimize_args[0])
-    disp = 'options' in minimize_kwargs and 'disp' in minimize_kwargs['options']
+    if 'options' in minimize_kwargs and 'disp' in minimize_kwargs['options']:
+        disp = minimize_kwargs['options']['disp']
+    else:
+        disp = False
 
     # Prepare functions for minimize
     fun, jac, last_values = _build_bound_inv_logL_and_logL_dB(
@@ -449,82 +812,201 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
             freq_of_dB = comp_of_dB_i[:-1] + (slice(None),)
             res.chi_dB.append(np.sum(res.chi[freq_of_dB] * As_dB_i, -1)
                               / np.linalg.norm(As_dB_i, axis=-1))
-    res.Sigma = np.linalg.inv(fisher)
+    try:
+        res.Sigma = np.linalg.inv(fisher)
+    except np.linalg.LinAlgError:
+        res.Sigma = fisher * np.nan
+    res.Sigma_inv = fisher
     return res
 
 
-def multi_comp_sep(A_ev, d, invN, patch_ids, *minimize_args, **minimize_kargs):
+def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
+                   *minimize_args, **minimize_kargs):
     """ Perform component separation
 
-    Run an independent `comp_sep` for entries identified by `patch_ids`
+    Run an independent :func:`comp_sep` for entries identified by *patch_ids*
+    and gathers the result.
 
     Parameters
     ----------
-    A_ev : function or list
+    A_ev : function or ndarray
         The evaluator of the mixing matrix. It takes a float or an array as
         argument and returns the mixing matrix, a ndarray with shape
-        `(..., n_freq, n_comp)`
+        *(..., n_freq, n_comp)*
         If list, the i-th entry is the evaluator of the i-th patch.
-    d: ndarray
-        The data vector. Shape `(..., n_freq)`.
-    invN: ndarray or None
-        The inverse noise matrix. Shape `(..., n_freq, n_freq)`.
-    patch_ids: array
+    d : ndarray
+        The data vector. Shape *(..., n_freq)*.
+    invN : ndarray or None
+        The inverse noise matrix. Shape *(..., n_freq, n_freq)*.
+        If a block of *invN* has a diagonal element equal to zero the
+        corresponding entries of *d* are masked.
+    A_dB_ev : function
+        The evaluator of the derivative of the mixing matrix.
+        It returns a list, each entry is the derivative with respect to a
+        different parameter.
+    comp_of_dB : list of IndexExpression
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[comp_of_dB[i]]``.
+    patch_ids : array
         id of regions.
-    minimize_args: list
+    minimize_args : list
         Positional arguments to be passed to `scipy.optimize.minimize`.
-        At this moment it just contains `x0`, the initial guess for the spectral
-        parameters.
-    minimize_kwargs: dict
+        At this moment, it just contains *x0*, the initial guess for the
+        spectral parameters. It is required if A_ev is a function and ignored
+        otherwise.
+    minimize_kwargs : dict
         Keyword arguments to be passed to `scipy.optimize.minimize`.
         A good choice for most cases is
-        `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
-        on both the solver and your signal to noise: it should ensure that the
+        ``minimize_kwargs = {'tol': 1, options: {'disp': True}}``. *tol* depends
+        on both the solver and your signal-to-noise: it should ensure that the
         difference between the best fit -logL and the minimum is way less
         than 1, without exagerating (a difference of 1e-4 is useless).
-        `disp` also triggers a verbose callback that monitors the convergence.
+        *disp* also triggers a verbose callback that monitors the convergence.
 
     Returns
     -------
-    result : scipy.optimze.OptimizeResult (dict)
-        Result of the spectral likelihood maximization
-	It is the output of `scipy.optimize.minimize`, and thus includes
-	- patch_resx : list
-	    the i-th entry is the result of `comp_sep` on `patch_ids == i`
-        with the addition of some extra information
-	- s : (ndarray)
-	    Separated components, collected from all the patches.
-            Shape `(..., n_comp)`
+    result: dict
+        It gathers the results of the component separation on each patch.
+	It includes
+
+	- **x**: *(ndarray)* - ``x[i]`` contains the best-fit spectra indices
+          from the i-th patch.  Shape *(n_patches, n_param)*
+        - **Sigma**: *(ndarray)* - ``Sigma[i]`` contains the semi-analytic
+          covariance of the best-fit spectra indices estimated from the `i`-th
+          patch.  Shape *(n_patches, n_param, n_param)*
+        - **s**: *(ndarray)* - Separated components, collected from all the
+          patches.  Shape *(..., n_comp)*
+        - **patch_res**: *(list)* - the i-th entry is the result of
+          :func:`comp_sep` on ``patch_ids == i`` (with the exception of the
+          quantities collected from all the patches)
 
     Note
     ----
-    The `...` in the arguments denote any extra set of dimention. They have to
+    The *...* in the arguments denote any extra set of dimension. They have to
     be compatible among different arguments in the `numpy` broadcasting sense.
     """
     # TODO: add the possibility of patch specific x0
-    # TODO: mask input arrays. What about masking where patch_ids < 0?
     assert np.all(patch_ids >= 0)
     max_id = patch_ids.max()
 
     def patch_comp_sep(patch_id):
-        mask = patch_ids == patch_id
-        patch_A_ev = A_ev[patch_id] if isinstance(A_ev, list) else A_ev
-        return comp_sep(patch_A_ev, d[mask], invN,
+        if isinstance(A_ev, list):
+            # Allow different A_ev (and A_dB_ev) for each index, not supported
+            # yet
+            patch_A_ev = A_ev[patch_id]
+            if A_dB_ev is None:
+                patch_A_dB_ev = None
+                patch_comp_of_dB = None
+            else:
+                patch_A_dB_ev = A_dB_ev[patch_id]
+                patch_comp_of_dB = comp_of_dB[patch_id]
+        else:
+            patch_A_ev = A_ev
+            patch_A_dB_ev = A_dB_ev
+            patch_comp_of_dB = comp_of_dB
+
+        patch_mask = patch_ids == patch_id
+        if not np.any(patch_mask):
+            return None
+        patch_d = d[patch_mask]
+        if invN is None:
+            patch_invN = None
+        else:
+            patch_invN = _indexed_matrix(invN, d.shape, patch_mask)
+        return comp_sep(patch_A_ev, patch_d, patch_invN,
+                        patch_A_dB_ev, patch_comp_of_dB,
                         *minimize_args, **minimize_kargs)
 
     # Separation
     res = sp.optimize.OptimizeResult()
-    res.patch_res = [patch_comp_sep(patch_id) for patch_id in range(max_id)]
+    res.patch_res = [patch_comp_sep(patch_id) for patch_id in range(max_id+1)]
 
     # Collect results
-    n_comp = res.patch_res[0].s.shape[-1]
+    n_comp = next(r for r in res.patch_res if r is not None).s.shape[-1]
     res.s = np.full((d.shape[:-1]+(n_comp,)), np.NaN) # NaN for testing
+    res.invAtNA = np.full((d.shape[:-1]+(n_comp, n_comp)), np.NaN) # NaN for testing
+    res.chi = np.full(d.shape, np.NaN) # NaN for testing
 
-    for patch_id in range(max_id):
+    for patch_id in range(max_id+1):
         mask = patch_ids == patch_id
-        res.s[mask] = res.patch_res[patch_id].s
+        if np.any(mask):
+            res.s[mask] = res.patch_res[patch_id].s
+            del res.patch_res[patch_id].s
+            res.invAtNA[mask] = res.patch_res[patch_id].invAtNA
+            del res.patch_res[patch_id].invAtNA
+            res.chi[mask] = res.patch_res[patch_id].chi
+            del res.patch_res[patch_id].chi
+
+    try:
+        res.x = np.array([minimize_args[0] * np.nan if r is None else
+                          r.x for r in res.patch_res])
+        res.Sigma = np.array([
+            minimize_args[0] * minimize_args[0][:, np.newaxis] * np.nan
+            if r is None else r.Sigma for r in res.patch_res])
+        for r in res.patch_res:
+            if r is not None:
+                del r.x
+                del r.Sigma
+    except (AttributeError, IndexError):  # The mixing matrix was constant
+        pass
+
+    try:
+        n_param = len(comp_of_dB)
+    except TypeError:
+        n_param = 0
+
+    try:
+        # Does not work if patch_ids has more than one dimension
+        for i in range(n_param):
+            shape_chi_dB = patch_ids.shape+res.patch_res[0].chi_dB[i].shape[1:]
+            if i == 0:
+                res.chi_dB = []
+            res.chi_dB.append(np.full(shape_chi_dB, np.NaN)) # NaN for testing
+    #except (AttributeError, TypeError):  # No chi_dB (no A_dB_ev)
+    except AttributeError:  # No chi_dB (no A_dB_ev)
+        pass
+    else:
+        for i in range(n_param):
+            for patch_id in range(max_id+1):
+                mask = patch_ids == patch_id
+                if np.any(mask):
+                    res.chi_dB[i][mask] = res.patch_res[patch_id].chi_dB[i]
+        if n_param:
+            for r in res.patch_res:
+                if r is not None:
+                    del r.chi_dB
 
     return res
+
+
+def _indexed_matrix(matrix, data_shape, data_indexing):
+    """ Indexing of a (possibly compressed) matrix
+
+    Given the indexing of a vector, index a matrix that is broadcastable to the
+    shape of the vector.
+
+    In other words,
+
+        _mv(matrix, data)[data_indexing]
+
+    gives the same result as
+
+        _mv(_indexed_matrix(matrix, data.shape, data_indexing),
+            data[data_indexing])
+
+    """
+    if not isinstance(data_indexing, tuple):
+        data_indexing = (data_indexing, )
+    matrix_indexing = []
+    data_extra_dims = len(data_shape) - len(matrix.shape) + 1
+    for i_dim, indexing in enumerate(data_indexing, data_extra_dims):
+        if i_dim >= 0:
+            if matrix.shape[i_dim] == 1:
+                matrix_indexing.append(slice(None))
+            else:
+                matrix_indexing.append(indexing)
+    return matrix[tuple(matrix_indexing)]
 
 
 def verbose_callback():
@@ -564,7 +1046,7 @@ def verbose_callback():
 
 
 def _get_from_caller(name):
-    """ Get the `name` variable from the scope immediately above
+    """ Get the *name* variable from the scope immediately above
 
     NOTE
     ----
