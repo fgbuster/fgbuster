@@ -7,11 +7,11 @@ def read(fname):
 
 setup(
     name = 'fgbuster',
-    version = '0.0.1',
+    version = '1.0.0',
     author = 'Davide Poletti, Josquin Errard and the FGBuster developers',
     author_email = 'davide.pole@gmail.com, josquin@apc.in2p3.fr',
     description = ('Handy parametric component separation tools'),
-    license = 'MIT',
+    license = 'GPLv3',
     keywords = 'statistics cosmology cmb foregrounds',
     url = 'https://github.com/fgbuster/fgbuster',
     packages = ['fgbuster'],
@@ -27,6 +27,5 @@ setup(
         'pysm',
     ],
     dependency_links=['git+https://github.com/bthorne93/PySM_public.git@master#egg=pysm-2.1.0'],
-    classifiers = ['Development Status :: 1 - Pre-Alpha'],
     test_suite = 'fgbuster.test'
 )
