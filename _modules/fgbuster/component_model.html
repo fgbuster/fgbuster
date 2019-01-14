@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>fgbuster.component_model &mdash; FGBuster 0.1.1 documentation</title>
+  <title>fgbuster.component_model &mdash; FGBuster 1.0.0 documentation</title>
   
 
   
@@ -56,7 +56,7 @@
             
             
               <div class="version">
-                0.1
+                1.0
               </div>
             
           
@@ -218,18 +218,18 @@
 <span class="sd">    It defines the API.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">_add_last_dimension_if_not_scalar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_add_last_dimension_if_ndarray</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
             <span class="c1"># Lambdified expressions always output an ndarray with shape</span>
             <span class="c1"># (param_dim_1, ..., param_dim_n, n_freq). However, parameters and</span>
             <span class="c1"># frequencies are both symbols with (no special meaning). In order</span>
             <span class="c1"># to impose the shape of the output, we append a dimension to the</span>
             <span class="c1"># parameters and let the broadcasting inside the lambdified</span>
             <span class="c1"># expressions do the rest</span>
-            <span class="c1"># TODO: Can replace this with a try/except?</span>
             <span class="k">return</span> <span class="n">param</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
-        <span class="c1"># param is an scalar value, no special treatment is required</span>
-        <span class="k">return</span> <span class="n">param</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="c1"># param is an scalar value, no special treatment is required</span>
+            <span class="k">return</span> <span class="n">param</span>
 
 <div class="viewcode-block" id="Component.eval"><a class="viewcode-back" href="../../api/fgbuster.component_model.html#fgbuster.component_model.Component.eval">[docs]</a>    <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="o">*</span><span class="n">params</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Evaluate the SED</span>
@@ -245,15 +245,21 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        result: ndarray</span>
-<span class="sd">            SED. The shape is</span>
-<span class="sd">            * the same of `nu` the parameters are all scalar. </span>
-<span class="sd">            * `np.broadcast(*params).shape + nu.shape` otherwise</span>
+<span class="sd">            SED. The shape is always ``np.broadcast(*params).shape + nu.shape``.</span>
+<span class="sd">            In particular, if the parameters are all floats, the shape is the</span>
+<span class="sd">            same `nu`.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_param</span>
+        <span class="k">if</span> <span class="n">params</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="o">*</span><span class="n">params</span><span class="p">)</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Parameters are all scalars.</span>
+            <span class="c1"># This case is frequent and easy, thus leave early</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lambda</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="o">*</span><span class="n">params</span><span class="p">)</span>
+
         <span class="c1"># Make sure that broadcasting rules will apply correctly when passing</span>
         <span class="c1"># the parameters to the lambdified functions:</span>
         <span class="c1"># last axis has to be nu, but that axis is missing in the parameters</span>
-        <span class="n">new_params</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimension_if_not_scalar</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">new_params</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimension_if_ndarray</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span><span class="p">]</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lambda</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="o">*</span><span class="n">new_params</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Component.diff"><a class="viewcode-back" href="../../api/fgbuster.component_model.html#fgbuster.component_model.Component.diff">[docs]</a>    <span class="k">def</span> <span class="nf">diff</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="o">*</span><span class="n">params</span><span class="p">):</span>
@@ -277,7 +283,7 @@
         <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_param</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">params</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[]</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="o">*</span><span class="n">params</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="o">*</span><span class="n">params</span><span class="p">)</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="c1"># Parameters are all scalars.</span>
             <span class="c1"># This case is frequent and easy, thus leave early</span>
             <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_lambda_diff</span><span class="p">[</span><span class="n">i_p</span><span class="p">](</span><span class="n">nu</span><span class="p">,</span> <span class="o">*</span><span class="n">params</span><span class="p">)</span>
@@ -286,7 +292,7 @@
         <span class="c1"># Make sure that broadcasting rules will apply correctly when passing</span>
         <span class="c1"># the parameters to the lambdified functions:</span>
         <span class="c1"># last axis has to be nu, but that axis is missing in the parameters</span>
-        <span class="n">new_params</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimension_if_not_scalar</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">new_params</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimension_if_ndarray</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span><span class="p">]</span>
 
         <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i_p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_param</span><span class="p">):</span>
@@ -296,8 +302,8 @@
     <span class="k">def</span> <span class="nf">diff_diff</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="o">*</span><span class="n">params</span><span class="p">):</span>
         <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_param</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">params</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">[]</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="o">*</span><span class="n">params</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[[]]</span>
+        <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="o">*</span><span class="n">params</span><span class="p">)</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="c1"># Parameters are all scalars.</span>
             <span class="c1"># This case is frequent and easy, thus leave early</span>
             <span class="k">return</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_lambda_diff_diff</span><span class="p">[</span><span class="n">i_p</span><span class="p">][</span><span class="n">j_p</span><span class="p">](</span><span class="n">nu</span><span class="p">,</span> <span class="o">*</span><span class="n">params</span><span class="p">)</span>
@@ -307,7 +313,7 @@
         <span class="c1"># Make sure that broadcasting rules will apply correctly when passing</span>
         <span class="c1"># the parameters to the lambdified functions:</span>
         <span class="c1"># last axis has to be nu, but that axis is missing in the parameters</span>
-        <span class="n">new_params</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimension_if_not_scalar</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">new_params</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_last_dimension_if_ndarray</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span><span class="p">]</span>
 
         <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i_p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_param</span><span class="p">):</span>
@@ -698,7 +704,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'../../',
-              VERSION:'0.1.1',
+              VERSION:'1.0.0',
               LANGUAGE:'en',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
