@@ -52,12 +52,13 @@ Acknowledgements
 ----------------
 
 Davide Poletti acknowledges the support from the
-`RADIOFOREGROUNDS <http://www.radioforegrounds.eu/>`_ project, funded by the
+`COSMOS network <http://www.cosmosnet.it>`_ of the Italian Space Agency, the
+`RADIOFOREGROUNDS <http://www.radioforegrounds.eu/>`_ project funded by the
 European Commissions H2020 Research Infrastructures under the Grant Agreement
 687312, and the
-`International School for Advanced Studies <www.sissa.it>`_ (SISSA)
+`International School for Advanced Studies <http://www.sissa.it>`_ (SISSA)
 
-|sissa| |radioforegrounds|
+|sissa| |radioforegrounds| |cosmos|
 
 .. |sissa| image:: /_static/logo_sissa.png
     :alt: SISSA
@@ -68,3 +69,8 @@ European Commissions H2020 Research Infrastructures under the Grant Agreement
     :alt: RADIOFOREGROUNDS
     :height: 100px
     :target: http://www.radioforegrounds.eu
+
+.. |cosmos| image:: /_static/logo_cosmos.png
+    :alt: COSMOS
+    :height: 100px
+    :target: http://www.cosmosnet.it
