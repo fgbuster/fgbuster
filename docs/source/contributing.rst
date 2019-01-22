@@ -21,7 +21,7 @@ Clone the documentation branch
    cd fgbuster-docs
    git clone git@github.com:fgbuster/fgbuster.git html
    cd html
-   git ch gh-pages
+   git checkout gh-pages
 
 You have now two clones of the FGBuster repository. It is important that they
 have the right relative location.

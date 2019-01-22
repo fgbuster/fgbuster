@@ -233,8 +233,12 @@ def P(A, invN=None, return_svd=False):
         res = _P_svd(u_e_v)
     else:
         res = _mm(_P_svd(u_e_v), _T(L))
-        res = sp.linalg.solve_triangular(L, res, lower=True,
-                                         overwrite_b=True, trans='T')
+        try:
+            res = sp.linalg.solve_triangular(L, res, lower=True,
+                                             overwrite_b=True, trans='T')
+        except np.linalg.LinAlgError:
+            return _mm(A, W(A, invN=invN))
+
     if return_svd:
         return res, (u_e_v, L)
     return res
@@ -251,8 +255,11 @@ def D(A, invN=None, return_svd=False):
         res = _D_svd(u_e_v)
     else:
         res = _mm(_D_svd(u_e_v), _T(L))
-        res = sp.linalg.solve_triangular(L, res, lower=True,
-                                         overwrite_b=True, trans='T')
+        try:
+            res = sp.linalg.solve_triangular(L, res, lower=True,
+                                             overwrite_b=True, trans='T')
+        except np.linalg.LinAlgError:
+            return np.eye(res.shape[-1]) - _mm(A, W(A, invN=invN))
     if return_svd:
         return res, (u_e_v, L)
     return res
