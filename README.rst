@@ -42,8 +42,7 @@ Contributing
 ############
 
 Development takes place on `github
-<https://github.com/fgbuster/fgbuster/issues/new>`_.
-
+<https://github.com/fgbuster/fgbuster>`_.
 See  :ref:`contributing`.
 
 ----
