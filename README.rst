@@ -58,6 +58,9 @@ European Commissions H2020 Research Infrastructures under the Grant Agreement
 687312, and the
 `International School for Advanced Studies <http://www.sissa.it>`_ (SISSA)
 
+Josquin Errard acknowledges support of the French National Research Agency
+(Agence National de Recherche) grant, ANR BxB.
+
 |sissa| |radioforegrounds| |cosmos|
 
 .. |sissa| image:: /_static/logo_sissa.png
