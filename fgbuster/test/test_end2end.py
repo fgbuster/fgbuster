@@ -12,7 +12,7 @@ from fgbuster.algebra import _mtv
 import fgbuster.component_model as cm
 from fgbuster.separation_recipies import basic_comp_sep
 import pysm
-from pysm.common import convert_units
+from pysm import convert_units
 
 from contextlib import contextmanager
 
