@@ -73,13 +73,13 @@ def bandpass_integration(f):
                     # Try to separate freqeuncey and bandpass weights
                     band_nu, band_w = bandpass
                     band_nu[0]  # An array with two 
-                    band_w /= np.trapz(band_nu, band_w)
+                    band_w /= np.trapz(band_w, band_nu)
                 except (ValueError, IndexError):
                     # No weights were provided
                     band_nu = bandpass
                     band_w = None
 
-                res[..., i] = np.trapz(band_nu, f(band_nu, *params) * band_w)
+                res[..., i] = np.trapz(f(band_nu, *params) * band_w, band_nu)
             return res
         return f(nu, *params)
 
