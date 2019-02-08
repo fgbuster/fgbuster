@@ -62,14 +62,14 @@ K_RJ2K_CMB_NU0 = K_RJ2K_CMB + ' / ' + K_RJ2K_CMB.replace('nu', 'nu0')
 
 def bandpass_integration(f):
     def integrated_f(nu, *params):
-        # It is user responsibility to provide weights in the same units as the
+        # It is user's responsibility to provide weights in the same units as the
         # components
         if isinstance(nu, (list, tuple)):
             res = np.empty(
                 np.broadcast(1, *params).shape + (len(nu),))
             for i, bandpass in enumerate(nu):
                 try:
-                    # Try to separate freqeuncey and bandpass weights
+                    # Try to separate frequency and bandpass weights
                     band_nu, band_w = bandpass
                     band_nu[0]  # An array with two 
                     band_w /= np.trapz(band_w, band_nu)
@@ -83,7 +83,6 @@ def bandpass_integration(f):
         return f(nu, *params)
 
     return integrated_f
-
 
 
 class Component(object):
