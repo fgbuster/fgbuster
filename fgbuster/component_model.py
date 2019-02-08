@@ -27,7 +27,6 @@ prepared.
 import os.path as op
 import numpy as np
 import sympy
-import sympy
 from sympy.parsing.sympy_parser import parse_expr
 import scipy
 from scipy import constants
@@ -60,6 +59,32 @@ K_RJ2K_CMB = K_RJ2K_CMB.replace('h_over_k', str(H_OVER_K))
 
 # Conversion factor at frequency nu divided by the one at frequency nu0
 K_RJ2K_CMB_NU0 = K_RJ2K_CMB + ' / ' + K_RJ2K_CMB.replace('nu', 'nu0')
+
+
+def bandpass_integration(f):
+    def integrated_f(nu, *params):
+        # It is user responsibility to provide weights in the same units as the
+        # components
+        if isinstance(nu, (list, tuple)):
+            res = np.empty(
+                np.broadcast(1, *params).shape + (len(nu),))
+            for i, bandpass in enumerate(nu):
+                try:
+                    # Try to separate freqeuncey and bandpass weights
+                    band_nu, band_w = bandpass
+                    band_nu[0]  # An array with two 
+                    band_w /= np.trapz(band_nu, band_w)
+                except (ValueError, IndexError):
+                    # No weights were provided
+                    band_nu = bandpass
+                    band_w = None
+
+                res[..., i] = np.trapz(band_nu, f(band_nu, *params) * band_w)
+            return res
+        return f(nu, *params)
+
+    return integrated_f
+
 
 
 class Component(object):
@@ -296,11 +321,14 @@ class AnalyticComponent(Component):
         self._params.pop(0)
 
         # Create lambda functions
-        self._lambda = lambdify(symbols, self._expr)
-        lambdify_diff_param = lambda param: lambdify(
+
+        _lambdify = lambda *args, **kwargs: bandpass_integration(
+            lambdify(*args, **kwargs))
+        self._lambda = _lambdify(symbols, self._expr)
+        lambdify_diff_param = lambda param: _lambdify(
             symbols, self._expr.diff(param))
         self._lambda_diff = [lambdify_diff_param(p) for p in self._params]
-        lambdify_diff_diff_params = lambda param1, param2: lambdify(
+        lambdify_diff_diff_params = lambda param1, param2: _lambdify(
             symbols, self._expr.diff(param1, param2))
         self._lambda_diff_diff = []
         for p1 in self._params:
