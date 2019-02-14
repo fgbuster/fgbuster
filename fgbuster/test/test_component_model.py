@@ -30,7 +30,8 @@ class TestAnalyticComponent(unittest.TestCase):
     
     funcs = ['eval', 'diff']
     vals = ['float', 'scal', 'vec', 'vecbcast']
-    tags = ['__'.join(args) for args in product(funcs, vals, vals)]
+    bands = ['centers', 'integral', 'weighted']
+    tags = ['__'.join(args) for args in product(funcs, vals, vals, bands)]
 
     def setUp(self):
         self.analitic_expr = 'nu * param0 + nu**param1 + hundred'
@@ -76,7 +77,7 @@ class TestAnalyticComponent(unittest.TestCase):
 
     @parameterized.expand(tags)
     def test(self, tag):
-        func, val0, val1 = tag.split('__')
+        func, val0, val1,  = tag.split('__')
         param0 = self._get_param0(val0)
         param1 = self._get_param1(val1)
 
