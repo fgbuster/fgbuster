@@ -36,22 +36,70 @@ class TestAnalyticComponent(unittest.TestCase):
     def setUp(self):
         self.analitic_expr = 'nu * param0 + nu**param1 + hundred'
         self.comp = AnalyticComponent(self.analitic_expr, hundred=100)
-        self.nu = np.arange(1,4) * 10
 
     def hard_eval(self, nu, param0, param1):
         param0 = self._add_dim_if_ndarray(param0)
         param1 = self._add_dim_if_ndarray(param1)
-        return nu * param0 + nu**param1 + 100.
+        nu = np.array(nu)
+        if nu.ndim == 1: # No bandpass
+            return nu * param0 + nu**param1 + 100.
+        elif nu.ndim == 2: # Bandpass but no weights
+            nu_shape = nu.shape
+            nu = nu.flatten()
+            res = nu * param0 + nu**param1 + 100.
+            return np.trapz(res.reshape(res.shape[:-1] + nu_shape),
+                            nu.reshape(nu_shape), -1)
+        elif nu.ndim == 3: # Bandpass and trasmission
+            nu, weight = np.swapaxes(nu, 0, 1)
+            nu_shape = nu.shape
+            nu = nu.flatten()
+            res = nu * param0 + nu**param1 + 100.
+            res *= weight.flatten()
+            return np.trapz(res.reshape(res.shape[:-1] + nu_shape),
+                            nu.reshape(nu_shape), -1)
 
     def hard_diff(self, nu, param0, param1):
         param0 = self._add_dim_if_ndarray(param0)
         param1 = self._add_dim_if_ndarray(param1)
-        return [nu, nu**param1 * np.log(nu)]
+        nu = np.array(nu)
+        if nu.ndim == 1: # No bandpass
+            return [nu, nu**param1 * np.log(nu)]
+        elif nu.ndim == 2: # Bandpass but no weights
+            nu_shape = nu.shape
+            nu = nu.flatten()
+            res = nu**param1 * np.log(nu)
+            nu = nu.reshape(nu_shape)
+            res = np.trapz(res.reshape(res.shape[:-1] + nu_shape), nu, -1)
+            return [nu.mean(-1) * (nu.max(-1) - nu.min(-1)), res]
+        elif nu.ndim == 3: # Bandpass and trasmission
+            nu, weight = np.swapaxes(nu, 0, 1)
+            nu_shape = nu.shape
+            nu = nu.flatten()
+            res = nu**param1 * np.log(nu)
+            res *= weight.flatten()
+            nu = nu.reshape(nu_shape)
+            res = np.trapz(res.reshape(res.shape[:-1] + nu_shape), nu, -1)
+            return [np.trapz(nu*weight, nu, -1), res]
 
     def _add_dim_if_ndarray(self, param):
         if isinstance(param, np.ndarray):
             return param[..., np.newaxis]
         return param
+
+    def _get_nu(self, tag):
+        if tag == 'centers':
+            return np.arange(1, 4) * 10
+        elif tag == 'integral':
+            bandpass = np.arange(1, 4) * 10
+            bandpass = bandpass[:, np.newaxis] * np.linspace(0.9, 1.1, 11)
+            return tuple(bandpass)
+        elif tag == 'weighted':
+            bandpass = np.arange(1, 4) * 10
+            bandpass = bandpass[:, np.newaxis] * np.linspace(0.9, 1.1, 11)
+            weight = np.random.uniform(0.5, 1.5, bandpass.size)
+            weight = weight.reshape(bandpass.shape)
+            return tuple(np.swapaxes(np.stack((bandpass, weight)), 0, 1))
+        raise ValueError(tag)
 
     def _get_param0(self, tag):
         if tag == 'float':
@@ -77,13 +125,14 @@ class TestAnalyticComponent(unittest.TestCase):
 
     @parameterized.expand(tags)
     def test(self, tag):
-        func, val0, val1,  = tag.split('__')
+        func, val0, val1, nu_type = tag.split('__')
         param0 = self._get_param0(val0)
         param1 = self._get_param1(val1)
+        nu = self._get_nu(nu_type)
 
-        res = getattr(self.comp, func)(self.nu, param0, param1)
+        res = getattr(self.comp, func)(nu, param0, param1)
 
-        ref = getattr(self, 'hard_'+func)(self.nu, param0, param1)
+        ref = getattr(self, 'hard_'+func)(nu, param0, param1)
 
         if not isinstance(res, list):
             res = [res]
@@ -91,6 +140,7 @@ class TestAnalyticComponent(unittest.TestCase):
 
         for args in zip(res, ref):
             np.testing.assert_allclose(*args)
+            break
 
 
 if __name__ == '__main__':

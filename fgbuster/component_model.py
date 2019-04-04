@@ -65,20 +65,18 @@ def bandpass_integration(f):
         # It is user's responsibility to provide weights in the same units as the
         # components
         if isinstance(nu, (list, tuple)):
-            res = np.empty(
-                np.broadcast(1, *params).shape + (len(nu),))
+            out_shape = f(np.array(100.), *params).shape[:-1]
+            res = np.empty(out_shape + (len(nu),))
             for i, bandpass in enumerate(nu):
                 try:
                     # Try to separate frequency and bandpass weights
                     band_nu, band_w = bandpass
-                    band_nu[0]  # An array with two 
-                    band_w /= np.trapz(band_w, band_nu)
+                    band_nu[0]  # Raise if bandpass stores the two edge freq
+                    res[..., i] = np.trapz(f(band_nu, *params) * band_w,
+                                           band_nu)
                 except (ValueError, IndexError):
                     # No weights were provided
-                    band_nu = bandpass
-                    band_w = None
-
-                res[..., i] = np.trapz(f(band_nu, *params) * band_w, band_nu)
+                    res[..., i] = np.trapz(f(bandpass, *params), bandpass)
             return res
         return f(nu, *params)
 
@@ -109,8 +107,25 @@ class Component(object):
 
         Parameters
         ----------
-        nu: array
-            Frequencies at which the SED is evaluated
+        nu: array, tuple or list
+            If array, frequencies at which the SED is evaluated
+            If tuple or list, they have one entry for each frequency band.
+            Each entry can be
+
+            * an array of frequencies: integrate the SED sampling the function
+              at these frequencies
+            * the pair of arrays (frequencies, transmittance): as before, but
+              the value of the function is multiplied by the transmittance
+
+            Note that the routine does not perform anything more that this. In
+            particular it does NOT:
+
+            * normalize the transmittance to 1 or any other value
+            * perform any unit conversion before integrating the SED
+
+            Make sure you normalize and "convert the units" of the
+            transmittance in such a way that you get the correct result.
+                
         *params: float or ndarray
             Value of each of the free parameters. They can be arrays and, in
             this case, they should be broadcastable to a common shape.
@@ -118,9 +133,10 @@ class Component(object):
         Returns
         -------
         result: ndarray
-            SED. The shape is always ``np.broadcast(*params).shape + nu.shape``.
+            SED. The shape is ``np.broadcast(*params).shape + nu.shape``
+            (or broadcastable to it).
             In particular, if the parameters are all floats, the shape is the
-            same `nu`.
+            same of `nu`.
 
         """
         assert len(params) == self.n_param
