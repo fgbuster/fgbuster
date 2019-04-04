@@ -42,7 +42,6 @@ __all__ = [
     'Synchrotron',
     'ModifiedBlackBody',
     'PowerLaw',
-    'AME',
     'FreeFree',
 ]
 
@@ -63,14 +62,14 @@ K_RJ2K_CMB_NU0 = K_RJ2K_CMB + ' / ' + K_RJ2K_CMB.replace('nu', 'nu0')
 
 def bandpass_integration(f):
     def integrated_f(nu, *params):
-        # It is user responsibility to provide weights in the same units as the
+        # It is user's responsibility to provide weights in the same units as the
         # components
         if isinstance(nu, (list, tuple)):
             res = np.empty(
                 np.broadcast(1, *params).shape + (len(nu),))
             for i, bandpass in enumerate(nu):
                 try:
-                    # Try to separate freqeuncey and bandpass weights
+                    # Try to separate frequency and bandpass weights
                     band_nu, band_w = bandpass
                     band_nu[0]  # An array with two 
                     band_w /= np.trapz(band_w, band_nu)
@@ -84,7 +83,6 @@ def bandpass_integration(f):
         return f(nu, *params)
 
     return integrated_f
-
 
 
 class Component(object):
@@ -495,45 +493,6 @@ class FreeFree(AnalyticComponent):
 
         self._set_default_of_free_symbols(
             logEM=self._REF_LOGEM, Te=self._REF_TE)
-
-
-class AME(Component):
-    _REF_NU_PEAK = 30.
-    _NU_PEAK_0 = 30.
-
-    def __init__(self, nu_0, nu_peak=None, units='K_CMB'):
-        # analytic_expr contains just the analytic part of the emission law
-        analytic_expr = 'nu**(-2)'
-        if 'K_CMB' in units:
-            analytic_expr += '*' + K_RJ2K_CMB
-        elif 'K_RJ' in units:
-            pass
-        else:
-            raise ValueError("Unsupported units: %s"%units)
-
-        super(AME, self).__init__(analytic_expr)
-
-        emissivity_file = op.join(op.dirname(pysm.__file__),
-                                  'template/emissivity.txt')
-        emissivity = np.loadtxt(emissivity_file, unpack=True)
-        self._interp = scipy.interpolate.interp1d(
-            emissivity[0], emissivity[1],
-            bounds_error=False, fill_value=0, assume_sorted=True, copy=False)
-
-        if nu_peak is None:
-            self._defaults.append(self._REF_NU_PEAK)
-            self._params.append('nu_peak')
-            self.eval = lambda nu, p: (
-                self._interp_eval(nu, p) / self._interp_eval(nu_0, p))
-            self.diff = lambda nu, p: [
-                (self.eval(nu, p*1.01) - self.eval(nu, p*0.99)) / (p*0.02)]
-        else:
-            self.eval = lambda nu: (self._interp_eval(nu, nu_peak)
-                                    / self._interp_eval(nu_0, nu_peak))
-            self.diff = lambda nu: []
-
-    def _interp_eval(self, nu, nu_peak):
-        return self._lambda(nu) * self._interp(nu * (self._NU_PEAK_0 / nu_peak))
 
 
 class Dust(ModifiedBlackBody):
