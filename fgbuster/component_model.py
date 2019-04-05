@@ -61,22 +61,55 @@ K_RJ2K_CMB_NU0 = K_RJ2K_CMB + ' / ' + K_RJ2K_CMB.replace('nu', 'nu0')
 
 
 def bandpass_integration(f):
-    def integrated_f(nu, *params):
+    ''' Decorator for bandpass integration
+
+    Parameters
+    ----------
+    f: callable
+        Function to evaluate an SED. Its first argument must be a frequency
+        array. The other positional or keyword arguments are arbitrary.
+
+    Returns
+    -------
+    f: callable
+        The function now accepts as a first argument
+
+        * array with the frequencies, as before (delta bandpasses)
+        * the list or tuple with the bandpasses 
+
+        Each entry of the tuple or list specifies one bandpass. The entry can be
+
+        * an array of frequencies: integrate the SED sampling the function
+          at these frequencies
+        * the pair of arrays (frequencies, transmittance): as before, but
+          the value of the function is multiplied by the transmittance
+
+        Note that the routine does not perform anything more that this. In
+        particular it does NOT:
+
+        * normalize the transmittance to 1 or any other value
+        * perform any unit conversion before integrating the SED
+
+        Make sure you normalize and "convert the units" of the
+        transmittance in such a way that you get the correct result.
+    '''
+    def integrated_f(nu, *params, **kwargs):
         # It is user's responsibility to provide weights in the same units as the
         # components
         if isinstance(nu, (list, tuple)):
-            out_shape = f(np.array(100.), *params).shape[:-1]
+            out_shape = f(np.array(100.), *params, **kwargs).shape[:-1]
             res = np.empty(out_shape + (len(nu),))
             for i, bandpass in enumerate(nu):
                 try:
                     # Try to separate frequency and bandpass weights
                     band_nu, band_w = bandpass
                     band_nu[0]  # Raise if bandpass stores the two edge freq
-                    res[..., i] = np.trapz(f(band_nu, *params) * band_w,
-                                           band_nu)
+                    res[..., i] = np.trapz(
+                        f(band_nu, *params, **kwargs) * band_w, band_nu)
                 except (ValueError, IndexError):
                     # No weights were provided
-                    res[..., i] = np.trapz(f(bandpass, *params), bandpass)
+                    res[..., i] = np.trapz(f(bandpass, *params, **kwargs),
+                                           bandpass)
             return res
         return f(nu, *params)
 
@@ -108,23 +141,8 @@ class Component(object):
         Parameters
         ----------
         nu: array, tuple or list
-            If array, frequencies at which the SED is evaluated
-            If tuple or list, they have one entry for each frequency band.
-            Each entry can be
-
-            * an array of frequencies: integrate the SED sampling the function
-              at these frequencies
-            * the pair of arrays (frequencies, transmittance): as before, but
-              the value of the function is multiplied by the transmittance
-
-            Note that the routine does not perform anything more that this. In
-            particular it does NOT:
-
-            * normalize the transmittance to 1 or any other value
-            * perform any unit conversion before integrating the SED
-
-            Make sure you normalize and "convert the units" of the
-            transmittance in such a way that you get the correct result.
+            Frequencies or banpasses for the SED evaluation
+            See the result of :func:`bandpass_integration`.
                 
         *params: float or ndarray
             Value of each of the free parameters. They can be arrays and, in
@@ -157,7 +175,8 @@ class Component(object):
         Parameters
         ----------
         nu: array
-            Frequencies at which the SED is evaluated
+            Frequencies or banpasses for the SED evaluation
+            See the result of :func:`bandpass_integration`.
         *params: float or ndarray
             Value of the free parameters. They can be arrays and, in this case,
             they should be broadcastable to a common shape.
