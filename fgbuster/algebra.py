@@ -139,11 +139,14 @@ def _svd_sqrt_invN_A(A, invN=None, L=None):
         try:
             L = np.linalg.cholesky(invN)
         except np.linalg.LinAlgError:
+            # Cholesky of the blocks that contain a non-zero diagonal element
             L = np.zeros_like(invN)
-            mask = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
-                                   axis=-1))
-            if np.any(mask):
-                L[mask] = np.linalg.cholesky(invN[mask])
+            good_idx = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
+                                       axis=-1))
+            if invN.ndim > 2:
+                L[good_idx] = np.linalg.cholesky(invN[good_idx])
+            elif good_idx[0].size:
+                L = np.linalg.cholesky(invN)
 
     if L is not None:
         A = _mtm(L, A)
