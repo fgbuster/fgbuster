@@ -19,6 +19,7 @@
 """
 from six import string_types
 import numpy as np
+from scipy.optimize import OptimizeResult
 import healpy as hp
 from . import algebra as alg
 from .mixingmatrix import MixingMatrix
@@ -269,6 +270,121 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         res.Sigma = res.Sigma.T
 
     res.mask_good = ~mask
+    return res
+
+
+def harmonic_ilc(components, instrument, data, lmin=0):
+    import pylab as pl
+    nside = hp.get_nside(data)
+    lmax = 3 * nside
+    n_freq = data.shape[0]
+    n_comp = len(components)
+
+    alms = np.array([hp.map2alm(fdata, lmax=lmax) for fdata in data])
+    ell, _ = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))
+    del _
+    pl.loglog(hp.alm2cl(alms[0]), label='original', lw=4)
+
+    # Make alms real
+    alms = np.asarray(alms, order='C')
+    alms = alms.view(np.float64)
+    alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN
+    ell = np.stack((ell, ell), axis=-1).reshape(-1)
+    ell[ell < lmin] = 0
+
+    pl.loglog(hp.alm2cl(alms[0].view(np.complex128)), label='before')
+    res = ilc(components, instrument, alms, ell)
+
+    pl.loglog(hp.alm2cl(res.s[0].view(np.complex128)), label='after')
+    alms = np.asarray(res.s, order='C').view(np.complex128)
+    res.s = np.empty((n_comp,) + data.shape[1:], dtype=data.dtype)
+    for c in range(n_comp):
+        res.s[c] = hp.alm2map(alms[c], nside)
+    pl.loglog(hp.anafast(res.s[0]), label='final')
+    pl.legend()
+
+    return res
+
+
+def ilc(components, instrument, data, patch_ids=None):
+    """ Internal Linear Combination
+
+    Parameters
+    ----------
+    components: list or tuple of lists
+        `Components` of the mixing matrix. They must have no free parameter.
+    instrument: PySM.Instrument
+        Instrument object used to define the mixing matrix
+        It is required to have:
+
+        - Frequencies
+
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
+        also absent.
+        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        neglected during the component separation process.
+    patch_ids: array
+        It stores the id of the region over which the ILC weights are computed
+        independently. It must be broadcast-compatible with data.
+
+    Returns
+    -------
+    result : dict
+	It includes
+
+        - **W**: *(ndarray)* - ILC weights for each component and possibly each
+          patch.
+        - **cov**: *(ndarray)* - Empirical covariance for each patch
+        - **s**: *(ndarray)* - Component maps
+
+    Note
+    ----
+    * During the component separation, a pixel is masked if at least one of its
+      frequencies is masked.
+    """
+    # Checks
+    instrument = _force_keys_as_attributes(instrument)
+    np.broadcast(data, patch_ids)
+    assert len(instrument.Frequencies) == data.shape[0]
+    n_freq = data.shape[0]
+    n_comp = len(components)
+    n_id = patch_ids.max() + 1
+
+    # Prepare mask and set to zero all the frequencies in the masked pixels:
+    # NOTE: mask are good pixels
+    mask = ~_intersect_mask(data)
+
+    A = MixingMatrix(*components).eval(instrument.Frequencies)
+
+    data = data.T
+    res = OptimizeResult()
+    res.s = np.full(data.shape[:-1] + (n_comp,), hp.UNSEEN)
+
+    def ilc_patch(mask_pix, mask_id):
+        if not np.any(mask_pix):
+            return
+        data_patch = data[mask_pix].reshape(-1, n_freq)
+        np.einsum('ij,ik->jk', data_patch, data_patch, out=res.cov[mask_id])
+        res.W[mask_id] = alg.W(A, np.linalg.inv(res.cov[mask_id]))
+        res.s[mask_pix] = alg._mv(res.W[mask_id], data_patch)
+
+    if patch_ids is None:
+        res.cov = np.full((n_freq, n_freq), hp.UNSEEN)
+        res.W = np.full((n_comp, n_freq), hp.UNSEEN)
+        ilc_patch(mask, np.s_[:])
+    else:
+        res.cov = np.full((n_id, n_freq, n_freq), hp.UNSEEN)
+        res.W = np.full((n_id, n_comp, n_freq), hp.UNSEEN)
+        for i in range(n_id):
+            print(i)
+            #if i == 162:
+                #import ipdb;ipdb.set_trace()
+            mask_i = ((patch_ids == i) & mask).T
+            ilc_patch(mask_i, np.s_[1])
+
+    res.s = res.s.T
+
     return res
 
 
