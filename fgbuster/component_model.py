@@ -482,7 +482,7 @@ class CMB(AnalyticComponent):
         super(CMB, self).__init__(analytic_expr)
 
         if 'K_CMB' in units:
-            self.eval = lambda nu: np.ones_like(nu)
+            self.eval = bandpass_integration(lambda nu: np.ones_like(nu))
 
 
 class FreeFree(AnalyticComponent):
