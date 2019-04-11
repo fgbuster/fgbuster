@@ -181,7 +181,15 @@ def _invAtNA_svd(u_e_v):
 
 
 def invAtNA(A, invN=None, return_svd=False):
-    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    try:
+        u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    except np.linalg.LinAlgError:
+        # invN is ill conditioned -> Cholesky failed
+        # invAtNA can still be well defined -> compute it brute-force
+        if return_svd:
+            raise
+        return np.linalg.inv(_mmm(_T(A), invN, A))
+
     res = _invAtNA_svd(u_e_v)
     if return_svd:
         return res, (u_e_v, L)
@@ -215,7 +223,15 @@ def _W_svd(u_e_v):
 
 
 def W(A, invN=None, return_svd=False):
-    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    try:
+        u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    except np.linalg.LinAlgError:
+        # invN is ill conditioned -> Cholesky failed
+        # W can still be well defined -> compute it brute-force
+        if return_svd:
+            raise
+        return _mmm(np.linalg.inv(_mmm(_T(A), invN, A)), _T(A), invN)
+
     if L is None:
         res = _W_svd(u_e_v)
     else:

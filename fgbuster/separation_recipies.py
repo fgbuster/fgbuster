@@ -273,35 +273,80 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
-def harmonic_ilc(components, instrument, data, lmin=0):
-    import pylab as pl
+def harmonic_ilc(components, instrument, data, lbins=None):
+    """ Internal Linear Combination
+
+    Parameters
+    ----------
+    components: list or tuple of lists
+        `Components` of the mixing matrix. They must have no free parameter.
+    instrument: dict or PySM.Instrument
+        Instrument object used to define the mixing matrix
+        It is required to have:
+
+        - Frequencies
+
+        It's only role is to evaluate the `components` at the
+        `instrument.Frequencies`.
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
+        1, 3 or absent.
+        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        neglected during the component separation process.
+    lbins: array
+        It stores the edges of the bins that will have the same ILC weights.
+
+    Returns
+    -------
+    result : dict
+	It includes
+
+        - **W**: *(ndarray)* - ILC weights for each component and possibly each
+          patch.
+        - **freq_cov**: *(ndarray)* - Empirical covariance for each bin
+        - **s**: *(ndarray)* - Component maps
+        - **cl_in**: *(ndarray)* - anafast output of the input
+        - **cl_out**: *(ndarray)* - anafast output of the output
+
+    Note
+    ----
+    * During the component separation, a pixel is masked if at least one of its
+      frequencies is masked.
+    """
     nside = hp.get_nside(data)
-    lmax = 3 * nside
-    n_freq = data.shape[0]
+    lmax = 3 * nside - 1
     n_comp = len(components)
 
     alms = np.array([hp.map2alm(fdata, lmax=lmax) for fdata in data])
-    ell, _ = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))
-    del _
-    pl.loglog(hp.alm2cl(alms[0]), label='original', lw=4)
+    cl_in = np.array([hp.alm2cl(alm) for alm in alms])
+
+    # Multipoles for the ILC bins
+    ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
+    if lbins is not None:
+        ell = np.digitize(ell, lbins)
 
     # Make alms real
     alms = np.asarray(alms, order='C')
     alms = alms.view(np.float64)
-    alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN
+    alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN  # Mask imaginary m = 0
     ell = np.stack((ell, ell), axis=-1).reshape(-1)
-    ell[ell < lmin] = 0
 
-    pl.loglog(hp.alm2cl(alms[0].view(np.complex128)), label='before')
     res = ilc(components, instrument, alms, ell)
 
-    pl.loglog(hp.alm2cl(res.s[0].view(np.complex128)), label='after')
+    # Back to real space
     alms = np.asarray(res.s, order='C').view(np.complex128)
+    cl_out = np.array([hp.alm2cl(alm) for alm in alms])
     res.s = np.empty((n_comp,) + data.shape[1:], dtype=data.dtype)
     for c in range(n_comp):
         res.s[c] = hp.alm2map(alms[c], nside)
-    pl.loglog(hp.anafast(res.s[0]), label='final')
-    pl.legend()
+
+    # Extra output
+    res.cl_in = cl_in
+    res.cl_out = cl_out
+    lrange = np.arange(lmax+1)
+    ldigitized = np.digitize(lrange, lbins)
+    res.l_ref = (np.bincount(ldigitized, lrange * 2*lrange+1) 
+                 / np.bincount(ldigitized, 2*lrange+1))
 
     return res
 
@@ -319,6 +364,8 @@ def ilc(components, instrument, data, patch_ids=None):
 
         - Frequencies
 
+        It's only role is to evaluate the `components` at the
+        `instrument.Frequencies`.
     data: ndarray or MaskedArray
         Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
         also absent.
@@ -335,7 +382,7 @@ def ilc(components, instrument, data, patch_ids=None):
 
         - **W**: *(ndarray)* - ILC weights for each component and possibly each
           patch.
-        - **cov**: *(ndarray)* - Empirical covariance for each patch
+        - **freq_cov**: *(ndarray)* - Empirical covariance for each patch
         - **s**: *(ndarray)* - Component maps
 
     Note
@@ -365,23 +412,22 @@ def ilc(components, instrument, data, patch_ids=None):
         if not np.any(mask_pix):
             return
         data_patch = data[mask_pix].reshape(-1, n_freq)
-        np.einsum('ij,ik->jk', data_patch, data_patch, out=res.cov[mask_id])
-        res.W[mask_id] = alg.W(A, np.linalg.inv(res.cov[mask_id]))
+        np.einsum('ij,ik->jk', data_patch, data_patch,
+                  out=res.freq_cov[mask_id])
+        inv_freq_cov = np.linalg.inv(res.freq_cov[mask_id])
+        res.W[mask_id] = alg.W(A, inv_freq_cov)
         res.s[mask_pix] = alg._mv(res.W[mask_id], data_patch)
 
     if patch_ids is None:
-        res.cov = np.full((n_freq, n_freq), hp.UNSEEN)
+        res.freq_cov = np.full((n_freq, n_freq), hp.UNSEEN)
         res.W = np.full((n_comp, n_freq), hp.UNSEEN)
         ilc_patch(mask, np.s_[:])
     else:
-        res.cov = np.full((n_id, n_freq, n_freq), hp.UNSEEN)
+        res.freq_cov = np.full((n_id, n_freq, n_freq), hp.UNSEEN)
         res.W = np.full((n_id, n_comp, n_freq), hp.UNSEEN)
         for i in range(n_id):
-            print(i)
-            #if i == 162:
-                #import ipdb;ipdb.set_trace()
             mask_i = ((patch_ids == i) & mask).T
-            ilc_patch(mask_i, np.s_[1])
+            ilc_patch(mask_i, i)
 
     res.s = res.s.T
 
