@@ -286,8 +286,10 @@ def harmonic_ilc(components, instrument, data, lbins=None):
 
         - Frequencies
 
-        It's only role is to evaluate the `components` at the
-        `instrument.Frequencies`.
+        It may have
+
+        - Beams (FWHM in arcmin) they are deconvolved before ILC
+
     data: ndarray or MaskedArray
         Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
         1, 3 or absent.
@@ -318,6 +320,16 @@ def harmonic_ilc(components, instrument, data, lbins=None):
     n_comp = len(components)
 
     alms = np.array([hp.map2alm(fdata, lmax=lmax) for fdata in data])
+    try:
+        assert np.any(instrument.Beams)
+    except (KeyError, AssertionError):
+        pass
+    else:  # Deconvolve the beam
+        # FIXME correct polarization with polarization beams
+        for fwhm, alm in zip(instrument.Beams, alms):
+            bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax)
+            hp.almxfl(alm, 1.0/bl, inplace=True)
+
     cl_in = np.array([hp.alm2cl(alm) for alm in alms])
 
     # Multipoles for the ILC bins
