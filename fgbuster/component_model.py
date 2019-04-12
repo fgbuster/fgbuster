@@ -38,6 +38,7 @@ __all__ = [
     'Component',
     'AnalyticComponent',
     'CMB',
+    'ThermalSZ',
     'Dust',
     'Synchrotron',
     'ModifiedBlackBody',
@@ -422,9 +423,34 @@ class CMB(AnalyticComponent):
             self.eval = lambda nu: np.ones_like(nu)
 
 
+class ThermalSZ(AnalyticComponent):
+    """ Thermal Sunyaev-Zeldovich
+
+    Parameters
+    ----------
+    units:
+        Output units (K_CMB and K_RJ available)
+    """
+
+    def __init__(self, units='K_CMB'):
+        # Prepare the analytic expression
+        x_nu = '(nu * h_over_k / Tcmb)'
+        analytic_expr = '(x_nu * (exp(x_nu) + 1) / expm1(x_nu) - 4)'
+        analytic_expr = analytic_expr.replace('x_nu', x_nu)
+        if units == 'K_CMB':
+            pass
+        elif units == 'K_RJ':
+            analytic_expr += ' / ' + K_RJ2K_CMB
+        else:
+            raise ValueError("Unsupported units: %s"%units)
+
+        kwargs = dict(Tcmb=Planck15.Tcmb(0).value, h_over_k=H_OVER_K)
+        super(ThermalSZ, self).__init__(analytic_expr, **kwargs)
+
+
 class FreeFree(AnalyticComponent):
     """ Free-free
-    
+
     Anlytic model for bremsstrahlung emission (Draine, 2011)
     Above 1GHz it is essentially equivalent to a power law.
 
