@@ -169,6 +169,7 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">six</span> <span class="k">import</span> <span class="n">string_types</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="k">import</span> <span class="n">OptimizeResult</span>
 <span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">algebra</span> <span class="k">as</span> <span class="n">alg</span>
 <span class="kn">from</span> <span class="nn">.mixingmatrix</span> <span class="k">import</span> <span class="n">MixingMatrix</span>
@@ -177,6 +178,8 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s1">&#39;basic_comp_sep&#39;</span><span class="p">,</span>
     <span class="s1">&#39;weighted_comp_sep&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;harmonic_ilc&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ilc&#39;</span><span class="p">,</span>
 <span class="p">]</span>
 
 
@@ -419,6 +422,181 @@
         <span class="n">res</span><span class="o">.</span><span class="n">Sigma</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">Sigma</span><span class="o">.</span><span class="n">T</span>
 
     <span class="n">res</span><span class="o">.</span><span class="n">mask_good</span> <span class="o">=</span> <span class="o">~</span><span class="n">mask</span>
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+<div class="viewcode-block" id="harmonic_ilc"><a class="viewcode-back" href="../../api/fgbuster.separation_recipies.html#fgbuster.separation_recipies.harmonic_ilc">[docs]</a><span class="k">def</span> <span class="nf">harmonic_ilc</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">lbins</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Internal Linear Combination</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    components: list or tuple of lists</span>
+<span class="sd">        `Components` of the mixing matrix. They must have no free parameter.</span>
+<span class="sd">    instrument: dict or PySM.Instrument</span>
+<span class="sd">        Instrument object used to define the mixing matrix</span>
+<span class="sd">        It is required to have:</span>
+
+<span class="sd">        - Frequencies</span>
+
+<span class="sd">        It may have</span>
+
+<span class="sd">        - Beams (FWHM in arcmin) they are deconvolved before ILC</span>
+
+<span class="sd">    data: ndarray or MaskedArray</span>
+<span class="sd">        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be</span>
+<span class="sd">        1, 3 or absent.</span>
+<span class="sd">        Values equal to hp.UNSEEN or, if MaskedArray, masked values are</span>
+<span class="sd">        neglected during the component separation process.</span>
+<span class="sd">    lbins: array</span>
+<span class="sd">        It stores the edges of the bins that will have the same ILC weights.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    result : dict</span>
+<span class="sd">	It includes</span>
+
+<span class="sd">        - **W**: *(ndarray)* - ILC weights for each component and possibly each</span>
+<span class="sd">          patch.</span>
+<span class="sd">        - **freq_cov**: *(ndarray)* - Empirical covariance for each bin</span>
+<span class="sd">        - **s**: *(ndarray)* - Component maps</span>
+<span class="sd">        - **cl_in**: *(ndarray)* - anafast output of the input</span>
+<span class="sd">        - **cl_out**: *(ndarray)* - anafast output of the output</span>
+
+<span class="sd">    Note</span>
+<span class="sd">    ----</span>
+
+<span class="sd">    * During the component separation, a pixel is masked if at least one of its</span>
+<span class="sd">      frequencies is masked.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nside</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">get_nside</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">lmax</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">nside</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">n_comp</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
+
+    <span class="n">alms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">hp</span><span class="o">.</span><span class="n">map2alm</span><span class="p">(</span><span class="n">fdata</span><span class="p">,</span> <span class="n">lmax</span><span class="o">=</span><span class="n">lmax</span><span class="p">)</span> <span class="k">for</span> <span class="n">fdata</span> <span class="ow">in</span> <span class="n">data</span><span class="p">])</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">instrument</span><span class="o">.</span><span class="n">Beams</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">AssertionError</span><span class="p">):</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># Deconvolve the beam</span>
+        <span class="c1"># FIXME correct polarization with polarization beams</span>
+        <span class="k">for</span> <span class="n">fwhm</span><span class="p">,</span> <span class="n">alm</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">instrument</span><span class="o">.</span><span class="n">Beams</span><span class="p">,</span> <span class="n">alms</span><span class="p">):</span>
+            <span class="n">bl</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">gauss_beam</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">fwhm</span><span class="o">/</span><span class="mf">60.0</span><span class="p">),</span> <span class="n">lmax</span><span class="p">)</span>
+            <span class="n">hp</span><span class="o">.</span><span class="n">almxfl</span><span class="p">(</span><span class="n">alm</span><span class="p">,</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">bl</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">cl_in</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">hp</span><span class="o">.</span><span class="n">alm2cl</span><span class="p">(</span><span class="n">alm</span><span class="p">)</span> <span class="k">for</span> <span class="n">alm</span> <span class="ow">in</span> <span class="n">alms</span><span class="p">])</span>
+
+    <span class="c1"># Multipoles for the ILC bins</span>
+    <span class="n">ell</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">Alm</span><span class="o">.</span><span class="n">getlm</span><span class="p">(</span><span class="n">lmax</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">alms</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">lbins</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">ell</span><span class="p">,</span> <span class="n">lbins</span><span class="p">)</span>
+
+    <span class="c1"># Make alms real</span>
+    <span class="n">alms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">alms</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+    <span class="n">alms</span> <span class="o">=</span> <span class="n">alms</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">alms</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">lmax</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">UNSEEN</span>  <span class="c1"># Mask imaginary m = 0</span>
+    <span class="n">ell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">ell</span><span class="p">,</span> <span class="n">ell</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="n">ilc</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">alms</span><span class="p">,</span> <span class="n">ell</span><span class="p">)</span>
+
+    <span class="c1"># Back to real space</span>
+    <span class="n">alms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">s</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+    <span class="n">cl_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">hp</span><span class="o">.</span><span class="n">alm2cl</span><span class="p">(</span><span class="n">alm</span><span class="p">)</span> <span class="k">for</span> <span class="n">alm</span> <span class="ow">in</span> <span class="n">alms</span><span class="p">])</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_comp</span><span class="p">,)</span> <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_comp</span><span class="p">):</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">alm2map</span><span class="p">(</span><span class="n">alms</span><span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">nside</span><span class="p">)</span>
+
+    <span class="c1"># Extra output</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">cl_in</span> <span class="o">=</span> <span class="n">cl_in</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">cl_out</span> <span class="o">=</span> <span class="n">cl_out</span>
+    <span class="n">lrange</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">lmax</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ldigitized</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">lrange</span><span class="p">,</span> <span class="n">lbins</span><span class="p">)</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">l_ref</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">ldigitized</span><span class="p">,</span> <span class="n">lrange</span> <span class="o">*</span> <span class="mi">2</span><span class="o">*</span><span class="n">lrange</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> 
+                 <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">ldigitized</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">lrange</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+<div class="viewcode-block" id="ilc"><a class="viewcode-back" href="../../api/fgbuster.separation_recipies.html#fgbuster.separation_recipies.ilc">[docs]</a><span class="k">def</span> <span class="nf">ilc</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">patch_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Internal Linear Combination</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    components: list or tuple of lists</span>
+<span class="sd">        `Components` of the mixing matrix. They must have no free parameter.</span>
+<span class="sd">    instrument: PySM.Instrument</span>
+<span class="sd">        Instrument object used to define the mixing matrix</span>
+<span class="sd">        It is required to have:</span>
+
+<span class="sd">        - Frequencies</span>
+
+<span class="sd">        It&#39;s only role is to evaluate the `components` at the</span>
+<span class="sd">        `instrument.Frequencies`.</span>
+<span class="sd">    data: ndarray or MaskedArray</span>
+<span class="sd">        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be</span>
+<span class="sd">        also absent.</span>
+<span class="sd">        Values equal to hp.UNSEEN or, if MaskedArray, masked values are</span>
+<span class="sd">        neglected during the component separation process.</span>
+<span class="sd">    patch_ids: array</span>
+<span class="sd">        It stores the id of the region over which the ILC weights are computed</span>
+<span class="sd">        independently. It must be broadcast-compatible with data.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    result : dict</span>
+<span class="sd">	It includes</span>
+
+<span class="sd">        - **W**: *(ndarray)* - ILC weights for each component and possibly each</span>
+<span class="sd">          patch.</span>
+<span class="sd">        - **freq_cov**: *(ndarray)* - Empirical covariance for each patch</span>
+<span class="sd">        - **s**: *(ndarray)* - Component maps</span>
+
+<span class="sd">    Note</span>
+<span class="sd">    ----</span>
+<span class="sd">    * During the component separation, a pixel is masked if at least one of its</span>
+<span class="sd">      frequencies is masked.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Checks</span>
+    <span class="n">instrument</span> <span class="o">=</span> <span class="n">_force_keys_as_attributes</span><span class="p">(</span><span class="n">instrument</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">broadcast</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">patch_ids</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">instrument</span><span class="o">.</span><span class="n">Frequencies</span><span class="p">)</span> <span class="o">==</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">n_freq</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">n_comp</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
+    <span class="n">n_id</span> <span class="o">=</span> <span class="n">patch_ids</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="c1"># Prepare mask and set to zero all the frequencies in the masked pixels:</span>
+    <span class="c1"># NOTE: mask are good pixels</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="o">~</span><span class="n">_intersect_mask</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="n">A</span> <span class="o">=</span> <span class="n">MixingMatrix</span><span class="p">(</span><span class="o">*</span><span class="n">components</span><span class="p">)</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">instrument</span><span class="o">.</span><span class="n">Frequencies</span><span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">OptimizeResult</span><span class="p">()</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">n_comp</span><span class="p">,),</span> <span class="n">hp</span><span class="o">.</span><span class="n">UNSEEN</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">ilc_patch</span><span class="p">(</span><span class="n">mask_pix</span><span class="p">,</span> <span class="n">mask_id</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask_pix</span><span class="p">):</span>
+            <span class="k">return</span>
+        <span class="n">data_patch</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">mask_pix</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_freq</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;ij,ik-&gt;jk&#39;</span><span class="p">,</span> <span class="n">data_patch</span><span class="p">,</span> <span class="n">data_patch</span><span class="p">,</span>
+                  <span class="n">out</span><span class="o">=</span><span class="n">res</span><span class="o">.</span><span class="n">freq_cov</span><span class="p">[</span><span class="n">mask_id</span><span class="p">])</span>
+        <span class="n">inv_freq_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">freq_cov</span><span class="p">[</span><span class="n">mask_id</span><span class="p">])</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">W</span><span class="p">[</span><span class="n">mask_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">alg</span><span class="o">.</span><span class="n">W</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">inv_freq_cov</span><span class="p">)</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="n">mask_pix</span><span class="p">]</span> <span class="o">=</span> <span class="n">alg</span><span class="o">.</span><span class="n">_mv</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">W</span><span class="p">[</span><span class="n">mask_id</span><span class="p">],</span> <span class="n">data_patch</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">patch_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">freq_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">n_freq</span><span class="p">,</span> <span class="n">n_freq</span><span class="p">),</span> <span class="n">hp</span><span class="o">.</span><span class="n">UNSEEN</span><span class="p">)</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">n_comp</span><span class="p">,</span> <span class="n">n_freq</span><span class="p">),</span> <span class="n">hp</span><span class="o">.</span><span class="n">UNSEEN</span><span class="p">)</span>
+        <span class="n">ilc_patch</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">s_</span><span class="p">[:])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">freq_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">n_id</span><span class="p">,</span> <span class="n">n_freq</span><span class="p">,</span> <span class="n">n_freq</span><span class="p">),</span> <span class="n">hp</span><span class="o">.</span><span class="n">UNSEEN</span><span class="p">)</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">n_id</span><span class="p">,</span> <span class="n">n_comp</span><span class="p">,</span> <span class="n">n_freq</span><span class="p">),</span> <span class="n">hp</span><span class="o">.</span><span class="n">UNSEEN</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_id</span><span class="p">):</span>
+            <span class="n">mask_i</span> <span class="o">=</span> <span class="p">((</span><span class="n">patch_ids</span> <span class="o">==</span> <span class="n">i</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">mask</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">ilc_patch</span><span class="p">(</span><span class="n">mask_i</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+
+    <span class="n">res</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">s</span><span class="o">.</span><span class="n">T</span>
+
     <span class="k">return</span> <span class="n">res</span></div>
 
 

@@ -177,7 +177,6 @@
 <span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">op</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">sympy</span>
-<span class="kn">import</span> <span class="nn">sympy</span>
 <span class="kn">from</span> <span class="nn">sympy.parsing.sympy_parser</span> <span class="k">import</span> <span class="n">parse_expr</span>
 <span class="kn">import</span> <span class="nn">scipy</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">constants</span>
@@ -189,11 +188,11 @@
     <span class="s1">&#39;Component&#39;</span><span class="p">,</span>
     <span class="s1">&#39;AnalyticComponent&#39;</span><span class="p">,</span>
     <span class="s1">&#39;CMB&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;ThermalSZ&#39;</span><span class="p">,</span>
     <span class="s1">&#39;Dust&#39;</span><span class="p">,</span>
     <span class="s1">&#39;Synchrotron&#39;</span><span class="p">,</span>
     <span class="s1">&#39;ModifiedBlackBody&#39;</span><span class="p">,</span>
     <span class="s1">&#39;PowerLaw&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;AME&#39;</span><span class="p">,</span>
     <span class="s1">&#39;FreeFree&#39;</span><span class="p">,</span>
 <span class="p">]</span>
 
@@ -574,9 +573,34 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">eval</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">nu</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">nu</span><span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="ThermalSZ"><a class="viewcode-back" href="../../api/fgbuster.component_model.html#fgbuster.component_model.ThermalSZ">[docs]</a><span class="k">class</span> <span class="nc">ThermalSZ</span><span class="p">(</span><span class="n">AnalyticComponent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Thermal Sunyaev-Zeldovich</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    units:</span>
+<span class="sd">        Output units (K_CMB and K_RJ available)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;K_CMB&#39;</span><span class="p">):</span>
+        <span class="c1"># Prepare the analytic expression</span>
+        <span class="n">x_nu</span> <span class="o">=</span> <span class="s1">&#39;(nu * h_over_k / Tcmb)&#39;</span>
+        <span class="n">analytic_expr</span> <span class="o">=</span> <span class="s1">&#39;(x_nu * (exp(x_nu) + 1) / expm1(x_nu) - 4)&#39;</span>
+        <span class="n">analytic_expr</span> <span class="o">=</span> <span class="n">analytic_expr</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;x_nu&#39;</span><span class="p">,</span> <span class="n">x_nu</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">units</span> <span class="o">==</span> <span class="s1">&#39;K_CMB&#39;</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="n">units</span> <span class="o">==</span> <span class="s1">&#39;K_RJ&#39;</span><span class="p">:</span>
+            <span class="n">analytic_expr</span> <span class="o">+=</span> <span class="s1">&#39; / &#39;</span> <span class="o">+</span> <span class="n">K_RJ2K_CMB</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported units: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="n">units</span><span class="p">)</span>
+
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Tcmb</span><span class="o">=</span><span class="n">Planck15</span><span class="o">.</span><span class="n">Tcmb</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">h_over_k</span><span class="o">=</span><span class="n">H_OVER_K</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ThermalSZ</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">analytic_expr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="FreeFree"><a class="viewcode-back" href="../../api/fgbuster.component_model.html#fgbuster.component_model.FreeFree">[docs]</a><span class="k">class</span> <span class="nc">FreeFree</span><span class="p">(</span><span class="n">AnalyticComponent</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Free-free</span>
-<span class="sd">    </span>
+
 <span class="sd">    Anlytic model for bremsstrahlung emission (Draine, 2011)</span>
 <span class="sd">    Above 1GHz it is essentially equivalent to a power law.</span>
 
@@ -617,45 +641,6 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_default_of_free_symbols</span><span class="p">(</span>
             <span class="n">logEM</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_REF_LOGEM</span><span class="p">,</span> <span class="n">Te</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_REF_TE</span><span class="p">)</span></div>
-
-
-<span class="k">class</span> <span class="nc">AME</span><span class="p">(</span><span class="n">Component</span><span class="p">):</span>
-    <span class="n">_REF_NU_PEAK</span> <span class="o">=</span> <span class="mf">30.</span>
-    <span class="n">_NU_PEAK_0</span> <span class="o">=</span> <span class="mf">30.</span>
-
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nu_0</span><span class="p">,</span> <span class="n">nu_peak</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;K_CMB&#39;</span><span class="p">):</span>
-        <span class="c1"># analytic_expr contains just the analytic part of the emission law</span>
-        <span class="n">analytic_expr</span> <span class="o">=</span> <span class="s1">&#39;nu**(-2)&#39;</span>
-        <span class="k">if</span> <span class="s1">&#39;K_CMB&#39;</span> <span class="ow">in</span> <span class="n">units</span><span class="p">:</span>
-            <span class="n">analytic_expr</span> <span class="o">+=</span> <span class="s1">&#39;*&#39;</span> <span class="o">+</span> <span class="n">K_RJ2K_CMB</span>
-        <span class="k">elif</span> <span class="s1">&#39;K_RJ&#39;</span> <span class="ow">in</span> <span class="n">units</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported units: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="n">units</span><span class="p">)</span>
-
-        <span class="nb">super</span><span class="p">(</span><span class="n">AME</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">analytic_expr</span><span class="p">)</span>
-
-        <span class="n">emissivity_file</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">pysm</span><span class="o">.</span><span class="vm">__file__</span><span class="p">),</span>
-                                  <span class="s1">&#39;template/emissivity.txt&#39;</span><span class="p">)</span>
-        <span class="n">emissivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">emissivity_file</span><span class="p">,</span> <span class="n">unpack</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_interp</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">interpolate</span><span class="o">.</span><span class="n">interp1d</span><span class="p">(</span>
-            <span class="n">emissivity</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">emissivity</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-            <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">assume_sorted</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">nu_peak</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_defaults</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_REF_NU_PEAK</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;nu_peak&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">eval</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">nu</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_interp_eval</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interp_eval</span><span class="p">(</span><span class="n">nu_0</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">diff</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">nu</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="p">[</span>
-                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="n">p</span><span class="o">*</span><span class="mf">1.01</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="n">p</span><span class="o">*</span><span class="mf">0.99</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">p</span><span class="o">*</span><span class="mf">0.02</span><span class="p">)]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">eval</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">nu</span><span class="p">:</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interp_eval</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="n">nu_peak</span><span class="p">)</span>
-                                    <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interp_eval</span><span class="p">(</span><span class="n">nu_0</span><span class="p">,</span> <span class="n">nu_peak</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">diff</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">nu</span><span class="p">:</span> <span class="p">[]</span>
-
-    <span class="k">def</span> <span class="nf">_interp_eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">nu_peak</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lambda</span><span class="p">(</span><span class="n">nu</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interp</span><span class="p">(</span><span class="n">nu</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_NU_PEAK_0</span> <span class="o">/</span> <span class="n">nu_peak</span><span class="p">))</span>
 
 
 <div class="viewcode-block" id="Dust"><a class="viewcode-back" href="../../api/fgbuster.component_model.html#fgbuster.component_model.Dust">[docs]</a><span class="k">class</span> <span class="nc">Dust</span><span class="p">(</span><span class="n">ModifiedBlackBody</span><span class="p">):</span>

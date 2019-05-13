@@ -289,11 +289,14 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">invN</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+            <span class="c1"># Cholesky of the blocks that contain a non-zero diagonal element</span>
             <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">invN</span><span class="p">)</span>
-            <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">invN</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=-</span><span class="mi">2</span><span class="p">),</span>
-                                   <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">))</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
-                <span class="n">L</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">invN</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
+            <span class="n">good_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">invN</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=-</span><span class="mi">2</span><span class="p">),</span>
+                                       <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">invN</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">L</span><span class="p">[</span><span class="n">good_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">invN</span><span class="p">[</span><span class="n">good_idx</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">good_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+                <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">invN</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">L</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">A</span> <span class="o">=</span> <span class="n">_mtm</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">A</span><span class="p">)</span>
@@ -328,7 +331,15 @@
 
 
 <span class="k">def</span> <span class="nf">invAtNA</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_svd</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="n">_svd_sqrt_invN_A</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="n">_svd_sqrt_invN_A</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+        <span class="c1"># invN is ill conditioned -&gt; Cholesky failed</span>
+        <span class="c1"># invAtNA can still be well defined -&gt; compute it brute-force</span>
+        <span class="k">if</span> <span class="n">return_svd</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">_mmm</span><span class="p">(</span><span class="n">_T</span><span class="p">(</span><span class="n">A</span><span class="p">),</span> <span class="n">invN</span><span class="p">,</span> <span class="n">A</span><span class="p">))</span>
+
     <span class="n">res</span> <span class="o">=</span> <span class="n">_invAtNA_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">return_svd</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">res</span><span class="p">,</span> <span class="p">(</span><span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span><span class="p">)</span>
@@ -362,7 +373,15 @@
 
 
 <span class="k">def</span> <span class="nf">W</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_svd</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="n">_svd_sqrt_invN_A</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">u_e_v</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="n">_svd_sqrt_invN_A</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">invN</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+        <span class="c1"># invN is ill conditioned -&gt; Cholesky failed</span>
+        <span class="c1"># W can still be well defined -&gt; compute it brute-force</span>
+        <span class="k">if</span> <span class="n">return_svd</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">return</span> <span class="n">_mmm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">_mmm</span><span class="p">(</span><span class="n">_T</span><span class="p">(</span><span class="n">A</span><span class="p">),</span> <span class="n">invN</span><span class="p">,</span> <span class="n">A</span><span class="p">)),</span> <span class="n">_T</span><span class="p">(</span><span class="n">A</span><span class="p">),</span> <span class="n">invN</span><span class="p">)</span>
+
     <span class="k">if</span> <span class="n">L</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">res</span> <span class="o">=</span> <span class="n">_W_svd</span><span class="p">(</span><span class="n">u_e_v</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>

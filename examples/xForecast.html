@@ -88,6 +88,7 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="component_and_mixingmatrix.html">SED evaluation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="intermediate_separation.html">Intermediate component separation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_ilc.html">Simple ILC example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="simple_separation.html">Simple component separation</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Forecasting</a></li>
 </ul>
@@ -443,6 +444,9 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 <div class="highlight"><pre>
 (&#39;fsky = &#39;, 0.030192057291666668)
 ======= ESTIMATION OF SPECTRAL PARAMETERS =======
+(&#39;res.x = &#39;, array([  1.54,  20.  ,  -3.  ]))
+======= ESTIMATION OF NOISE AFTER COMP SEP =======
+======= COMPUTATION OF CL_FGS =======
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -450,7 +454,7 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 </div>
 <div class="stderr output_area docutils container">
 <div class="highlight"><pre>
-/Users/dpoletti/software/fgbuster/fgbuster/algebra.py:814: RuntimeWarning: invalid value encountered in divide
+/Users/dpoletti/software/fgbuster/fgbuster/algebra.py:840: RuntimeWarning: invalid value encountered in divide
   / np.linalg.norm(As_dB_i, axis=-1))
 </pre></div></div>
 </div>
@@ -459,9 +463,6 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-(&#39;res.x = &#39;, array([  1.54,  20.  ,  -3.  ]))
-======= ESTIMATION OF NOISE AFTER COMP SEP =======
-======= COMPUTATION OF CL_FGS =======
 ======= ESTIMATION OF STAT AND SYS RESIDUALS =======
 ======= OPTIMIZATION OF COSMO LIKELIHOOD =======
 (&#39;bounds on r = &#39;, 0.00098625217948687845, &#39; / &#39;, 0.0010328281259410286)
@@ -469,20 +470,20 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 (&#39;    ===&gt;&gt; fitted r = &#39;, array([ 0.00099999]))
 ======= ESTIMATION OF SIGMA(R) =======
 (&#39;ind_sr_min = &#39;, 1)
-(&#39;sr_grid[ind_sr_min-1] = &#39;, 0.00099999488612585209)
-(&#39;sr_grid[ind_sr_min+1] = &#39;, 0.0017782710739648016)
-(&#39;sr_grid = &#39;, array([  9.99994886e-04,   1.33351490e-03,   1.77827107e-03,
-         2.37136309e-03,   3.16226418e-03,   4.21694796e-03,
-         5.62339168e-03,   7.49891493e-03,   9.99996591e-03,
-         1.33351717e-02,   1.77827411e-02,   2.37136714e-02,
-         3.16226957e-02,   4.21695515e-02,   5.62340127e-02,
-         7.49892771e-02,   9.99998295e-02,   1.33351944e-01,
-         1.77827714e-01,   2.37137118e-01,   3.16227496e-01,
-         4.21696234e-01,   5.62341086e-01,   7.49894050e-01,
+(&#39;sr_grid[ind_sr_min-1] = &#39;, 0.00099999485115925737)
+(&#39;sr_grid[ind_sr_min+1] = &#39;, 0.0017782710169661007)
+(&#39;sr_grid = &#39;, array([  9.99994851e-04,   1.33351485e-03,   1.77827102e-03,
+         2.37136302e-03,   3.16226409e-03,   4.21694785e-03,
+         5.62339154e-03,   7.49891474e-03,   9.99996567e-03,
+         1.33351714e-02,   1.77827407e-02,   2.37136709e-02,
+         3.16226952e-02,   4.21695508e-02,   5.62340119e-02,
+         7.49892761e-02,   9.99998284e-02,   1.33351943e-01,
+         1.77827712e-01,   2.37137116e-01,   3.16227495e-01,
+         4.21696232e-01,   5.62341084e-01,   7.49894048e-01,
          1.00000000e+00]))
 case # 3
-(&#39;bounds on sigma(r) = &#39;, 0.00099999488612585209, &#39; / &#39;, 0.0017782710739648016)
-(&#39;starting point = &#39;, 0.0013335148968460495)
+(&#39;bounds on sigma(r) = &#39;, 0.00099999485115925737, &#39; / &#39;, 0.0017782710169661007)
+(&#39;starting point = &#39;, 0.0013335148521601984)
 (&#39;    ===&gt;&gt; sigma(r) = &#39;, array([ 0.00030872]))
 ======= GRIDDING COSMO LIKELIHOOD =======
 </pre></div></div>
