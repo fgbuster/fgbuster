@@ -28,6 +28,8 @@ from .mixingmatrix import MixingMatrix
 __all__ = [
     'basic_comp_sep',
     'weighted_comp_sep',
+    'ilc',
+    'harmonic_ilc',
 ]
 
 
@@ -117,9 +119,10 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
     # Component separation
     if nside:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
-                                hp.npix2nside(data.shape[-1]))[mask]
+                                hp.npix2nside(data.shape[-1]))
+        patch_ids_cs = patch_ids[mask]
         res = alg.multi_comp_sep(A_ev, data_cs, invN, A_dB_ev, comp_of_param,
-                             patch_ids, x0, **minimize_kwargs)
+                             patch_ids_cs, x0, **minimize_kwargs)
     else:
         res = alg.comp_sep(A_ev, data_cs, invN, A_dB_ev, comp_of_param, x0,
                        **minimize_kwargs)
@@ -273,7 +276,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
-def harmonic_ilc(components, instrument, data, lbins=None):
+def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
     """ Internal Linear Combination
 
     Parameters
@@ -307,30 +310,51 @@ def harmonic_ilc(components, instrument, data, lbins=None):
           patch.
         - **freq_cov**: *(ndarray)* - Empirical covariance for each bin
         - **s**: *(ndarray)* - Component maps
-        - **cl_in**: *(ndarray)* - anafast output of the input
+        - **cl_in**: *(ndarray)* - anafast output of the input 
         - **cl_out**: *(ndarray)* - anafast output of the output
 
     Note
     ----
     * During the component separation, a pixel is masked if at least one of its
       frequencies is masked.
+    * Output spectra are divided by the fsky, computed as 
     """
+    instrument = _force_keys_as_attributes(instrument)
     nside = hp.get_nside(data)
     lmax = 3 * nside - 1
+    lmax = min(lmax, lbins.max())
     n_comp = len(components)
 
-    alms = np.array([hp.map2alm(fdata, lmax=lmax) for fdata in data])
+    print('Computing alms')
+    if weights is not None:
+        assert not np.any(_intersect_mask(data) * weights.astype(bool))
+        fsky = np.mean(weights**2)**2 / np.mean(weights**4)
+        print('fsky', fsky)
+    else:
+        mask = _intersect_mask(data)
+        fsky = flost(mask.sum()) / mask.size
+
+    alms = []
+    for f, fdata in enumerate(data):
+        if weights is None:
+            alms.append(hp.map2alm(fdata, lmax=lmax))
+        else:
+            alms.append(hp.map2alm(hp.ma(fdata)*weights, lmax=lmax))
+        print(f'{f+1} of {len(data)} complete')
+    alms = np.array(alms)
+
     try:
         assert np.any(instrument.Beams)
     except (KeyError, AssertionError):
         pass
     else:  # Deconvolve the beam
+        print('Correcting alms')
         # FIXME correct polarization with polarization beams
         for fwhm, alm in zip(instrument.Beams, alms):
             bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax)
             hp.almxfl(alm, 1.0/bl, inplace=True)
 
-    cl_in = np.array([hp.alm2cl(alm) for alm in alms])
+    cl_in = np.array([hp.alm2cl(alm) for alm in alms]) / fsky
 
     # Multipoles for the ILC bins
     ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
@@ -345,19 +369,21 @@ def harmonic_ilc(components, instrument, data, lbins=None):
 
     res = ilc(components, instrument, alms, ell)
 
+    print('ILC done, back to real')
     # Back to real space
     alms = np.asarray(res.s, order='C').view(np.complex128)
-    cl_out = np.array([hp.alm2cl(alm) for alm in alms])
+    cl_out = np.array([hp.alm2cl(alm) for alm in alms]) / fsky
     res.s = np.empty((n_comp,) + data.shape[1:], dtype=data.dtype)
     for c in range(n_comp):
         res.s[c] = hp.alm2map(alms[c], nside)
+    print('Done')
 
     # Extra output
     res.cl_in = cl_in
     res.cl_out = cl_out
     lrange = np.arange(lmax+1)
     ldigitized = np.digitize(lrange, lbins)
-    res.l_ref = (np.bincount(ldigitized, lrange * 2*lrange+1) 
+    res.l_ref = (np.bincount(ldigitized, lrange * 2*lrange+1)
                  / np.bincount(ldigitized, 2*lrange+1))
 
     return res
