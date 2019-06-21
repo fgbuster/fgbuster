@@ -276,7 +276,8 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
-def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
+def harmonic_ilc(components, instrument, data, lbins=None, weights=None,
+                 inplace=True):
     """ Internal Linear Combination
 
     Parameters
@@ -300,6 +301,8 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
         neglected during the component separation process.
     lbins: array
         It stores the edges of the bins that will have the same ILC weights.
+    weights: array
+        If provided data are multiplied by the weights map before computing alms
 
     Returns
     -------
@@ -310,14 +313,18 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
           patch.
         - **freq_cov**: *(ndarray)* - Empirical covariance for each bin
         - **s**: *(ndarray)* - Component maps
-        - **cl_in**: *(ndarray)* - anafast output of the input 
+        - **cl_in**: *(ndarray)* - anafast output of the input
         - **cl_out**: *(ndarray)* - anafast output of the output
 
     Note
     ----
+
     * During the component separation, a pixel is masked if at least one of its
       frequencies is masked.
-    * Output spectra are divided by the fsky, computed as 
+    * Output spectra are divided by the fsky. fsky is computed with the MASTER
+      formula if `weights` is provided, otherwise it is the fraction of unmasked
+      pixels
+
     """
     instrument = _force_keys_as_attributes(instrument)
     nside = hp.get_nside(data)
@@ -329,10 +336,9 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
     if weights is not None:
         assert not np.any(_intersect_mask(data) * weights.astype(bool))
         fsky = np.mean(weights**2)**2 / np.mean(weights**4)
-        print('fsky', fsky)
     else:
         mask = _intersect_mask(data)
-        fsky = flost(mask.sum()) / mask.size
+        fsky = float(mask.sum()) / mask.size
 
     alms = []
     for f, fdata in enumerate(data):
@@ -340,7 +346,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
             alms.append(hp.map2alm(fdata, lmax=lmax))
         else:
             alms.append(hp.map2alm(hp.ma(fdata)*weights, lmax=lmax))
-        print(f'{f+1} of {len(data)} complete')
+        print('%i of %i complete' % (f+1, len(data)))
     alms = np.array(alms)
 
     try:
@@ -348,7 +354,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
     except (KeyError, AssertionError):
         pass
     else:  # Deconvolve the beam
-        print('Correcting alms')
+        print('Correcting alms for the beams')
         # FIXME correct polarization with polarization beams
         for fwhm, alm in zip(instrument.Beams, alms):
             bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax)
@@ -379,6 +385,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
     print('Done')
 
     # Extra output
+    res.fsky = fsky
     res.cl_in = cl_in
     res.cl_out = cl_out
     lrange = np.arange(lmax+1)
@@ -440,7 +447,8 @@ def ilc(components, instrument, data, patch_ids=None):
     # NOTE: mask are good pixels
     mask = ~_intersect_mask(data)
 
-    A = MixingMatrix(*components).eval(instrument.Frequencies)
+    mm = MixingMatrix(*components)
+    A = mm.eval(instrument.Frequencies)
 
     data = data.T
     res = OptimizeResult()
@@ -468,6 +476,7 @@ def ilc(components, instrument, data, patch_ids=None):
             ilc_patch(mask_i, i)
 
     res.s = res.s.T
+    res.components = mm.components
 
     return res
 
