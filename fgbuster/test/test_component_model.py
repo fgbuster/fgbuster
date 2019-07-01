@@ -140,7 +140,6 @@ class TestAnalyticComponent(unittest.TestCase):
 
         for args in zip(res, ref):
             np.testing.assert_allclose(*args)
-            break
 
 
 if __name__ == '__main__':
