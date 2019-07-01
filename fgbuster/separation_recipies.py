@@ -276,8 +276,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
-def harmonic_ilc(components, instrument, data, lbins=None, weights=None,
-                 inplace=True):
+def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
     """ Internal Linear Combination
 
     Parameters
@@ -331,8 +330,6 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None,
     lmax = 3 * nside - 1
     lmax = min(lmax, lbins.max())
     n_comp = len(components)
-
-    print('Computing alms')
     if weights is not None:
         assert not np.any(_intersect_mask(data) * weights.astype(bool))
         fsky = np.mean(weights**2)**2 / np.mean(weights**4)
@@ -340,6 +337,29 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None,
         mask = _intersect_mask(data)
         fsky = float(mask.sum()) / mask.size
 
+
+    print('Computing alms')
+    try:
+        assert np.any(instrument.Beams)
+    except (KeyError, AssertionError):
+        beams = None
+    else:  # Deconvolve the beam
+        beams = instrument.Beams
+
+    alms = _get_alms(data, beams, lmax, weights)
+
+    print('Computing ILC')
+    res = _harmonic_ilc_alm(components, instrument, alms, lbins, fsky)
+
+    print('Back to real')
+    res.s = np.empty((n_comp,) + data.shape[1:], dtype=data.dtype)
+    for c in range(n_comp):
+        res.s[c] = hp.alm2map(alms[c], nside)
+
+    return res
+
+
+def _get_alms(data, beams=None, lmax=None, weights=None):
     alms = []
     for f, fdata in enumerate(data):
         if weights is None:
@@ -349,20 +369,21 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None,
         print('%i of %i complete' % (f+1, len(data)))
     alms = np.array(alms)
 
-    try:
-        assert np.any(instrument.Beams)
-    except (KeyError, AssertionError):
-        pass
-    else:  # Deconvolve the beam
+    if beams is not None:
         print('Correcting alms for the beams')
         # FIXME correct polarization with polarization beams
-        for fwhm, alm in zip(instrument.Beams, alms):
+        for fwhm, alm in zip(beams, alms):
             bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax)
             hp.almxfl(alm, 1.0/bl, inplace=True)
 
-    cl_in = np.array([hp.alm2cl(alm) for alm in alms]) / fsky
+    return alms
+
+
+def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
+    cl_in = np.array([hp.alm2cl(alm) for alm in alms])
 
     # Multipoles for the ILC bins
+    lmax = hp.Alm.getlmax(alms.shape[-1])
     ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
     if lbins is not None:
         ell = np.digitize(ell, lbins)
@@ -375,19 +396,17 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None,
 
     res = ilc(components, instrument, alms, ell)
 
-    print('ILC done, back to real')
-    # Back to real space
-    alms = np.asarray(res.s, order='C').view(np.complex128)
-    cl_out = np.array([hp.alm2cl(alm) for alm in alms]) / fsky
-    res.s = np.empty((n_comp,) + data.shape[1:], dtype=data.dtype)
-    for c in range(n_comp):
-        res.s[c] = hp.alm2map(alms[c], nside)
-    print('Done')
+    # Craft output
+    res.s = np.asarray(res.s, order='C').view(np.complex128)
+    cl_out = np.array([hp.alm2cl(alm) for alm in res.s])
 
-    # Extra output
-    res.fsky = fsky
     res.cl_in = cl_in
     res.cl_out = cl_out
+    if fsky:
+        res.cl_in /= fsky
+        res.cl_out /= fsky
+
+    res.fsky = fsky
     lrange = np.arange(lmax+1)
     ldigitized = np.digitize(lrange, lbins)
     res.l_ref = (np.bincount(ldigitized, lrange * 2*lrange+1)
