@@ -5,7 +5,7 @@ python:
   - 3.6
 
 install:
-  - pip install . --process-dependency-links
+  - pip install . -r requirements.txt
 
 script:
   - python setup.py test          
