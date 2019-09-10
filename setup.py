@@ -24,6 +24,7 @@ setup(
         'numdifftools',
         'sympy',
         'healpy',
+        'pysm',
     ],
     test_suite = 'fgbuster.test'
 )
