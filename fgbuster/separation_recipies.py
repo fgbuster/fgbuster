@@ -276,7 +276,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
-def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
+def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3):
     """ Internal Linear Combination
 
     Parameters
@@ -326,27 +326,27 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
 
     """
     instrument = _force_keys_as_attributes(instrument)
-    nside = hp.get_nside(data)
+    nside = hp.get_nside(data[0])
     lmax = 3 * nside - 1
     lmax = min(lmax, lbins.max())
     n_comp = len(components)
     if weights is not None:
-        assert not np.any(_intersect_mask(data) * weights.astype(bool))
+        assert not np.any(_intersect_mask(data) * weights.astype(bool)), \
+            "Weights are non-zero where the data is masked"
         fsky = np.mean(weights**2)**2 / np.mean(weights**4)
     else:
         mask = _intersect_mask(data)
         fsky = float(mask.sum()) / mask.size
 
-
     print('Computing alms')
     try:
         assert np.any(instrument.Beams)
-    except (KeyError, AssertionError):
+    except (AttributeError, AssertionError):
         beams = None
     else:  # Deconvolve the beam
         beams = instrument.Beams
 
-    alms = _get_alms(data, beams, lmax, weights)
+    alms = _get_alms(data, beams, lmax, weights, iter=iter)
 
     print('Computing ILC')
     res = _harmonic_ilc_alm(components, instrument, alms, lbins, fsky)
@@ -359,13 +359,13 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
     return res
 
 
-def _get_alms(data, beams=None, lmax=None, weights=None):
+def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
     alms = []
     for f, fdata in enumerate(data):
         if weights is None:
-            alms.append(hp.map2alm(fdata, lmax=lmax))
+            alms.append(hp.map2alm(fdata, lmax=lmax, iter=iter))
         else:
-            alms.append(hp.map2alm(hp.ma(fdata)*weights, lmax=lmax))
+            alms.append(hp.map2alm(hp.ma(fdata)*weights, lmax=lmax, iter=iter))
         print('%i of %i complete' % (f+1, len(data)))
     alms = np.array(alms)
 
@@ -384,19 +384,27 @@ def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
 
     # Multipoles for the ILC bins
     lmax = hp.Alm.getlmax(alms.shape[-1])
-    ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
+    ell = hp.Alm.getlm(lmax)[0]
     if lbins is not None:
         ell = np.digitize(ell, lbins)
+    # NOTE: use lmax for indexing alms, ell.max() is the maximum bin index
 
     # Make alms real
     alms = np.asarray(alms, order='C')
     alms = alms.view(np.float64)
-    alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN  # Mask imaginary m = 0
+    alms[..., np.arange(1, 2*(lmax+1), 2)] = hp.UNSEEN  # Mask imaginary m = 0
     ell = np.stack((ell, ell), axis=-1).reshape(-1)
+    if alms.ndim > 2:  # TEB -> ILC indipendently on each Stokes
+        n_stokes = alms.shape[1]
+        assert n_stokes in [1, 3], "Alms must be either T only or T E B"
+        alms[:, 1:, [0, 2, 2*lmax+2, 2*lmax+3]] = hp.UNSEEN  # EB for ell < 2
+        ell = np.stack([ell] * n_stokes)  # Replicate ell for every Stokes
+        ell += np.arange(n_stokes).reshape(-1, 1) * (ell.max() + 1) # Add offset
 
     res = ilc(components, instrument, alms, ell)
 
     # Craft output
+    res.s[res.s == hp.UNSEEN] = 0.
     res.s = np.asarray(res.s, order='C').view(np.complex128)
     cl_out = np.array([hp.alm2cl(alm) for alm in res.s])
 
@@ -411,6 +419,9 @@ def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
     ldigitized = np.digitize(lrange, lbins)
     res.l_ref = (np.bincount(ldigitized, lrange * 2*lrange+1)
                  / np.bincount(ldigitized, 2*lrange+1))
+    res.freq_cov *= 2  # sqrt(2) missing between complex-real alm conversion
+    if res.s.ndim > 2:
+        res.freq_cov.reshape(n_stokes, -1, *res.freq_cov.shape[1:])
 
     return res
 
@@ -457,10 +468,10 @@ def ilc(components, instrument, data, patch_ids=None):
     # Checks
     instrument = _force_keys_as_attributes(instrument)
     np.broadcast(data, patch_ids)
-    assert len(instrument.Frequencies) == data.shape[0]
     n_freq = data.shape[0]
+    assert len(instrument.Frequencies) == n_freq,\
+        "The number of frequencies does not match the number of maps provided"
     n_comp = len(components)
-    n_id = patch_ids.max() + 1
 
     # Prepare mask and set to zero all the frequencies in the masked pixels:
     # NOTE: mask are good pixels
@@ -476,9 +487,10 @@ def ilc(components, instrument, data, patch_ids=None):
     def ilc_patch(mask_pix, mask_id):
         if not np.any(mask_pix):
             return
-        data_patch = data[mask_pix].reshape(-1, n_freq)
-        np.einsum('ij,ik->jk', data_patch, data_patch,
-                  out=res.freq_cov[mask_id])
+        data_patch = data[mask_pix]  # data_patch is a copy (advanced indexing)
+        res.freq_cov[mask_id] = np.cov(data_patch.reshape(-1, n_freq).T)
+        assert np.linalg.cond(res.freq_cov[mask_id]) < 1e8,\
+            "Empirical covariance matrix cannot be reliably inverted"
         inv_freq_cov = np.linalg.inv(res.freq_cov[mask_id])
         res.W[mask_id] = alg.W(A, inv_freq_cov)
         res.s[mask_pix] = alg._mv(res.W[mask_id], data_patch)
@@ -488,6 +500,7 @@ def ilc(components, instrument, data, patch_ids=None):
         res.W = np.full((n_comp, n_freq), hp.UNSEEN)
         ilc_patch(mask, np.s_[:])
     else:
+        n_id = patch_ids.max() + 1
         res.freq_cov = np.full((n_id, n_freq, n_freq), hp.UNSEEN)
         res.W = np.full((n_id, n_comp, n_freq), hp.UNSEEN)
         for i in range(n_id):

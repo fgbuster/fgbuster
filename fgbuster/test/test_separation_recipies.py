@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from itertools import product
 import unittest
 from parameterized import parameterized
@@ -10,9 +10,11 @@ import pysm
 from fgbuster.algebra import _mv
 from fgbuster.mixingmatrix import MixingMatrix
 from fgbuster.observation_helpers import get_instrument
+from fgbuster.test.test_end2end import suppress_stdout
 import fgbuster.component_model as cm
 from fgbuster.separation_recipies import (basic_comp_sep, weighted_comp_sep,
-                                          _force_keys_as_attributes)
+                                          _force_keys_as_attributes,
+                                          ilc, harmonic_ilc)
 
 
 def _get_n_stokes(tag):
@@ -291,12 +293,214 @@ class TestWeightedCompSep(unittest.TestCase):
                 raise ValueError(stokes)
 
 
+class TestILC(unittest.TestCase):
+
+    def setUp(self):
+        np.random.seed(0)
+        self.NSIDE = 128
+        N_FREQ = 4
+        N_STOKES = 3
+        self.TOL = 1e-1
+        F = 1e-3
+
+        npix = hp.nside2npix(self.NSIDE)
+        self.freqs = np.logspace(1, 2, N_FREQ)
+
+        self.cov = np.arange(N_STOKES * 12).reshape(N_STOKES, 12) // 4 + 1.
+        self.s = np.random.normal(size=N_STOKES*npix).reshape(N_STOKES, npix)
+        self.s_patchy = self.s * hp.ud_grade(self.cov**0.5, self.NSIDE)
+
+        self.components = [cm.PowerLaw(10., 0.1)]
+        sed = self.components[0].eval(self.freqs).reshape(-1, 1, 1)
+        self.a = sed[:, 0]
+        self.exp_freq_cov = self.a * self.a.T + np.eye(N_FREQ) * self.TOL * F
+
+        self.d = sed * self.s
+        noise = np.random.normal(size=self.d.size).reshape(self.d.shape)
+        noise *= (self.TOL * F)**0.5
+
+        self.d += noise
+        self.d_patchy = sed * self.s_patchy + noise
+
+    def test_TQU_no_ids_no_patchy(self):
+        with suppress_stdout():
+            res = ilc(self.components, dict(Frequencies=self.freqs), self.d)
+
+        aac(res.s[0], self.s, atol=self.TOL)
+        aac(res.freq_cov, self.exp_freq_cov, atol=self.TOL)
+
+    def test_TQU_1_id_no_patchy(self):
+        # No patch and one patch has to give the same result
+        patch_ids = np.zeros(hp.nside2npix(self.NSIDE), dtype=int)
+        with suppress_stdout():
+            res = ilc(self.components, dict(Frequencies=self.freqs), self.d)
+            res_patch = ilc(self.components, dict(Frequencies=self.freqs),
+                            self.d, patch_ids)
+        aac(res.s, res_patch.s)
+        aac(res.freq_cov, res_patch.freq_cov[0])
+
+    def test_TQU_ids_no_patchy(self):
+        patch_ids = np.arange(self.cov.size).reshape(-1, 12) // 4
+        patch_ids = hp.ud_grade(patch_ids, self.NSIDE)
+
+        with suppress_stdout():
+            res = ilc(self.components, dict(Frequencies=self.freqs),
+                      self.d, patch_ids)
+
+        aac(res.s[0], self.s, atol=self.TOL)
+
+    def test_TQU_ids_patchy(self):
+        patch_ids = np.arange(self.cov.size).reshape(-1, 12) // 4
+        patch_ids = hp.ud_grade(patch_ids, self.NSIDE)
+
+        with suppress_stdout():
+            res = ilc(self.components, dict(Frequencies=self.freqs),
+                      self.d_patchy, patch_ids)
+        aac(res.s[0], self.s_patchy, atol=self.TOL)
+
+
+    def test_QU_no_ids_no_patchy(self):
+        with suppress_stdout():
+            res = ilc(self.components, dict(Frequencies=self.freqs),
+                      self.d[:, 1:])
+
+        aac(res.s[0], self.s[1:], atol=self.TOL)
+        aac(res.freq_cov, self.exp_freq_cov, atol=self.TOL)
+
+    def test_QU_1_id_no_patchy(self):
+        # No patch and one patch has to give the same result
+        patch_ids = np.zeros(hp.nside2npix(self.NSIDE), dtype=int)
+        with suppress_stdout():
+            res = ilc(self.components, dict(Frequencies=self.freqs),
+                      self.d[:, 1:])
+            res_patch = ilc(self.components, dict(Frequencies=self.freqs),
+                            self.d[:, 1:], patch_ids)
+        aac(res.s, res_patch.s)
+        aac(res.freq_cov, res_patch.freq_cov[0])
+
+    def test_QU_ids_no_patchy(self):
+        patch_ids = np.arange(self.cov[1:].size).reshape(-1, 12) // 4
+        patch_ids = hp.ud_grade(patch_ids, self.NSIDE)
+
+        with suppress_stdout():
+            res = ilc(self.components, dict(Frequencies=self.freqs),
+                      self.d[:, 1:], patch_ids)
+        aac(res.s[0], self.s[1:], atol=self.TOL)
+
+    def test_QU_ids_patchy(self):
+        patch_ids = np.arange(self.cov[1:].size).reshape(-1, 12) // 4
+        patch_ids = hp.ud_grade(patch_ids, self.NSIDE)
+
+        with suppress_stdout():
+            res = ilc(self.components, dict(Frequencies=self.freqs),
+                      self.d_patchy[:, 1:], patch_ids)
+        aac(res.s[0], self.s_patchy[1:], atol=self.TOL)
+
+
+    def test_QU_ids_patchy_mask(self):
+        mask_good = (np.arange(hp.nside2npix(self.NSIDE)) % 13).astype(bool)
+        patch_ids = np.arange(self.cov[1:].size).reshape(-1, 12) // 4
+        patch_ids = hp.ud_grade(patch_ids, self.NSIDE)
+
+        data = self.d_patchy[:, 1:].copy()
+        data[..., ~mask_good] = hp.UNSEEN
+        ref = self.s_patchy[1:].copy()
+        ref[..., ~mask_good] = hp.UNSEEN
+        with suppress_stdout():
+            res = ilc(self.components, dict(Frequencies=self.freqs),
+                      data, patch_ids)
+        aac(res.s[0], ref, atol=self.TOL)
+
+
+class TestHILC(unittest.TestCase):
+    def setUp(self):
+        np.random.seed(0)
+        self.LMAX = 100
+        N_FREQ = 4
+        N_STOKES = 3
+        self.TOL = 1e-1
+        F = 1e-3
+        self.BINS_WIDTH = 10
+
+        self.ids = np.arange((N_STOKES+1) * (self.LMAX+1)) // self.BINS_WIDTH
+        self.cl = (self.ids + 1.).reshape((N_STOKES+1), self.LMAX+1)
+        self.cl = 3 * (self.cl / self.cl[-2].max())**3
+        self.cl = self.cl[..., ::-1]
+        self.cl[-1] *= 0.0  # TE is zero
+        self.cl_noise = np.ones_like(self.cl)
+        self.cl_noise *= self.TOL * F
+        self.cl_noise[-1] *= 0.0
+
+        self.nside = 2**int(np.log2((self.LMAX + 1) / 3))
+        self.npix = hp.nside2npix(self.nside)
+
+        self.s = hp.synfast(self.cl, self.nside, new=True, verbose=False)
+        noise = [hp.synfast(self.cl_noise, self.nside, new=True, verbose=False)
+                 for i in range(N_FREQ)]
+        noise = np.array(noise)
+
+        self.freqs = np.logspace(1, 2, N_FREQ)
+        self.components = [cm.PowerLaw(10., 0.1, units='K_RJ')]
+        sed = self.components[0].eval(self.freqs).reshape(-1, 1, 1)
+        self.a = sed[:, 0]
+        self.d = sed * self.s
+        self.d += noise
+
+    def test_TQU(self):
+        bins = np.arange(1000) * self.BINS_WIDTH
+        with suppress_stdout():
+            res = harmonic_ilc(
+                self.components, dict(Frequencies=self.freqs), self.d,
+                lbins=bins, iter=10)
+
+        lmax = res.cl_out.shape[-1] - 1
+        ell = np.arange(lmax+1)
+        ref = self.cl[:, :lmax+1]
+        norm_diff = (ref - res.cl_out[0, :4]) * np.sqrt((2 * ell + 1) / 2)
+        norm_diff[:3] /= ref[:3]
+
+        aac(norm_diff[..., 2: int(2.5*self.nside)],
+            np.zeros_like(norm_diff[..., 2: int(2.5*self.nside)]),
+            atol=5)
+
+        # This is a very weak test:
+        # recovery is bad at small scales at the poles, especially in Q and U
+        aac(res.s[0], self.s, atol=3*self.TOL*self.s.max())
+
+    def test_TQU_weights(self):
+        theta = hp.pix2ang(self.nside, np.arange(hp.nside2npix(self.nside)))[0]
+        weights = 1.0 / (1.0 + np.exp(- 20.0 * (theta - 0.25 * np.pi)))
+        weights *= 1.0 / (1.0 + np.exp(20.0 * (theta - 0.65 * np.pi)))
+        bins = np.arange(1000) * self.BINS_WIDTH
+
+        with suppress_stdout():
+            res = harmonic_ilc(
+                self.components, dict(Frequencies=self.freqs), self.d,
+                lbins=bins, weights=weights, iter=10)
+
+        lmax = res.cl_out.shape[-1] - 1
+        ell = np.arange(lmax+1)
+        ref = self.cl[:, :lmax+1]
+        norm_diff = (ref - res.cl_out[0, :4]) * np.sqrt((2 * ell + 1) / 2)
+        norm_diff[:3] /= ref[:3]
+        norm_diff = norm_diff[..., :int(2.5*self.nside)]
+        if False:  # Debug plots
+            import pylab as pl
+            pl.plot(norm_diff[..., 2:].T)
+            pl.show()
+            pl.plot(res.cl_in[0].T)
+            pl.plot(self.cl[:4].T, ls='--')
+            pl.show()
+
+
+        aac(norm_diff[..., 2:],
+            np.zeros_like(norm_diff[..., 2:]),
+            atol=5)
+
+        # This is a weak test:
+        # recovery is bad in polarization, mostly at small scales
+        aac(res.s[0], self.s*weights, atol=self.TOL*self.s.max())
+
+
 if __name__ == '__main__':
     unittest.main()
-    '''
-    suite = unittest.TestSuite()
-    for method in dir(TestWeightedCompSep):
-        if 'the failing thest' in method:
-            suite.addTest(TestWeightedCompSep(method))
-    unittest.TextTestRunner().run(suite)
-    '''
