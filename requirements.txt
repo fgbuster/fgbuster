@@ -2,7 +2,7 @@ sphinx
 numdifftools
 travis-sphinx
 healpy
-scipy
+scipy==1.2
 numpy
 sympy>=1.1.1
 six
