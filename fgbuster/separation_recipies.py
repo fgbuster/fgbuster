@@ -18,6 +18,7 @@
 
 """
 from six import string_types
+import logging
 import numpy as np
 from scipy.optimize import OptimizeResult
 import healpy as hp
@@ -338,7 +339,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
         mask = _intersect_mask(data)
         fsky = float(mask.sum()) / mask.size
 
-    print('Computing alms')
+    logging.info('Computing alms')
     try:
         assert np.any(instrument.Beams)
     except (AttributeError, AssertionError):
@@ -348,10 +349,10 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
 
     alms = _get_alms(data, beams, lmax, weights, iter=iter)
 
-    print('Computing ILC')
+    logging.info('Computing ILC')
     res = _harmonic_ilc_alm(components, instrument, alms, lbins, fsky)
 
-    print('Back to real')
+    logging.info('Back to real')
     res.s = np.empty((n_comp,) + data.shape[1:], dtype=data.dtype)
     for c in range(n_comp):
         res.s[c] = hp.alm2map(alms[c], nside)
@@ -366,15 +367,19 @@ def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
             alms.append(hp.map2alm(fdata, lmax=lmax, iter=iter))
         else:
             alms.append(hp.map2alm(hp.ma(fdata)*weights, lmax=lmax, iter=iter))
-        print('%i of %i complete' % (f+1, len(data)))
+        logging.info('%i of %i complete' % (f+1, len(data)))
     alms = np.array(alms)
 
     if beams is not None:
-        print('Correcting alms for the beams')
-        # FIXME correct polarization with polarization beams
+        logging.info('Correcting alms for the beams')
         for fwhm, alm in zip(beams, alms):
-            bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax)
-            hp.almxfl(alm, 1.0/bl, inplace=True)
+            bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax, pol=(alm.ndim==2))
+            if alm.ndim == 1:
+                alm = [alm]
+                bl = [bl]
+
+            for i_alm, i_bl in zip(alm, bl.T):
+                hp.almxfl(i_alm, 1.0/i_bl, inplace=True)
 
     return alms
 
@@ -421,7 +426,8 @@ def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
                  / np.bincount(ldigitized, 2*lrange+1))
     res.freq_cov *= 2  # sqrt(2) missing between complex-real alm conversion
     if res.s.ndim > 2:
-        res.freq_cov.reshape(n_stokes, -1, *res.freq_cov.shape[1:])
+        res.freq_cov = res.freq_cov.reshape(n_stokes, -1, *res.freq_cov.shape[1:])
+        res.W = res.W.reshape(n_stokes, -1, *res.W.shape[1:])
 
     return res
 
@@ -484,16 +490,29 @@ def ilc(components, instrument, data, patch_ids=None):
     res = OptimizeResult()
     res.s = np.full(data.shape[:-1] + (n_comp,), hp.UNSEEN)
 
-    def ilc_patch(mask_pix, mask_id):
-        if not np.any(mask_pix):
+    def ilc_patch(ids_i, i_patch):
+        if not np.any(ids_i):
             return
-        data_patch = data[mask_pix]  # data_patch is a copy (advanced indexing)
-        res.freq_cov[mask_id] = np.cov(data_patch.reshape(-1, n_freq).T)
-        assert np.linalg.cond(res.freq_cov[mask_id]) < 1e8,\
-            "Empirical covariance matrix cannot be reliably inverted"
-        inv_freq_cov = np.linalg.inv(res.freq_cov[mask_id])
-        res.W[mask_id] = alg.W(A, inv_freq_cov)
-        res.s[mask_pix] = alg._mv(res.W[mask_id], data_patch)
+        data_patch = data[ids_i]  # data_patch is a copy (advanced indexing)
+        cov = np.cov(data_patch.reshape(-1, n_freq).T)
+        # Perform the inversion of the correlation instead of the covariance.
+        # This allows to meaninfully invert covariances that have very noisy
+        # channels.
+        cov_regularizer = np.diag(cov)**0.5 * np.diag(cov)[:, np.newaxis]**0.5
+        correlation = cov / cov_regularizer
+        try:
+            inv_freq_cov = np.linalg.inv(correlation) * cov_regularizer
+        except np.linalg.LinAlgError:
+            np.set_printoptions(precision=2)
+            logging.error(
+                f"Empirical covariance matrix cannot be reliably inverted.\n"
+                f"The domain that failed is {i_patch}.\n"
+                f"Covariance matrix diagonal {np.diag(cov)}\n"
+                f"Correlation matrix\n{correlation}")
+            raise
+        res.freq_cov[i_patch] = cov
+        res.W[i_patch] = alg.W(A, inv_freq_cov)
+        res.s[ids_i] = alg._mv(res.W[i_patch], data_patch)
 
     if patch_ids is None:
         res.freq_cov = np.full((n_freq, n_freq), hp.UNSEEN)
@@ -503,9 +522,11 @@ def ilc(components, instrument, data, patch_ids=None):
         n_id = patch_ids.max() + 1
         res.freq_cov = np.full((n_id, n_freq, n_freq), hp.UNSEEN)
         res.W = np.full((n_id, n_comp, n_freq), hp.UNSEEN)
+        patch_ids_bak = patch_ids.copy().T
+        patch_ids_bak[~mask] = -1
         for i in range(n_id):
-            mask_i = ((patch_ids == i) & mask).T
-            ilc_patch(mask_i, i)
+            ids_i = np.where(patch_ids_bak == i)
+            ilc_patch(ids_i, i)
 
     res.s = res.s.T
     res.components = mm.components
