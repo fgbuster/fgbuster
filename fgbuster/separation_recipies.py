@@ -27,6 +27,7 @@ from .mixingmatrix import MixingMatrix
 __all__ = [
     'basic_comp_sep',
     'weighted_comp_sep',
+    'multi_res_comp_sep',
 ]
 
 
@@ -267,6 +268,130 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         res.Sigma[x_mask] = hp.UNSEEN
         res.x = res.x.T
         res.Sigma = res.Sigma.T
+
+    res.mask_good = ~mask
+    return res
+
+
+def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
+    """ Basic component separation
+
+    Parameters
+    ----------
+    components: list
+        List storing the :class:`Component` s of the mixing matrix
+    instrument
+        Instrument object used to define the mixing matrix.
+        It can be any object that has what follows either as a key or as an
+        attribute (e.g. `dict`, `PySM.Instrument`)
+
+        - **Frequencies**
+        - **Sens_I** or **Sens_P** (optional, frequencies are inverse-noise
+          weighted according to these noise levels)
+
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape *(n_freq, ..., n_pix).*
+        *...* can be
+
+        - absent or 1: temperature maps
+        - 2: polarization maps
+        - 3: temperature and polarization maps (see note)
+
+        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
+        neglected during the component separation process.
+    nsides: seq
+        Specify the ``nside`` for each free parameter of the components
+
+    Returns
+    -------
+    result: dict
+	It includes
+
+	- **param**: *(list)* - Names of the parameters fitted
+	- **x**: *(seq)* - ``x[i]`` is the best-fit (map of) the *i*-th
+          parameter. The map has ``nside = nsides[i]``
+        - **Sigma**: *(ndarray)* - ``Sigma[i, j]`` is the (map of) the
+          semi-analytic covariance between the *i*-th and the *j*-th parameter.
+          It is meaningful only in the high signal-to-noise regime and when the
+          *cov* is the true covariance of the data
+        - **s**: *(ndarray)* - Component amplitude maps
+        - **mask_good**: *(ndarray)* - mask of the entries actually used in the
+          component separation
+
+    Note
+    ----
+
+    * During the component separation, a pixel is masked if at least one of
+      its frequencies is masked.
+    * If you provide temperature and polarization maps, they will constrain the
+      **same** set of parameters. In particular, separation is **not** done
+      independently for temperature and polarization. If you want an
+      independent fitting for temperature and polarization, please launch
+
+      >>> res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)
+      >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
+
+    """
+    instrument = _force_keys_as_attributes(instrument)
+    # Prepare mask and set to zero all the frequencies in the masked pixels:
+    # NOTE: mask are bad pixels
+    mask = _intersect_mask(data)
+    data = hp.pixelfunc.ma_to_array(data).copy()
+    data[..., mask] = 0  # Thus no contribution to the spectral likelihood
+
+    try:
+        data_nside = hp.get_nside(data[0])
+    except TypeError:
+        data_nside = 0
+
+    invN = _get_prewhiten_factors(instrument, data.shape, data_nside)
+    invN = np.diag(invN**2)
+
+    def array2maps(x):
+        i = 0
+        maps = []
+        for nside in nsides:
+            npix = hp.nside2npix(nside)
+            maps.append(x[i:i+npix])
+            i += npix
+        return maps
+
+    unpack = lambda x: [hp.ud_grade(m, data_nside) for m in array2maps(x)]
+
+    A = MixingMatrix(*components)
+    assert len(A.defaults) == len(nsides), (
+        "%i free parameters but %i nsides" % (len(A.defaults), len(nsides)))
+    A_ev = A.evaluator(instrument.Frequencies, unpack)
+    A_dB_ev = A.diff_evaluator(instrument.Frequencies, unpack)
+    x0 = [x for c in components for x in c.defaults]
+    x0 = [np.full(hp.nside2npix(nside), px0) for nside, px0 in zip(nsides, x0)]
+    x0 = np.array(sum(x0, []))
+
+    if not len(x0):
+        A_ev = A_ev()
+
+    # Component separation
+    res = alg.comp_sep(A_ev, data, invN, A_dB_ev, A.comp_of_dB, x0,
+                       **minimize_kwargs)
+
+    # Craft output
+    # 1) Apply the mask, if any
+    # 2) Restore the ordering of the input data (pixel dimension last)
+    res.params = A.params
+    res.s = res.s.T
+    res.s[..., mask] = hp.UNSEEN
+    res.chi = res.chi.T
+    res.chi[..., mask] = hp.UNSEEN
+    if 'chi_dB' in res:
+        for i in range(len(res.chi_dB)):
+            res.chi_dB[i] = res.chi_dB[i].T
+            res.chi_dB[i][..., mask] = hp.UNSEEN
+    if len(x0):
+        x_masks = [hp.ud_grade(mask.astype(float), nside) == 1.
+                   for nside in nsides]
+        res.x = array2maps(res.x)
+        for x, x_mask in zip(res.x, x_masks):
+            x[x_mask] = hp.UNSEEN
 
     res.mask_good = ~mask
     return res

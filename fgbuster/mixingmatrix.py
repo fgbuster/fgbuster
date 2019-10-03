@@ -76,11 +76,11 @@ class MixingMatrix(tuple):
             res[..., i_c] += c.eval(nu, *params[i_fp: i_fp + c.n_param])
         return res
 
-    def evaluator(self, nu, shape=(-1,)):
+    def evaluator(self, nu, unpack=(lambda x: x.reshape((-1,)))):
         if self.n_param:
             def f(param_array):
                 param_array = np.array(param_array)
-                return self.eval(nu, *[p for p in param_array.reshape(shape)])
+                return self.eval(nu, *[p for p in unpack(param_array)])
         else:
             A = self.eval(nu)
             def f():
