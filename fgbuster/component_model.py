@@ -432,17 +432,22 @@ class ThermalSZ(AnalyticComponent):
         Output units (K_CMB and K_RJ available)
     """
 
-    def __init__(self, units='K_CMB'):
+    def __init__(self, units='uK_CMB'):
         # Prepare the analytic expression
         x_nu = '(nu * h_over_k / Tcmb)'
-        analytic_expr = '(x_nu * (exp(x_nu) + 1) / expm1(x_nu) - 4)'
+        analytic_expr = 'Tcmb * (x_nu * (exp(x_nu) + 1) / expm1(x_nu) - 4)'
         analytic_expr = analytic_expr.replace('x_nu', x_nu)
-        if units == 'K_CMB':
+        if 'K_CMB' in units:
             pass
-        elif units == 'K_RJ':
+        elif 'K_RJ' in units:
             analytic_expr += ' / ' + K_RJ2K_CMB
         else:
             raise ValueError("Unsupported units: %s"%units)
+        if units[0] == 'u':
+            analytic_expr = '1e6 * ' + analytic_expr
+        elif units[0] == 'm':
+            analytic_expr = '1e3 * ' + analytic_expr
+
 
         kwargs = dict(Tcmb=Planck15.Tcmb(0).value, h_over_k=H_OVER_K)
         super(ThermalSZ, self).__init__(analytic_expr, **kwargs)
