@@ -422,6 +422,8 @@ def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
     res.freq_cov *= 2  # sqrt(2) missing between complex-real alm conversion
     if res.s.ndim > 2:
         res.freq_cov.reshape(n_stokes, -1, *res.freq_cov.shape[1:])
+        res.W.reshape(n_stokes, -1, *res.W.shape[1:])
+
 
     return res
 
