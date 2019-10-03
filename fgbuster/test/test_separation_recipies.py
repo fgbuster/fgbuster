@@ -290,6 +290,59 @@ class TestWeightedCompSep(unittest.TestCase):
             else:
                 raise ValueError(stokes)
 
+class TestMultiResCompSep(unittest.TestCase):
+    stokess = 'IPN'
+    nsides = [4]
+    nsidepars = [0, 1, 2, 4]
+    componentss = ['powerlaw_curvedpowerlaw', 'curvedpowerlaw']
+    masks = ['nomask', 'maskgal30']
+    instruments = ['dict_homo', 'pysm']
+
+    tags = []
+    tags += [_make_tag(*args) for args in product(stokess[:], nsides[:1],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:], componentss[:1],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:1], componentss[:],
+                                                  masks[:1], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:], instruments[:1])]
+    tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
+                                                  nsidepars[:1], componentss[:1],
+                                                  masks[:1], instruments[:])]
+
+    @parameterized.expand(tags)
+    def test(self, tag):
+        _, sky_tag, comp_sep_tag = tag.split('___')
+
+        data, s, x = _get_sky(sky_tag)
+
+        components, instrument, nsidepar = comp_sep_tag.split('__')
+        components = _get_component(components)
+        for c in components:
+            c.defaults = [1.1 * d for d in c.defaults]
+
+        instrument = _get_instrument(instrument)
+        nsidepar = _get_nside(nsidepar)
+
+        # basic comp sep call
+        res_multipatch = basic_comp_sep(components, instrument, data, nsidepar)
+
+        # multi res comp sep call, with equal resolutions for each spectral index
+        res_multires = multi_res_comp_sep(components, instrument, data, nsides=[nsidepar]*len(c.defaults)) 
+
+        aac(res_multipatch.s, s, rtol=1e-4)
+        aac(res_multires.s, s, rtol=1e-4)
+        aac(res_multipatch.s, res_multires.s, rtol=1e-4)
+
+
 
 if __name__ == '__main__':
     unittest.main()
