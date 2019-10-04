@@ -356,7 +356,8 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
             i += npix
         return maps
 
-    unpack = lambda x: [hp.ud_grade(m, data_nside) for m in array2maps(x)]
+    unpack = lambda x: [hp.ud_grade(m, data_nside).reshape(-1, 1, 1)
+                        for m in array2maps(x)]
 
     A = MixingMatrix(*components)
     assert A.n_param == len(nsides), (
@@ -371,7 +372,7 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
         A_ev = A_ev()
 
     # Component separation
-    res = alg.comp_sep(A_ev, data, invN, None, None, x0,
+    res = alg.comp_sep(A_ev, data.T, invN, None, None, x0,
                        **minimize_kwargs)
 
     # Craft output
