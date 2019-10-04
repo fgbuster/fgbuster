@@ -359,19 +359,19 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     unpack = lambda x: [hp.ud_grade(m, data_nside) for m in array2maps(x)]
 
     A = MixingMatrix(*components)
-    assert len(A.defaults) == len(nsides), (
+    assert A.n_param == len(nsides), (
         "%i free parameters but %i nsides" % (len(A.defaults), len(nsides)))
     A_ev = A.evaluator(instrument.Frequencies, unpack)
     A_dB_ev = A.diff_evaluator(instrument.Frequencies, unpack)
     x0 = [x for c in components for x in c.defaults]
     x0 = [np.full(hp.nside2npix(nside), px0) for nside, px0 in zip(nsides, x0)]
-    x0 = np.array(sum(x0, []))
+    x0 = np.concatenate(x0)
 
     if not len(x0):
         A_ev = A_ev()
 
     # Component separation
-    res = alg.comp_sep(A_ev, data, invN, A_dB_ev, A.comp_of_dB, x0,
+    res = alg.comp_sep(A_ev, data, invN, None, None, x0,
                        **minimize_kwargs)
 
     # Craft output
