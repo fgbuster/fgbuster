@@ -31,7 +31,6 @@ __all__ = [
 ]
 
 
-
 def weighted_comp_sep(components, instrument, data, cov, nside=0,
                       **minimize_kwargs):
     """ Weighted component separation
@@ -342,7 +341,7 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     try:
         data_nside = hp.get_nside(data[0])
     except TypeError:
-        data_nside = 0
+        raise ValueError("data has to be a stack of healpix maps")
 
     invN = _get_prewhiten_factors(instrument, data.shape, data_nside)
     invN = np.diag(invN**2)
@@ -356,8 +355,19 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
             i += npix
         return maps
 
-    unpack = lambda x: [hp.ud_grade(m, data_nside).reshape(-1, 1, 1)
+    max_nside = max(nsides)
+    if max_nside == 0:
+        return basic_comp_sep(components, instrument, data, **minimize_kwargs)
+
+    unpack = lambda x: [_my_ud_grade(m, max_nside).reshape(-1, 1, 1, 1)
                         for m in array2maps(x)]
+
+    # Traspose the the data and put the pixels that share the same spectral
+    # indices next to each other
+    n_pix_max_nside = hp.nside2npix(max_nside)
+    pix_ids = np.argsort(hp.ud_grade(np.arange(n_pix_max_nside), data_nside))
+    data = data.T[pix_ids].reshape(
+        n_pix_max_nside, (data_nside / max_nside)**2, *data.T.shape[1:])
 
     A = MixingMatrix(*components)
     assert A.n_param == len(nsides), (
@@ -372,21 +382,25 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
         A_ev = A_ev()
 
     # Component separation
-    res = alg.comp_sep(A_ev, data.T, invN, None, None, x0,
+    res = alg.comp_sep(A_ev, data, invN, None, None, x0,
                        **minimize_kwargs)
 
     # Craft output
     # 1) Apply the mask, if any
     # 2) Restore the ordering of the input data (pixel dimension last)
+    def restore_index_mask_transpose(x):
+        x = x.reshape(-1, *x.shape[2:])
+        x[pix_ids] = x
+        x[mask] = hp.UNSEEN
+        return x.T
+
     res.params = A.params
-    res.s = res.s.T
-    res.s[..., mask] = hp.UNSEEN
-    res.chi = res.chi.T
-    res.chi[..., mask] = hp.UNSEEN
+    res.s = restore_index_mask_transpose(res.s)
+    res.chi = restore_index_mask_transpose(res.chi)
     if 'chi_dB' in res:
         for i in range(len(res.chi_dB)):
-            res.chi_dB[i] = res.chi_dB[i].T
-            res.chi_dB[i][..., mask] = hp.UNSEEN
+            res.chi_dB[i] = restore_index_mask_transpose(res.chi_dB[i])
+
     if len(x0):
         x_masks = [hp.ud_grade(mask.astype(float), nside) == 1.
                    for nside in nsides]
@@ -459,6 +473,33 @@ def _A_evaluator(components, instrument, prewhiten_factors=None):
         pw_A_dB_ev = None
 
     return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
+
+
+def _my_ud_grade(map_in, nside_out, **kwargs):
+    # As healpy.ud_grade, but it accepts map_in of nside = 0 and nside_out = 0,
+    # which in this module means a single float or lenght-1 array
+    if nside_out == 0:
+        try:
+            # Both input and output hace nside = 0
+            return np.array([float(map_in)])
+        except TypeError:
+            # This is really clunky...
+            # 1) Downgrade to nside 1
+            # 2) put the 12 values in the pixels of a nside 4 map that belong to
+            #    the same nside 1 pixels
+            # 3) Downgrade to nside 1
+            # 4) pick the value of the pixel in which the 12 values were placed
+            map_in = hp.ud_grade(map_in, 1, **kwargs)
+            out = np.full(hp.nside2npix(4), hp.UNSEEN)
+            ids = hp.ud_grade(np.arange(12), 4, **kwargs)
+            out[np.where(ids == 0)[0][:12]] = map_in
+            kwargs['pess'] = False
+            res = hp.ud_grade(out, 1, **kwargs)
+            return np.array([res])
+    try:
+        return hp.ud_grade(np.full(12, float(map_in)), nside_out, **kwargs)
+    except TypeError:
+        return hp.ud_grade(map_in, nside_out, **kwargs)
 
 
 def _intersect_mask(maps):
