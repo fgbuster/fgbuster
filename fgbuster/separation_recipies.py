@@ -402,7 +402,7 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
             res.chi_dB[i] = restore_index_mask_transpose(res.chi_dB[i])
 
     if len(x0):
-        x_masks = [hp.ud_grade(mask.astype(float), nside) == 1.
+        x_masks = [_my_ud_grade(mask.astype(float), nside) == 1.
                    for nside in nsides]
         res.x = array2maps(res.x)
         for x, x_mask in zip(res.x, x_masks):
