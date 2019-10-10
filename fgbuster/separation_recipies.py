@@ -350,7 +350,7 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
         i = 0
         maps = []
         for nside in nsides:
-            npix = hp.nside2npix(nside)
+            npix = _my_nside2npix(nside)
             maps.append(x[i:i+npix])
             i += npix
         return maps
@@ -375,7 +375,7 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     A_ev = A.evaluator(instrument.Frequencies, unpack)
     A_dB_ev = A.diff_evaluator(instrument.Frequencies, unpack)
     x0 = [x for c in components for x in c.defaults]
-    x0 = [np.full(hp.nside2npix(nside), px0) for nside, px0 in zip(nsides, x0)]
+    x0 = [np.full(_my_nside2npix(nside), px0) for nside, px0 in zip(nsides, x0)]
     x0 = np.concatenate(x0)
 
     if not len(x0):
@@ -473,6 +473,13 @@ def _A_evaluator(components, instrument, prewhiten_factors=None):
         pw_A_dB_ev = None
 
     return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
+
+
+def _my_nside2npix(nside):
+    if nside:
+        return hp.nside2npix(nside)
+    else:
+        return 1
 
 
 def _my_ud_grade(map_in, nside_out, **kwargs):
