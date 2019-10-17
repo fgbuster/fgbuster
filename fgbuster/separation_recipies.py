@@ -498,10 +498,11 @@ def ilc(components, instrument, data, patch_ids=None):
         # Perform the inversion of the correlation instead of the covariance.
         # This allows to meaninfully invert covariances that have very noisy
         # channels.
+        assert cov.ndim == 2
         cov_regularizer = np.diag(cov)**0.5 * np.diag(cov)[:, np.newaxis]**0.5
         correlation = cov / cov_regularizer
         try:
-            inv_freq_cov = np.linalg.inv(correlation) * cov_regularizer
+            inv_freq_cov = np.linalg.inv(correlation) / cov_regularizer
         except np.linalg.LinAlgError:
             np.set_printoptions(precision=2)
             logging.error(
