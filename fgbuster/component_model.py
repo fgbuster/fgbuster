@@ -236,13 +236,94 @@ class Component(object):
         raise NotImplementedError(message)
 
 
+
+
+#Added by Clement Leloup
+class SemiBlind(Component):
+    """ Undefined component for semi-blind method
+    
+    Class that builds undefined components with some arbitrary mixing matrix
+    elements for use in semi-blind component separation.
+
+    Parameters
+    ----------
+    A_blind: ndarray
+        Column of the mixing matrix for blind component
+    n_comp: int
+        Total number of components
+    pos: int
+        Position of the component in the mixing matrix
+
+    """
+
+    def __init__(self, A_blind, n_comp, pos):
+        assert n_comp >= pos, "Too many blind components !"
+        self._n_comp = n_comp
+        self._pos = pos
+        self._params = ['blind_' + str(i) + str(pos) for i in np.arange(len(A_blind) - self._n_comp)] #name of parameters
+        assert np.all(A_blind[:self._n_comp] == np.eye(self._n_comp)[:,self._pos-1]), ('A_blind={} should start as {}'.format(A_blind, np.eye(self._n_comp)[:,self._pos-1])) #check that blind components have right format
+        self._defaults = A_blind[n_comp:]
+
+    def eval(self, nu, *params):
+        """ Evaluate the SED
+
+        Parameters
+        ----------
+        nu: array
+            Frequencies at which the SED is evaluated
+        *params: array
+            Value of the free parameters. Should be of size len(nu)-n_comp.
+
+        Returns
+        -------
+        result: array
+            SED. The shape is always ``nu.shape``.
+
+        """
+        assert len(params) == self.n_param and len(nu) == len(params) + self._n_comp
+        #print(nu, np.concatenate((np.eye(self._n_comp)[:,self._pos-1], params)))
+        return np.concatenate((np.eye(self._n_comp)[:,self._pos-1], params))
+
+    def diff(self, nu, *params):
+        """ Evaluate the derivative of the SED
+
+        Parameters
+        ----------
+        nu: array
+            Frequencies at which the SED is evaluated
+        *params: array
+            Value of the free parameters. Should be of size len(nu)-n_comp.
+
+        Returns
+        -------
+        result: list
+            It contains the derivatives with respect to each parameter. See
+            :meth:`eval` for more details about the format of the
+            evaluated derivative
+        """
+        assert len(params) == self.n_param and len(nu) == len(params) + self._n_comp
+        if not params:
+            return []
+
+        return [np.eye(len(nu))[:,i_p+self._n_comp] for i_p in range(self.n_param)]
+
+    def diff_diff(self, nu, *params):
+        assert len(params) == self.n_param and len(nu) == len(params) + self._n_comp
+        if not params:
+            return [[]]
+
+        return np.zeros((len(nu), len(nu)))
+
+
+
+
+    
 class AnalyticComponent(Component):
     """ Component defined analytically
 
     Class that allows analytic definition and automatic (symbolic)
     differentiation of it using `sympy`_.
-
-
+        
     Parameters
     ----------
     analytic_expr: str
