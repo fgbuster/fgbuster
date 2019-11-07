@@ -23,7 +23,9 @@ from scipy.optimize import OptimizeResult
 import healpy as hp
 from . import algebra as alg
 from .mixingmatrix import MixingMatrix
+import sys
 
+np.set_printoptions(threshold=sys.maxsize)
 
 __all__ = [
     'basic_comp_sep',
@@ -220,13 +222,14 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
       >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
 
     """
+
     instrument = _force_keys_as_attributes(instrument)
     # Prepare mask and set to zero all the frequencies in the masked pixels:
     # NOTE: mask are bad pixels
     mask = _intersect_mask(data)
     data = hp.pixelfunc.ma_to_array(data).copy()
     data[..., mask] = 0  # Thus no contribution to the spectral likelihood
-
+    
     try:
         data_nside = hp.get_nside(data[0])
     except TypeError:
@@ -273,6 +276,99 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         res.Sigma = res.Sigma.T
 
     res.mask_good = ~mask
+    return res
+
+
+#Added by Clement Leloup
+def harmonic_semiblind(components, instrument, templates, data, nside, invN=None):
+    """ Semi-blind method
+
+    Parameters
+    ----------
+    components: list or tuple of lists
+        `Components` of the mixing matrix. They must have no free parameter.
+    instrument: dict or PySM.Instrument
+        Instrument object used to define the mixing matrix
+        It is required to have:
+
+        - Frequencies
+
+        It may have
+
+        - Beams (FWHM in arcmin) they are deconvolved before ILC
+
+    templates: str
+        Name of templates file.
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
+        1, 3 or absent.
+        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        neglected during the component separation process.
+    invN: ndarray
+        Inverse noise matrix
+
+    Returns
+    -------
+    result : dict
+	It includes
+
+        - **s**: *(ndarray)* - Component maps
+
+    Note
+    ----
+
+    * During the component separation, a pixel is masked if at least one of its
+      frequencies is masked.
+    * Works just with polarization at the moment
+
+    """
+    instrument = _force_keys_as_attributes(instrument)
+    lmax = 3 * nside - 1
+    n_comp = len(components)
+    #mask = _intersect_mask(data)
+    #fsky = float(mask.sum()) / mask.size
+
+    print('Computing Cl')
+    try:
+        assert np.any(instrument.Beams)
+    except (KeyError, AssertionError):
+        beams = None
+    else:  # Deconvolve the beam
+        beams = instrument.Beams
+
+    alms = _get_alms(data, beams, lmax)[:,1:,:]
+    alms = np.swapaxes(alms, 0, 2)
+    #print('alms : ', alms.shape)
+    #print('lm : ', hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0])
+    cl_out = np.array([hp.alm2cl(alm) for alm in alms])[:,1:,:] #Take only polarization
+    #print('cl_out : ', cl_out.shape)
+    cl_out = np.swapaxes(cl_out, 0, 2)
+
+    print('Computing prior')
+    cl_in = hp.read_cl(templates)[1:3,:lmax+1] #Take only polarization
+
+    #Format the prior shape
+    with np.errstate(divide='ignore'):
+        EE_in = np.array([np.diag(np.append(1/cl, np.zeros(n_comp-1))) for cl in cl_in[0,:]]) #Should modify here in case several non-blind components
+        BB_in = np.array([np.diag(np.append(1/cl, np.zeros(n_comp-1))) for cl in cl_in[1,:]])
+        cl_in = np.stack((EE_in, BB_in), axis=1) #Probably a better way to do that
+    cl_in[~np.isfinite(cl_in)] = 0.
+    #print('cl_in : ', cl_in[:,0,,0])
+    prior = np.array([cl_in[ell,:,:] for ell in hp.Alm.getlm(lmax, np.arange(alms.shape[0]))[0]])
+    #print('prior : ', prior.shape)
+
+
+    print('Computing mixing matrix')
+    A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components, instrument)
+    if not len(x0):
+        A_ev = A_ev()
+        
+    print('Separating components')
+    res = _semiblind_comp_sep(A_ev, cl_out, invN, prior, A_dB_ev, comp_of_param)
+    
+    #Craft output
+    #Empty at the moment
+    
     return res
 
 
