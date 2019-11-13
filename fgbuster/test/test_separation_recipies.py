@@ -12,6 +12,7 @@ from fgbuster.mixingmatrix import MixingMatrix
 from fgbuster.observation_helpers import get_instrument
 import fgbuster.component_model as cm
 from fgbuster.separation_recipies import (basic_comp_sep, weighted_comp_sep,
+                                          multi_res_comp_sep,
                                           _force_keys_as_attributes)
 
 
@@ -336,7 +337,8 @@ class TestMultiResCompSep(unittest.TestCase):
         res_multipatch = basic_comp_sep(components, instrument, data, nsidepar)
 
         # multi res comp sep call, with equal resolutions for each spectral index
-        res_multires = multi_res_comp_sep(components, instrument, data, nsides=[nsidepar]*len(c.defaults)) 
+        res_multires = multi_res_comp_sep(components, instrument, data,
+                                          nsides=[nsidepar]*len(x))
 
         aac(res_multipatch.s, s, rtol=1e-4)
         aac(res_multires.s, s, rtol=1e-4)
@@ -345,11 +347,11 @@ class TestMultiResCompSep(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    '''
     unittest.main()
     '''
     suite = unittest.TestSuite()
-    for method in dir(TestWeightedCompSep):
+    for method in dir(TestMultiResCompSep):
         if 'the failing thest' in method:
             suite.addTest(TestWeightedCompSep(method))
     unittest.TextTestRunner().run(suite)
-    '''
