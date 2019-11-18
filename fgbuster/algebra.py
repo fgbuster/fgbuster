@@ -156,7 +156,46 @@ def _svd_sqrt_invN_A(A, invN=None, L=None):
 
 
 def _logL_svd(u_e_v, d):
+
+    u1d = _mtv(u_e_v[0], d)
+    print('u1d : ', u1d.shape)
+    like = np.ravel(u1d, order='K')
+    test = np.dot(like, like)
+    print('test : ', 0.5*test)
+    print('likelihood : ', 0.5 * np.linalg.norm(_mtv(u_e_v[0], d))**2)
+    
     return 0.5 * np.linalg.norm(_mtv(u_e_v[0], d))**2
+
+
+#Added by Clement Leloup
+def _semiblind_logL_svd(u_e_v, invS, d):
+    print("_semiblind_logL_svd")
+    u, e, v = u_e_v #u is U_1, e is a vector of singular values, v is V^T
+    utd = _mtv(u, d) #(U_1)^T * d (cf my notes)
+#    print('v : ', v)
+#    print('e : ', e)
+    v = _T(v)/e[...,np.newaxis,:] #V' (cf my notes)
+#    print('v_prime :', v)
+
+    vtsv_prime = _mtmm(v, invS, v) #(V')^T S^-1 V'
+
+    try:
+        m = _mm(vtsv_prime, _inv(vtsv_prime + np.eye(invS.shape[-1])[np.newaxis, np.newaxis, ...]))
+    except np.linalg.linalg.LinAlgError:
+        print('Inversion of semi-blind correlation matrix failed !')
+
+#    print('m : ', m)
+    m = np.eye(m.shape[-1])[np.newaxis, np.newaxis, ...] - m
+
+    mutd = np.ravel(_mv(m, utd))
+    utd = np.ravel(utd)
+
+    like = np.dot(utd, mutd)
+    print('utd : ', utd.shape)
+    print('m : ', m.shape)
+    print('likelihood : ', 0.5*like)
+    
+    return 0.5 * like
 
 
 def logL(A, d, invN=None, return_svd=False):
@@ -178,6 +217,17 @@ def logL(A, d, invN=None, return_svd=False):
 def _invAtNA_svd(u_e_v):
     _, e, v = u_e_v
     return _mtm(v, v / e[..., np.newaxis]**2)
+
+
+#Added by Clement Leloup
+def _invAtNAS_svd(u_e_v, invS=None):
+    print("_invAtNAS")
+    if invS is None: #so that parametric case is included
+        
+        return _invAtNA_svd(u_e_v)
+    _, e, v = u_e_v
+
+    return _inv(_mm(v, _T(v) * e[..., np.newaxis]**2) + invS)
 
 
 def invAtNA(A, invN=None, return_svd=False):
@@ -207,11 +257,37 @@ def _Wd_svd(u_e_v, d):
     return _mtv(v, utd / e)
 
 
+#Added by Clement Leloup
+def _semiblind_Wd_svd(u_e_v, invS, d): #add wiener filtering here ?
+    print("_semiblind_Wd_svd")
+    u, e, v = u_e_v
+    utd = _mtv(u, d)
+    v_prime = _T(v)/e[..., np.newaxis, :]
+    vtsv = _mtmm(v_prime, invS, v_prime) #(V')^T S^-1 V' (cf my notes)
+    m = _mm(vtsv, _inv(vtsv + np.eye(vtsv.shape[-1])[np.newaxis, np.newaxis, ...]))
+    return _mmv(v_prime, np.eye(m.shape[-1])[np.newaxis, np.newaxis, ...] - m, utd)
+
+
 def Wd(A, d, invN=None, return_svd=False):
     u_e_v, L = _svd_sqrt_invN_A(A, invN)
     if L is not None:
         d = _mtv(L, d)
     res = _Wd_svd(u_e_v, d)
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
+#Added by Clement Leloup
+def semiblind_Wd(A, d, invN=None, invS=None, return_svd=False):
+    print("semiblind_Wd")
+    if invS is None: #so that parametric case is included
+        return Wd(A, d, invN, return_svd)
+    
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        d = _mtv(L, d)
+    res = _semiblind_Wd_svd(u_e_v, invS, d)
     if return_svd:
         return res, (u_e_v, L)
     return res
@@ -535,6 +611,7 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     u, e, v = u_e_v
     utd = _mtv(u, d)
     Dd = d - _mv(u, utd)
+    
     with np.errstate(divide='ignore'):
         s = _mtv(v, utd / e)
     s[~np.isfinite(s)] = 0.
@@ -545,6 +622,50 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
         freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
         diff[i] = np.sum(_mv(A_dB[i], s[comp_of_dB[i]])
                          * Dd[freq_of_dB])
+    return diff
+
+
+#Added by Clement Leloup
+def _semiblind_logL_dB_svd(u_e_v, invS, d, A_dB, comp_of_dB):
+    print("_semiblind_logL_dB_svd")
+    u, e, v = u_e_v
+    utd = _mtv(u, d) #(U_1)^T * d (cf my notes)
+    print('e : ', e[..., np.newaxis,:].shape)
+    print('v :', v.shape)
+    print('invS :', invS.shape)
+    vtsv = _mmm(v, invS, _T(v)/e[..., np.newaxis,:]**2) #V^T S^-1 V (Sigma^T Sigma)^-1
+    print('vtsv :', vtsv.shape)
+    v_prime = _T(v)/e[..., np.newaxis, :] #V' (cf my notes)
+    print('v_prime :', v_prime.shape)
+
+    vtsv_prime = _mtmm(v_prime, invS, v_prime) #(V')^T S^-1 V'
+
+    try:
+        m = _mm(vtsv, _inv(vtsv + np.eye(invS.shape[-1])[np.newaxis, np.newaxis, ...]))
+        m_prime = _mm(vtsv_prime, _inv(vtsv_prime + np.eye(invS.shape[-1])[np.newaxis, np.newaxis, ...]))
+    except np.linalg.linalg.LinAlgError:
+        print('Inversion of semi-blind correlation matrices failed (derivative) !')
+
+    print('m : ', m.shape)
+    print('m_prime : ', m_prime.shape)
+    m = np.eye(m.shape[-1])[np.newaxis, np.newaxis, ...] - m
+    m_prime = np.eye(m_prime.shape[-1])[np.newaxis, np.newaxis, ...] - m_prime
+    print('m2 : ', m.shape)
+    print('m2_prime : ', m_prime.shape)
+
+    Dd = d - _mmv(u, m_prime, utd)
+
+    with np.errstate(divide='ignore'):
+        s = _mtmv(v, m, utd / e)
+    s[~np.isfinite(s)] = 0.
+
+    n_param = len(A_dB)
+    diff = np.empty(n_param)    
+    for i in range(n_param):
+        freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
+        diff[i] = np.sum(_mv(A_dB[i], s[comp_of_dB[i]])
+                         * Dd[freq_of_dB])
+
     return diff
 
 
@@ -721,6 +842,65 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
                 print('SVD of A failed -> logL_dB not updated')
             return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
                                   A_dB_old[0], comp_of_dB)
+
+    return _inv_logL, _inv_logL_dB, (u_e_v_old, A_dB_old, x_old, pw_d)
+
+
+
+#Added by Clement Leloup
+def _semiblind_build_bound_inv_logL_and_logL_dB(A_ev, d, invN, invS,
+                                      A_dB_ev=None, comp_of_dB=None):
+    # XXX: Turn this function into a class?
+    """ Produce the functions -logL(x) and -logL_dB(x)
+
+    Keep in the memory the the quantities computed for the last value of x.
+    If x of the next call coincide with the last one, recycle the pre-computed
+    quantities. It gives ~2x speedup if you often compute both -logL and
+    -logL_dB for the same x.
+    """
+
+    print("_semiblind_build_bound_inv_logL_and_logL_dB")
+    L = [None]
+    x_old = [None]
+    u_e_v_old = [None]
+    A_dB_old = [None]
+    pw_d = [None]
+
+    def _update_old(x):
+        # If x is different from the last one, update the SVD
+        if not np.all(x == x_old[0]):
+            u_e_v_old[0], L[0] = _svd_sqrt_invN_A(A_ev(x), invN, L[0])
+            if A_dB_ev is not None:
+                if L[0] is None:
+                    A_dB_old[0] = A_dB_ev(x)
+                else:
+                    A_dB_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in A_dB_ev(x)]
+            x_old[0] = x
+            if pw_d[0] is None:  # If this is the first call, prewhiten d
+                if L[0] is None:
+                    pw_d[0] = d
+                else:
+                    pw_d[0] = _mtv(L[0], d)
+
+    def _inv_logL(x):
+        try:
+            _update_old(x)
+        except np.linalg.linalg.LinAlgError:
+            print('SVD of A failed -> logL = -inf')
+            return np.inf
+        return - _semiblind_logL_svd(u_e_v_old[0], invS, pw_d[0]) #modification here
+
+    if A_dB_ev is None:
+        def _inv_logL_dB(x):
+            return sp.optimize.approx_fprime(x, _inv_logL, _EPSILON_LOGL_DB)
+    else:
+        def _inv_logL_dB(x):
+            try:
+                _update_old(x)
+            except np.linalg.linalg.LinAlgError:
+                print('SVD of A failed -> logL_dB not updated')
+            return - _semiblind_logL_dB_svd(u_e_v_old[0], invS, pw_d[0],
+                                  A_dB_old[0], comp_of_dB) #modification here
 
     return _inv_logL, _inv_logL_dB, (u_e_v_old, A_dB_old, x_old, pw_d)
 
@@ -1004,6 +1184,135 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
                     del r.chi_dB
 
     return res
+
+
+#Added by Clement Leloup
+def semiblind_comp_sep(A_ev, d, invN, invS, A_dB_ev, comp_of_dB,
+             *minimize_args, **minimize_kwargs):
+    """ Perform component separation
+
+    Build the (inverse) spectral likelihood and minimize it to estimate the
+    parameters of the mixing matrix. Separate the components using the best-fit
+    mixing matrix.
+
+    Parameters
+    ----------
+    A_ev : function
+        The evaluator of the mixing matrix. It takes a float or an array as
+        argument and returns the mixing matrix, a ndarray with shape
+        *(..., n_freq, n_comp)*
+    d: ndarray
+        The data vector. Shape *(..., n_freq)*.
+    invN: ndarray or None
+        The inverse noise matrix. Shape *(..., n_freq, n_freq)*.
+    invS: ndarray or None
+        The inverse prior correlation matrix. Shape *(..., n_comp, n_comp)*.
+    A_dB_ev : function
+        The evaluator of the derivative of the mixing matrix.
+        It returns a list, each entry is the derivative with respect to a
+        different parameter.
+    comp_of_dB: list of IndexExpression
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[comp_of_dB[i]]``.
+    minimize_args: list
+        Positional arguments to be passed to `scipy.optimize.minimize`.
+        At this moment it just contains *x0*, the initial guess for the spectral
+        parameters
+    minimize_kwargs: dict
+        Keyword arguments to be passed to `scipy.optimize.minimize`.
+        A good choice for most cases is
+        ``minimize_kwargs = {'tol': 1, options: {'disp': True}}``. *tol* depends
+        on both the solver and your signal to noise: it should ensure that the
+        difference between the best fit -logL and and the minimum is well less
+        then 1, without exagereting (a difference of 1e-4 is useless).
+        *disp* also triggers a verbose callback that monitors the convergence.
+
+    Returns
+    -------
+    result : scipy.optimze.OptimizeResult (dict)
+        Result of the spectral likelihood maximisation
+        It is the output of `scipy.optimize.minimize`, plus some extra.
+        It includes
+
+	- **x**: *(ndarray)* - the best-fit spectra indices
+        - **Sigma**: *(ndarray)* - the semi-analytic covariance of the best-fit
+          spectra indices patch.
+        - **s**: *(ndarray)* - Separated components, Shape *(..., n_comp)*
+        - **invAtNAS** : *(ndarray)* - Covariance of the separated components.
+          Shape *(..., n_comp, n_comp)*
+
+    Note
+    ----
+    The *...* in the arguments denote any extra set of dimension. They have to
+    be compatible among different arguments in the `numpy` broadcasting sense.
+    """
+
+    print("semiblind_comp_sep")
+    # If mixing matrix is fixed, separate and return
+    if isinstance(A_ev, np.ndarray):
+        res = sp.optimize.OptimizeResult()
+        res.s, (u_e_v, L) = semiblind_Wd(A_ev, d, invN, invS, True) #modification here
+        res.invAtNAS = _invAtNAS_svd(u_e_v, invS) #modification here
+        if L is not None:
+            d = _mtv(L, d)
+        res.chi = d - _As_svd(u_e_v, res.s)
+        return res
+    else:
+        # Mixing matrix has free paramters: check that x0 was provided
+        assert minimize_args
+        assert len(minimize_args[0])
+
+    # Check input
+    if A_dB_ev is not None:
+        A_dB_ev, comp_of_dB = _A_dB_ev_and_comp_of_dB_as_compatible_list(
+            A_dB_ev, comp_of_dB, minimize_args[0])
+    if 'options' in minimize_kwargs and 'disp' in minimize_kwargs['options']:
+        disp = minimize_kwargs['options']['disp']
+    else:
+        disp = False
+
+    # Prepare functions for minimize
+    fun, jac, last_values = _semiblind_build_bound_inv_logL_and_logL_dB(
+        A_ev, d, invN, invS, A_dB_ev, comp_of_dB) #modification here
+    minimize_kwargs['jac'] = jac
+
+    # Gather minmize arguments
+    if disp and 'callback' not in minimize_kwargs:
+        minimize_kwargs['callback'] = verbose_callback()
+
+    # Likelihood maximization
+    res = sp.optimize.minimize(fun, *minimize_args, **minimize_kwargs)
+
+    # Gather results
+    u_e_v_last, A_dB_last, x_last, pw_d = last_values
+    if not np.all(x_last[0] == res.x):
+        fun(res.x) #  Make sure that last_values refer to the minimum
+
+    res.s = _semiblind_Wd_svd(u_e_v_last[0], invS, pw_d[0]) #modification here
+    res.invAtNAS = _invAtNAS_svd(u_e_v_last[0], invS) #modification here
+    res.chi = pw_d[0] - _As_svd(u_e_v_last[0], res.s)
+    if A_dB_ev is None:
+        fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
+    else:
+        fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
+                                        A_dB_last[0], comp_of_dB) #careful here, should change, has no meaning atm
+        As_dB = (_mv(A_dB_i, res.s[comp_of_dB_i])
+                 for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
+        res.chi_dB = []
+        for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
+            freq_of_dB = comp_of_dB_i[:-1] + (slice(None),)
+            res.chi_dB.append(np.sum(res.chi[freq_of_dB] * As_dB_i, -1)
+                              / np.linalg.norm(As_dB_i, axis=-1))
+    try:
+        res.Sigma = np.linalg.inv(fisher)
+    except np.linalg.LinAlgError:
+        res.Sigma = fisher * np.nan
+
+    res.Sigma_inv = fisher
+    return res
+
+
 
 
 def _indexed_matrix(matrix, data_shape, data_indexing):

@@ -249,20 +249,12 @@ class SemiBlind(Component):
     ----------
     A_blind: ndarray
         Column of the mixing matrix for blind component
-    n_comp: int
-        Total number of components
-    pos: int
-        Position of the component in the mixing matrix
 
     """
 
-    def __init__(self, A_blind, n_comp, pos):
-        assert n_comp >= pos, "Too many blind components !"
-        self._n_comp = n_comp
-        self._pos = pos
-        self._params = ['blind_' + str(i) + str(pos) for i in np.arange(len(A_blind) - self._n_comp)] #name of parameters
-        assert np.all(A_blind[:self._n_comp] == np.eye(self._n_comp)[:,self._pos-1]), ('A_blind={} should start as {}'.format(A_blind, np.eye(self._n_comp)[:,self._pos-1])) #check that blind components have right format
-        self._defaults = A_blind[n_comp:]
+    def __init__(self, A_blind, pos):
+        self._params = ['blind_' + str(i) + str(pos) for i in np.arange(len(A_blind))] #name of parameters
+        self._defaults = A_blind
 
     def eval(self, nu, *params):
         """ Evaluate the SED
@@ -280,9 +272,8 @@ class SemiBlind(Component):
             SED. The shape is always ``nu.shape``.
 
         """
-        assert len(params) == self.n_param and len(nu) == len(params) + self._n_comp
-        #print(nu, np.concatenate((np.eye(self._n_comp)[:,self._pos-1], params)))
-        return np.concatenate((np.eye(self._n_comp)[:,self._pos-1], params))
+        assert len(params) == self.n_param
+        return params
 
     def diff(self, nu, *params):
         """ Evaluate the derivative of the SED
@@ -301,14 +292,14 @@ class SemiBlind(Component):
             :meth:`eval` for more details about the format of the
             evaluated derivative
         """
-        assert len(params) == self.n_param and len(nu) == len(params) + self._n_comp
+        assert len(params) == self.n_param
         if not params:
             return []
 
-        return [np.eye(len(nu))[:,i_p+self._n_comp] for i_p in range(self.n_param)]
+        return [np.eye(len(nu))[:,i_p] for i_p in np.arange(self.n_param)]
 
     def diff_diff(self, nu, *params):
-        assert len(params) == self.n_param and len(nu) == len(params) + self._n_comp
+        assert len(params) == self.n_param
         if not params:
             return [[]]
 

@@ -23,6 +23,7 @@ from scipy.optimize import OptimizeResult
 import healpy as hp
 from . import algebra as alg
 from .mixingmatrix import MixingMatrix
+from .component_model import CMB, SemiBlind
 import sys
 
 np.set_printoptions(threshold=sys.maxsize)
@@ -236,15 +237,27 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         data_nside = 0
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape,
                                                data_nside)
+    #A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(
+    #    components, instrument, prewhiten_factors=prewhiten_factors)
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(
-        components, instrument, prewhiten_factors=prewhiten_factors)
+        components, instrument)
     if not len(x0):
         A_ev = A_ev()
+    else: #modification by Clement Leloup
+        #A1 = np.eye(A_ev(x0).shape[1])
+        #A1[1:,1:] =
+        A1 = A_ev(x0)[1:A_ev(x0).shape[1],1:A_ev(x0).shape[1]]
+        B = np.concatenate((A_ev(x0)[:,0, np.newaxis], np.dot(A_ev(x0)[:,1:], np.linalg.inv(A1))), axis=1)
+        print('A = ', A_ev(x0))
+        print('A1 = ', A1)
+        print('B = ', B)
+        exit()
+        
     if prewhiten_factors is None:
         prewhitened_data = data.T
     else:
         prewhitened_data = prewhiten_factors * data.T
-
+        
     # Component separation
     if nside:
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
@@ -280,7 +293,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
 
 #Added by Clement Leloup
-def harmonic_semiblind(components, instrument, templates, data, nside, invN=None):
+def harmonic_semiblind(components, instrument, templates, data, nside, invN=None, **minimize_kwargs):
     """ Semi-blind method
 
     Parameters
@@ -325,10 +338,11 @@ def harmonic_semiblind(components, instrument, templates, data, nside, invN=None
     instrument = _force_keys_as_attributes(instrument)
     lmax = 3 * nside - 1
     n_comp = len(components)
-    #mask = _intersect_mask(data)
+    mask = _intersect_mask(data)
     #fsky = float(mask.sum()) / mask.size
+    data[..., mask] = 0
 
-    print('Computing Cl')
+    print('Computing alms')
     try:
         assert np.any(instrument.Beams)
     except (KeyError, AssertionError):
@@ -337,12 +351,24 @@ def harmonic_semiblind(components, instrument, templates, data, nside, invN=None
         beams = instrument.Beams
 
     alms = _get_alms(data, beams, lmax)[:,1:,:]
+    #alms = np.swapaxes(alms, 0, 2)
+    ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
+
+    print('alms : ', alms.shape)
+    alms = np.asarray(alms, order='C')
+    alms = alms.view(np.float64)
+    alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN  # Mask imaginary m = 0
+    #alms[..., np.arange(1, lmax+1, 2)] = 0  # Mask imaginary m = 0
+    mask_alms = _intersect_mask(alms)
+    alms[..., mask_alms] = 0  # Thus no contribution to the spectral likelihood
     alms = np.swapaxes(alms, 0, 2)
-    #print('alms : ', alms.shape)
+    print('alms : ', alms.shape)
+    ell = np.stack((ell, ell), axis=-1).reshape(-1)
+    print('ell : ', ell.shape)
     #print('lm : ', hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0])
-    cl_out = np.array([hp.alm2cl(alm) for alm in alms])[:,1:,:] #Take only polarization
+    #cl_out = np.array([hp.alm2cl(alm) for alm in alms])[:,1:,:] #Take only polarization
+    #cl_out = np.swapaxes(cl_out, 0, 2)
     #print('cl_out : ', cl_out.shape)
-    cl_out = np.swapaxes(cl_out, 0, 2)
 
     print('Computing prior')
     cl_in = hp.read_cl(templates)[1:3,:lmax+1] #Take only polarization
@@ -354,23 +380,66 @@ def harmonic_semiblind(components, instrument, templates, data, nside, invN=None
         cl_in = np.stack((EE_in, BB_in), axis=1) #Probably a better way to do that
     cl_in[~np.isfinite(cl_in)] = 0.
     #print('cl_in : ', cl_in[:,0,,0])
-    prior = np.array([cl_in[ell,:,:] for ell in hp.Alm.getlm(lmax, np.arange(alms.shape[0]))[0]])
-    #print('prior : ', prior.shape)
-
+    prior = np.array([cl_in[l,:,:] for l in ell])#hp.Alm.getlm(lmax, np.arange(alms.shape[0]))[0]])
+    print('prior : ', prior.shape)
+    #print('invN : ', invN.shape)
+    invNlm = np.array([invN[l,:,:]/(2.0*l+1.0) for l in ell])[:,np.newaxis,:,:]#hp.Alm.getlm(lmax, np.arange(alms.shape[0]))[0]])[:,np.newaxis,:,:]
+    print('invNlm : ', invNlm.shape)
 
     print('Computing mixing matrix')
-    A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components, instrument)
+    #A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components, instrument)
+    A_ev, A_dB_ev, comp_of_param, x0, params = init_semiblind_mixmat(components, instrument)
     if not len(x0):
         A_ev = A_ev()
-        
+    else: #modification by Clement Leloup
+        print('A = ', A_ev(x0))
+  
     print('Separating components')
-    res = _semiblind_comp_sep(A_ev, cl_out, invN, prior, A_dB_ev, comp_of_param)
+    res = alg.semiblind_comp_sep(A_ev, alms, invNlm, prior, A_dB_ev, comp_of_param, x0, **minimize_kwargs)
     
     #Craft output
-    #Empty at the moment
+    #Empty atm
     
     return res
 
+#Added by Clement Leloup
+def init_semiblind_mixmat(components, instrument, prewhiten_factors=None):
+    A = MixingMatrix(*components)
+    A_ev = A.evaluator(instrument.Frequencies)
+    x0 = np.array([x for c in components for x in c.defaults])
+    if not len(x0):
+        A_ev = A_ev()
+        A1 = A_ev[1:A_ev.shape[1],1:]
+        B = np.concatenate((A_ev[:,0, np.newaxis], np.dot(A_ev[:,1:], np.linalg.inv(A1))), axis=1)
+    else: #modification by Clement Leloup
+        A_ev = A_ev(x0)
+        A1 = A_ev[1:A_ev.shape[1],1:]
+        B_mat = np.concatenate((A_ev[:,0, np.newaxis], np.dot(A_ev[:,1:], np.linalg.inv(A1))), axis=1)
+        print('B_mat = ', B_mat)
+
+    #comp = [CMB()], SemiBlind(B_mat[:,1], 1), SemiBlind(B_mat[:,2], 2)]
+    comp = np.append([CMB()], [SemiBlind(B_mat[:,i], i) for i in np.arange(1, len(components))])
+    B = MixingMatrix(*comp)
+    B_ev = B.evaluator(instrument.Frequencies)
+    B_dB_ev = B.diff_evaluator(instrument.Frequencies)
+    comp_of_dB = B.comp_of_dB
+    xB0 = np.array([x for c in comp for x in c.defaults])
+    params = B.params
+    print('B = ', B_ev(xB0))
+    exit()
+
+    if prewhiten_factors is None:
+        return B_ev, B_dB_ev, comp_of_dB, xB0, params
+
+    if B.n_param:
+        pw_B_ev = lambda x: prewhiten_factors[..., np.newaxis] * B_ev(x)
+        pw_B_dB_ev = lambda x: [prewhiten_factors[..., np.newaxis] * B_dB_i
+                                for B_dB_i in B_dB_ev(x)]
+    else:
+        pw_B_ev = lambda: prewhiten_factors[..., np.newaxis] * B_ev()
+        pw_B_dB_ev = None
+
+    return pw_B_ev, pw_B_dB_ev, comp_of_dB, xB0, params
 
 def harmonic_ilc(components, instrument, data, lbins=None, weights=None):
     """ Internal Linear Combination
