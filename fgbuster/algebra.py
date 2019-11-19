@@ -513,6 +513,7 @@ def W_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
 
 
 def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
+    #import ipdb;ipdb.set_trace()
     u, e, v = u_e_v
     utd = _mtv(u, d)
     Dd = d - _mv(u, utd)
@@ -520,13 +521,20 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
         s = _mtv(v, utd / e)
     s[~np.isfinite(s)] = 0.
 
-    n_param = len(A_dB)
-    diff = np.empty(n_param)
-    for i in range(n_param):
-        freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
-        diff[i] = np.sum(_mv(A_dB[i], s[comp_of_dB[i]])
-                         * Dd[freq_of_dB])
-    return diff
+    diff = []
+    for par_comp_of_dB, par_A_dB in zip(comp_of_dB, A_dB):
+        s_comp = s[..., par_comp_of_dB[0]]
+        dt_D_A_dB_s = _mv(par_A_dB, s_comp) * Dd  # Only product, not sum
+        try:
+            ids = np.array(np.broadcast_to(par_comp_of_dB[1].T,
+                                           s.T[0].shape)).T
+        except IndexError:
+            diff.append(dt_D_A_dB_s.sum())
+        else:
+            # Only if ids doesn't have any missing values
+            diff.append(np.bincount(
+                ids.ravel(), (_mv(par_A_dB, s_comp) * Dd).sum(-1).ravel()))
+    return np.concatenate(diff)
 
 
 def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
@@ -583,7 +591,7 @@ def _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB):
         comp_of_dB = [comp_of_dB] * len(A_dB)
 
     # The following ensures that s[comp_of_dB[i]] still has all the axes
-    comp_of_dB = [_turn_into_slice_if_integer(c) for c in comp_of_dB]
+    # comp_of_dB = [_turn_into_slice_if_integer(c) for c in comp_of_dB] XXX
 
     return A_dB, comp_of_dB
 
@@ -628,7 +636,6 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
     comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
                     for comp_of_dB_i in comp_of_dB]  # Add freq dimension
     A_dB_full = np.zeros((n_dB,)+u.shape)
-    A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
     for i in range(n_dB):
         A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
 
@@ -728,10 +735,17 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
         The evaluator of the derivative of the mixing matrix.
         It returns a list, each entry is the derivative with respect to a
         different parameter.
-    comp_of_dB: list of IndexExpression
+    comp_of_dB: tuple or list of tuples
         It allows to provide as output of *A_dB_ev* only the non-zero columns
-        *A*. ``A_dB_ev(x)[i]`` is assumed to be the derivative of
-        ``A[comp_of_dB[i]]``.
+        *A*. If list, every entry refers to a parameter.
+        Tuple(s) can have lenght 1 or 2. The first element is the index
+        (or slice) of the component dimension of A (the last one) that is
+        affected by the derivative: ``A_dB_ev(x)[i]`` is assumed to be the
+        derivative of ``A[..., comp_of_dB[i]]``. The second element of the
+        touple, if present, is an array of integers. It can be used to specify
+        that the same parameter is actually fitted for indpendentely on
+        different sections of the *...* dimension(s). The index identifying
+        these regions are collected in the array.
     minimize_args: list
         Positional arguments to be passed to `scipy.optimize.minimize`.
         At this moment it just contains *x0*, the initial guess for the spectral
@@ -807,6 +821,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
     res.chi = pw_d[0] - _As_svd(u_e_v_last[0], res.s)
+    return res #XXX
     if A_dB_ev is None:
         fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
     else:
@@ -824,7 +839,6 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     except np.linalg.LinAlgError:
         res.Sigma = fisher * np.nan
     res.Sigma_inv = fisher
-    return res
 
 
 def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,

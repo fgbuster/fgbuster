@@ -359,15 +359,18 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     if max_nside == 0:
         return basic_comp_sep(components, instrument, data, **minimize_kwargs)
 
-    unpack = lambda x: [_my_ud_grade(m, max_nside).reshape(-1, 1, 1, 1)
-                        for m in array2maps(x)]
+    extra_dim = [1]*(data.ndim-1)
+    unpack = lambda x: [
+        _my_ud_grade(m, max_nside).reshape(-1, *extra_dim)
+        for m in array2maps(x)]
 
     # Traspose the the data and put the pixels that share the same spectral
     # indices next to each other
     n_pix_max_nside = hp.nside2npix(max_nside)
     pix_ids = np.argsort(hp.ud_grade(np.arange(n_pix_max_nside), data_nside))
     data = data.T[pix_ids].reshape(
-        n_pix_max_nside, (data_nside / max_nside)**2, *data.T.shape[1:])
+        n_pix_max_nside, (data_nside // max_nside)**2, *data.T.shape[1:])
+    back_pix_ids = np.argsort(pix_ids)
 
     A = MixingMatrix(*components)
     assert A.n_param == len(nsides), (
@@ -381,16 +384,19 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     if not len(x0):
         A_ev = A_ev()
 
+    comp_of_dB = [
+        (c_db, _my_ud_grade(np.arange(_my_nside2npix(p_nside)), max_nside))
+        for p_nside, c_db in zip(nsides, A.comp_of_dB)]
+
     # Component separation
-    res = alg.comp_sep(A_ev, data, invN, None, None, x0,
+    res = alg.comp_sep(A_ev, data, invN, A_dB_ev, comp_of_dB, x0,
                        **minimize_kwargs)
 
     # Craft output
     # 1) Apply the mask, if any
     # 2) Restore the ordering of the input data (pixel dimension last)
     def restore_index_mask_transpose(x):
-        x = x.reshape(-1, *x.shape[2:])
-        x[pix_ids] = x
+        x = x.reshape(-1, *x.shape[2:])[back_pix_ids]
         x[mask] = hp.UNSEEN
         return x.T
 
