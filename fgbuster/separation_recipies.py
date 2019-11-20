@@ -508,10 +508,11 @@ def _my_ud_grade(map_in, nside_out, **kwargs):
             out[np.where(ids == 0)[0][:12]] = map_in
             kwargs['pess'] = False
             res = hp.ud_grade(out, 1, **kwargs)
-            return np.array([res])
+            return res[:1]
     try:
-        return hp.ud_grade(np.full(12, float(map_in)), nside_out, **kwargs)
-    except TypeError:
+        return hp.ud_grade(np.full(12, np.asscalar(map_in)),
+                           nside_out, **kwargs)
+    except ValueError:
         return hp.ud_grade(map_in, nside_out, **kwargs)
 
 
