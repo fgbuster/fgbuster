@@ -332,6 +332,10 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
 
     """
     instrument = _force_keys_as_attributes(instrument)
+    max_nside = max(nsides)
+    if max_nside == 0:
+        return basic_comp_sep(components, instrument, data, **minimize_kwargs)
+
     # Prepare mask and set to zero all the frequencies in the masked pixels:
     # NOTE: mask are bad pixels
     mask = _intersect_mask(data)
@@ -354,10 +358,6 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
             maps.append(x[i:i+npix])
             i += npix
         return maps
-
-    max_nside = max(nsides)
-    if max_nside == 0:
-        return basic_comp_sep(components, instrument, data, **minimize_kwargs)
 
     extra_dim = [1]*(data.ndim-1)
     unpack = lambda x: [

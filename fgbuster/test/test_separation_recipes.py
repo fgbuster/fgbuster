@@ -11,9 +11,9 @@ from fgbuster.algebra import _mv
 from fgbuster.mixingmatrix import MixingMatrix
 from fgbuster.observation_helpers import get_instrument
 import fgbuster.component_model as cm
-from fgbuster.separation_recipies import (basic_comp_sep, weighted_comp_sep,
-                                          multi_res_comp_sep,
-                                          _force_keys_as_attributes)
+from fgbuster.separation_recipes import (basic_comp_sep, weighted_comp_sep,
+                                         multi_res_comp_sep,
+                                         _force_keys_as_attributes)
 
 
 def _get_n_stokes(tag):
@@ -341,13 +341,12 @@ class TestMultiResCompSep(unittest.TestCase):
                                           nsides=[nsidepar]*len(x))
 
         aac(res_multipatch.s, s, rtol=1e-4)
-        aac(res_multires.s, s, rtol=1e-4)
-        aac(res_multipatch.s, res_multires.s, rtol=1e-4)
+        aac(res_multires.s, s, rtol=1e-3)
+        aac(res_multipatch.s, res_multires.s, rtol=1e-3)
 
 
 
 if __name__ == '__main__':
-    '''
     unittest.main()
     '''
     suite = unittest.TestSuite()
@@ -355,3 +354,4 @@ if __name__ == '__main__':
         if 'the failing thest' in method:
             suite.addTest(TestWeightedCompSep(method))
     unittest.TextTestRunner().run(suite)
+    '''

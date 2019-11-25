@@ -266,15 +266,17 @@ def D(A, invN=None, return_svd=False):
 
 
 def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
+    _raise_if_not_simple_comp_of_dB(comp_of_dB)
     u, e, v = u_e_v
     res = []
     for comp_of_dB_i, A_dB_i in zip(comp_of_dB, A_dB):
         # res = v^t e^-2 v A_dB (1 - u u^t) - v^t e^-1 u^t A_dB v^t e^-1 u^t
         inve_v = v / e[..., np.newaxis]
-        slice_inve_v = _T(_T(inve_v)[comp_of_dB_i+(slice(None),)])
+        slice_inve_v = inve_v[(Ellipsis,)+comp_of_dB_i]
         res_i = _mm(_mtm(inve_v, slice_inve_v), _T(A_dB_i))
         res_i -= _mmm(res_i, u, _T(u))
-        res_i -= _mmm(_mmm(_T(inve_v), _T(u), A_dB_i), _T(slice_inve_v), _T(u))
+        res_i -= _mmm(_mmm(_T(inve_v), _T(u), A_dB_i),
+                      _T(slice_inve_v), _T(u))
         res.append(res_i)
     return np.array(res)
 
@@ -321,18 +323,17 @@ def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
 
 
 def _P_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
+    _raise_if_not_simple_comp_of_dB(comp_of_dB)
     u, e, v = u_e_v
     n_dB = len(A_dB)
 
     # Expand A_dB and A_dBdB to full shape
-    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
-                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
     A_dB_full = np.zeros((n_dB,)+u.shape)
     A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
     for i in range(n_dB):
-        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+        A_dB_full[(i, Ellipsis) + comp_of_dB[i]] = A_dB[i]
         for j in range(n_dB):
-            A_dBdB_full[(i, j)+comp_of_dB_A[i]] = A_dBdB[i][j]
+            A_dBdB_full[(i, j, Ellipsis)+comp_of_dB[i]] = A_dBdB[i][j]
 
     # Apply diag(e^(-1)) * v to the domain of the components
     # In this basis A' = u and (A'^t A') = 1
@@ -413,18 +414,17 @@ def P_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
 
 
 def _W_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
+    _raise_if_not_simple_comp_of_dB(comp_of_dB)
     u, e, v = u_e_v
     n_dB = len(A_dB)
 
     # Expand A_dB and A_dBdB to full shape
-    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
-                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
     A_dB_full = np.zeros((n_dB,)+u.shape)
     A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
     for i in range(n_dB):
-        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+        A_dB_full[(i, Ellipsis) + comp_of_dB[i]] = A_dB[i]
         for j in range(n_dB):
-            A_dBdB_full[(i, j)+comp_of_dB_A[i]] = A_dBdB[i][j]
+            A_dBdB_full[(i, j, Ellipsis)+comp_of_dB[i]] = A_dBdB[i][j]
 
     # Apply diag(e^(-1)) * v to the domain of the components
     # In this basis A' = u and (A'^t A') = 1
@@ -513,7 +513,6 @@ def W_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
 
 
 def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
-    #import ipdb;ipdb.set_trace()
     u, e, v = u_e_v
     utd = _mtv(u, d)
     Dd = d - _mv(u, utd)
@@ -529,7 +528,7 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
             ids = np.array(np.broadcast_to(par_comp_of_dB[1].T,
                                            s.T[0].shape)).T
         except IndexError:
-            diff.append(dt_D_A_dB_s.sum())
+            diff.append(np.array([dt_D_A_dB_s.sum()]))
         else:
             # Only if ids doesn't have any missing values
             diff.append(np.bincount(
@@ -537,7 +536,7 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     return np.concatenate(diff)
 
 
-def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
+def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[:], return_svd=False):
     """ Derivative of the log likelihood
 
     Parameters
@@ -553,7 +552,7 @@ def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
         derivative with respect to a different parameter.
     comp_of_dB: IndexExpression or list of IndexExpression
         It allows to provide in *A_dB* only the non-zero columns *A*.
-        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
+        *A_dB* is assumed to be the derivative of ``A[..., comp_of_dB]``.
         If a list is provided, also *A_dB* has to be a list and
         ``A_dB[i]`` is assumed to be the derivative of ``A[comp_of_dB[i]]``.
 
@@ -590,8 +589,8 @@ def _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB):
     else:
         comp_of_dB = [comp_of_dB] * len(A_dB)
 
-    # The following ensures that s[comp_of_dB[i]] still has all the axes
-    # comp_of_dB = [_turn_into_slice_if_integer(c) for c in comp_of_dB] XXX
+    # The following ensures that s[..., comp_of_dB[i]] still has all the axes
+    comp_of_dB = [_turn_into_slice_if_integer(c) for c in comp_of_dB]
 
     return A_dB, comp_of_dB
 
@@ -600,6 +599,8 @@ def _turn_into_slice_if_integer(index_expression):
     # When you index an array with an integer you lose one dimension.
     # To avoid this we turn the integer into a slice
     res = []
+    if not isinstance(index_expression, tuple):
+        index_expression = (index_expression,)
     for i in index_expression:
         if isinstance(i, six.integer_types):
             res.append(slice(i, i+1, None))
@@ -622,26 +623,31 @@ def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
     else:
         comp_of_dB = [comp_of_dB] * len(A_dB)
 
-    # The following ensures that s[comp_of_dB[i]] still has all the axes
+    # The following ensures that s[..., comp_of_dB[i]] still has all the axes
     comp_of_dB = [_turn_into_slice_if_integer(c) for c in comp_of_dB]
 
     return A_dB_ev, comp_of_dB
 
 
-def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
-    u, _, _ = u_e_v
+def _is_simple_comp_of_dB(comp_of_dB):
+    return all([len(comp_of_dB_i) == 1 for comp_of_dB_i in comp_of_dB])
 
-    # Expand A_dB
-    n_dB = len(A_dB)
-    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
-                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
-    A_dB_full = np.zeros((n_dB,)+u.shape)
-    for i in range(n_dB):
-        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+
+def _raise_if_not_simple_comp_of_dB(comp_of_dB):
+    if not _is_simple_comp_of_dB(comp_of_dB):
+        raise NotImplementedError(
+            "This routine supports only simple comp_of_dB, which containt only "
+            "the slice of the component dimension. "
+            "You may be trying to compute it for maps of parameters.")
+
+
+def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
+    _raise_if_not_simple_comp_of_dB(comp_of_dB)
+    u, _, _ = u_e_v
 
     D_A_dB_s = []
     for i in range(len(A_dB)):
-        A_dB_s = _mv(A_dB_full[i], s)
+        A_dB_s = _mv(A_dB[i], s[(Ellipsis,) + comp_of_dB[i]])
         D_A_dB_s.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
 
     return np.array([[np.sum(i*j) for i in D_A_dB_s] for j in D_A_dB_s])
@@ -821,24 +827,26 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
     res.chi = pw_d[0] - _As_svd(u_e_v_last[0], res.s)
-    return res #XXX
-    if A_dB_ev is None:
-        fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
-    else:
-        fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
-                                        A_dB_last[0], comp_of_dB)
-        As_dB = (_mv(A_dB_i, res.s[comp_of_dB_i])
-                 for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
-        res.chi_dB = []
-        for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
-            freq_of_dB = comp_of_dB_i[:-1] + (slice(None),)
-            res.chi_dB.append(np.sum(res.chi[freq_of_dB] * As_dB_i, -1)
-                              / np.linalg.norm(As_dB_i, axis=-1))
-    try:
-        res.Sigma = np.linalg.inv(fisher)
-    except np.linalg.LinAlgError:
-        res.Sigma = fisher * np.nan
-    res.Sigma_inv = fisher
+    
+    if _is_simple_comp_of_dB(comp_of_dB):
+        if A_dB_ev is None:
+            fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
+        else:
+            fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
+                                            A_dB_last[0], comp_of_dB)
+            As_dB = (_mv(A_dB_i, res.s[(Ellipsis,) + comp_of_dB_i])
+                     for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
+            res.chi_dB = []
+            for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
+                res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
+                                  / np.linalg.norm(As_dB_i, axis=-1))
+        try:
+            res.Sigma = np.linalg.inv(fisher)
+        except np.linalg.LinAlgError:
+            res.Sigma = fisher * np.nan
+        res.Sigma_inv = fisher
+
+    return res
 
 
 def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
@@ -969,7 +977,8 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             if r is not None:
                 del r.x
                 del r.Sigma
-    except (AttributeError, IndexError):  # The mixing matrix was constant
+    except (AttributeError, IndexError):
+        # No Sigma: constant mixing matrix or too too many parameters
         pass
 
     try:
