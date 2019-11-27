@@ -520,6 +520,9 @@ def W_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
 
 
 def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
+    # logL_dB = d^t (1 - uu^t) A_dB s
+    # Compute it as the dot between (1 - uu^t)d and A_dB s
+    # Note that (1 - uu^t) is referred to as D (deprojector)
     u, e, v = u_e_v
     utd = _mtv(u, d)
     Dd = d - _mv(u, utd)
@@ -528,16 +531,27 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     s[~np.isfinite(s)] = 0.
 
     diff = []
+    # Iterate over the parameter types (i.e. over A_dB), compute log_dB
+    # and append it to diff        
     for par_comp_of_dB, par_A_dB in zip(comp_of_dB, A_dB):
+        # A_dB is compressed: it contains only the column that acts
+        # on the following slice of s
         s_comp = s[..., par_comp_of_dB[0]]
         dt_D_A_dB_s = _mv(par_A_dB, s_comp) * Dd  # Only product, not sum
         try:
             ids = np.array(np.broadcast_to(par_comp_of_dB[1].T,
                                            s.T[0].shape)).T
         except IndexError:
+            # The `...` dimensions were not partitioned in sub-domains over
+            # which the parameters are fitted independently
+            # -> do the sum and produce only one value
             diff.append(np.array([dt_D_A_dB_s.sum()]))
         else:
-            # Only if ids doesn't have any missing values
+            # comp_of_dB specified the domains over which the sky 
+            # is partitioned. They are indexed by ids.
+            # Accumulate dt_D_A_dB_s for the entries that share the same id.
+            # The size of the output vector is the number of domains.
+            # NOTE: it assumes that ids doesn't have any missing values
             diff.append(np.bincount(
                 ids.ravel(), (_mv(par_A_dB, s_comp) * Dd).sum(-1).ravel()))
     return np.concatenate(diff)
