@@ -24,8 +24,7 @@ setup(
         'numdifftools',
         'sympy',
         'healpy',
-        'pysm',
+        'pysm @ git+https://github.com/bthorne93/PySM_public.git@master#egg=pysm',
     ],
-    dependency_links=['git+https://github.com/bthorne93/PySM_public.git@master#egg=pysm-2.1.0'],
     test_suite = 'fgbuster.test'
 )

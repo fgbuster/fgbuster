@@ -296,11 +296,14 @@ def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
     A_dB : ndarray or list of ndarray
         The derivative of the mixing matrix. If list, each entry is the
         derivative with respect to a different parameter.
-    comp_of_dB: index or list of indices
-        It allows to provide in *A_dB* only the non-zero columns *A*.
-        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
-        If a list is provided, also *A_dB* has to be a list and
-        ``A_dB[i]`` is assumed to be the derivative of ``A[comp_of_dB[i]]``.
+    comp_of_dB: tuple or list of tuples
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. If list, every entry refers to a parameter.
+        Unlike `comp_sep` the
+        tuple(s) can have only lenght 1. The element is the index (or slice) of
+        the component dimension of A (the last one) that is affected by the
+        derivative: ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[..., comp_of_dB[i]]``.
 
     Returns
     -------
@@ -378,12 +381,14 @@ def P_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
     A_dBdB : ndarray or list of list of ndarray
         The second derivative of the mixing matrix. If list, each entry is the
         derivative of A_dB with respect to a different parameter.
-    comp_of_dB: index or list of indices
-        It allows to provide in *A_dB* only the non-zero columns *A*.
-        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
-        If a list is provided, also *A_dB* and *A_dBdB* have to be a lists,
-        ``A_dB[i]`` and ``A_dBdB[i][j]`` (for any j) are assumed to be the
-        derivatives of ``A[comp_of_dB[i]]``.
+    comp_of_dB: tuple or list of tuples
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. If list, every entry refers to a parameter.
+        Unlike `comp_sep` the
+        tuple(s) can have only lenght 1. The element is the index (or slice) of
+        the component dimension of A (the last one) that is affected by the
+        derivative: ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[..., comp_of_dB[i]]``.
 
     Returns
     -------
@@ -478,12 +483,14 @@ def W_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
     A_dBdB : ndarray or list of list of ndarray
         The second derivative of the mixing matrix. If list, each entry is the
         derivative of A_dB with respect to a different parameter.
-    comp_of_dB: index or list of indices
-        It allows to provide in *A_dB* only the non-zero columns *A*.
-        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
-        If a list is provided, also *A_dB* and *A_dBdB* have to be a lists,
-        ``A_dB[i]`` and ``A_dBdB[i][j]`` (for any *j*) are assumed to be the
-        derivatives of ``A[comp_of_dB[i]]``.
+    comp_of_dB: tuple or list of tuples
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. If list, every entry refers to a parameter.
+        Unlike `comp_sep` the
+        tuple(s) can have only lenght 1. The element is the index (or slice) of
+        the component dimension of A (the last one) that is affected by the
+        derivative: ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[..., comp_of_dB[i]]``.
 
     Returns
     -------
@@ -550,11 +557,17 @@ def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[:], return_svd=False):
     A_dB : ndarray or list of ndarray
         The derivative of the mixing matrix. If list, each entry is the
         derivative with respect to a different parameter.
-    comp_of_dB: IndexExpression or list of IndexExpression
-        It allows to provide in *A_dB* only the non-zero columns *A*.
-        *A_dB* is assumed to be the derivative of ``A[..., comp_of_dB]``.
-        If a list is provided, also *A_dB* has to be a list and
-        ``A_dB[i]`` is assumed to be the derivative of ``A[comp_of_dB[i]]``.
+    comp_of_dB: tuple or list of tuples
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. If list, every entry refers to a parameter.
+        Tuple(s) can have lenght 1 or 2. The first element is the index
+        (or slice) of the component dimension of A (the last one) that is
+        affected by the derivative: ``A_dB_ev(x)[i]`` is assumed to be the
+        derivative of ``A[..., comp_of_dB[i]]``. The second element of the
+        touple, if present, is an array of integers. It can be used to specify
+        that the same parameter is actually fitted for indpendentely on
+        different sections of the *...* dimension(s). The index identifying
+        these regions are collected in the array.
 
     Returns
     -------
@@ -873,10 +886,14 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         The evaluator of the derivative of the mixing matrix.
         It returns a list, each entry is the derivative with respect to a
         different parameter.
-    comp_of_dB : list of IndexExpression
+    comp_of_dB: tuple or list of tuples
         It allows to provide as output of *A_dB_ev* only the non-zero columns
-        *A*. ``A_dB_ev(x)[i]`` is assumed to be the derivative of
-        ``A[comp_of_dB[i]]``.
+        *A*. If list, every entry refers to a parameter.
+        Due to the presence of the `patch_ids` arguemnt, unlike `comp_sep` the
+        tuple(s) can have only lenght 1. The element is the index (or slice) of
+        the component dimension of A (the last one) that is affected by the
+        derivative: ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[..., comp_of_dB[i]]``.
     patch_ids : array
         id of regions.
     minimize_args : list
