@@ -101,7 +101,7 @@ def _get_sky(tag):
     x0 = [x for c in components for x in c.defaults]
     if nsidepar and len(x0):
         for i in range(len(x0)):
-            factor = np.linspace(0.8, 1.2, hp.nside2npix(nsidepar))
+            factor = np.linspace(0.9, 1.1, hp.nside2npix(nsidepar))
             np.random.shuffle(factor)
             x0[i] = x0[i] * factor
         ux0 = [hp.ud_grade(x0_i, nside) for x0_i in x0]
@@ -328,7 +328,7 @@ class TestMultiResCompSep(unittest.TestCase):
         components, instrument, nsidepar = comp_sep_tag.split('__')
         components = _get_component(components)
         for c in components:
-            c.defaults = [1.1 * d for d in c.defaults]
+            c.defaults = [1.05 * d for d in c.defaults]
 
         instrument = _get_instrument(instrument)
         nsidepar = _get_nside(nsidepar)
