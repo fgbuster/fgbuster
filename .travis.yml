@@ -5,12 +5,12 @@ python:
   - 3.7
 
 install:
+  - pip install travis-sphinx nbsphinx sphinx_rtd_theme jupyter_client
   - pip install .
-    - pip install travis-sphinx nbsphinx sphinx_rtd_theme jupyter_client
 
 script:
-  - python setup.py test          
-    - travis-sphinx build -n
+  - python setup.py test
+  - travis-sphinx build -n
 
 after_success: 
-    - travis-sphinx deploy -b multi_resolution
+  - travis-sphinx deploy -b multi_resolution
