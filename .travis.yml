@@ -5,12 +5,14 @@ python:
   - 3.7
 
 install:
-  - pip install travis-sphinx nbsphinx sphinx_rtd_theme jupyter_client
   - pip install .
 
 script:
   - python setup.py test
-  - travis-sphinx build -n
 
 after_success: 
-  - travis-sphinx deploy -b multi_resolution
+  - sudo apt-get -qq update
+  - sudo apt-get install -y pandoc
+  - pip install travis-sphinx nbsphinx sphinx_rtd_theme jupyter_client ipykernel
+  - travis-sphinx build -n
+  - travis-sphinx deploy
