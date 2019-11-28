@@ -510,7 +510,7 @@ def _my_ud_grade(map_in, nside_out, **kwargs):
             res = hp.ud_grade(out, 1, **kwargs)
             return res[:1]
     try:
-        return hp.ud_grade(np.full(12, np.asscalar(map_in)),
+        return hp.ud_grade(np.full(12, map_in.item()),
                            nside_out, **kwargs)
     except ValueError:
         return hp.ud_grade(map_in, nside_out, **kwargs)
