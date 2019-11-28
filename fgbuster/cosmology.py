@@ -23,7 +23,7 @@ import healpy as hp
 import scipy as sp
 from .algebra import comp_sep, W_dBdB, W_dB, W, _mmm, _utmv, _mmv
 from .mixingmatrix import MixingMatrix
-from .separation_recipies import _force_keys_as_attributes
+from .separation_recipes import _force_keys_as_attributes
 
 
 __all__ = [

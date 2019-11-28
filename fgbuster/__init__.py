@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from .separation_recipies import *
+from .separation_recipes import *
 from .component_model import *
 from .mixingmatrix import *
 from .cosmology import *
