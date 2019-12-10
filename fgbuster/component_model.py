@@ -105,11 +105,11 @@ def bandpass_integration(f):
                     band_nu, band_w = bandpass
                     band_nu[0]  # Raise if bandpass stores the two edge freq
                     res[..., i] = np.trapz(
-                        f(band_nu, *params, **kwargs) * band_w, band_nu)
+                        f(band_nu, *params, **kwargs) * band_w, band_nu * 1e9)
                 except (ValueError, IndexError):
                     # No weights were provided
                     res[..., i] = np.trapz(f(bandpass, *params, **kwargs),
-                                           bandpass)
+                                           bandpass * 1e9)
             return res
         return f(nu, *params)
 

@@ -2,8 +2,11 @@
 import unittest
 from itertools import product
 from parameterized import parameterized
+import scipy
 import numpy as np
 from fgbuster.component_model import AnalyticComponent, Dust
+from fgbuster.observation_helpers import get_sky, get_instrument
+import pysm
 
 class TestModifiedBlackBody(unittest.TestCase):
 
@@ -140,6 +143,35 @@ class TestAnalyticComponent(unittest.TestCase):
 
         for args in zip(res, ref):
             np.testing.assert_allclose(*args)
+
+    def test_bandpass_integration_against_pysm(self):
+        NSIDE = 1
+        N_SAMPLE_BAND = 10
+        sky_conf = get_sky(NSIDE, 'd1')
+        sky = pysm.Sky(sky_conf)
+        instr_conf = get_instrument('litebird', NSIDE)
+        bandpasses = [
+            (np.linspace(0.8, 1.2, N_SAMPLE_BAND)*f, np.ones(N_SAMPLE_BAND))
+            for f in instr_conf['frequencies']]
+        instr_conf['channels'] = bandpasses
+        instr_conf['channel_names'] = map(str, instr_conf['frequencies'])
+        instr_conf['use_bandpass'] = True
+        instrument = pysm.Instrument(instr_conf)
+        pysm_freq_maps, _ = instrument.observe(sky, write_outputs=False)
+        pysm_freq_maps = pysm_freq_maps[:, 1:]
+
+        beta = sky_conf['dust'][0]['spectral_index'][:, np.newaxis]
+        temp = sky_conf['dust'][0]['temp'][:, np.newaxis]
+        bandpasses = [(f, t / pysm.common.convert_units('Jysr', 'K_CMB', f))
+                      for f, t in bandpasses]
+        bandpasses = [(f, t / scipy.integrate.trapz(t, f))
+                      for f, t in bandpasses]
+        fgb_freq_maps = Dust(sky_conf['dust'][0]['nu_0_P']).eval(
+            instrument.Frequencies, beta, temp)
+        fgb_freq_maps = fgb_freq_maps.T * np.stack((sky_conf['dust'][0]['A_Q'],
+                                                    sky_conf['dust'][0]['A_U']))
+        print((fgb_freq_maps- pysm_freq_maps)/ fgb_freq_maps)
+        
 
 
 if __name__ == '__main__':
