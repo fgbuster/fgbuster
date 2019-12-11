@@ -1017,6 +1017,8 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
     except TypeError:
         n_param = 0
 
+    #TODO: This multipatch chi_dB needs better definition (or should be removed)
+    """
     try:
         # Does not work if patch_ids has more than one dimension
         for i in range(n_param):
@@ -1036,6 +1038,7 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             for r in res.patch_res:
                 if r is not None:
                     del r.chi_dB
+    """
 
     return res
 

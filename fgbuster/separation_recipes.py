@@ -136,14 +136,15 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
     def craft_params(par_array):
         # Add possible last pixels lost due to masking
         # Restore the ordering of the input data (pixel dimension last)
-        missing_ids = np.max(patch_ids) - par_array.shape[0] + 1
+        missing_ids = hp.nside2npix(nside) - par_array.shape[0]
         extra_dims = np.full((missing_ids,) + par_array.shape[1:], hp.UNSEEN)
         result = np.concatenate((par_array, extra_dims))
         result[np.isnan(result)] = hp.UNSEEN
         return result.T
 
     if len(x0):
-        res.chi_dB = [craft_maps(c) for c in res.chi_dB]
+        if 'chi_dB' in res:
+            res.chi_dB = [craft_maps(c) for c in res.chi_dB]
         if nside:
             res.x = craft_params(res.x)
             res.Sigma = craft_params(res.Sigma)
