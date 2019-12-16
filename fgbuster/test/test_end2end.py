@@ -4,7 +4,6 @@ import sys
 import os
 import numpy as np
 from numpy.testing import assert_allclose as aac
-from numpy.testing import assert_array_almost_equal as aaae
 from scipy.stats import kstest
 import healpy as hp
 from fgbuster.observation_helpers import get_instrument, get_sky
@@ -54,16 +53,15 @@ class TestEnd2EndNoiselessPhysical(unittest.TestCase):
 
     def test_basic_comp_sep_T(self):
         res_T = basic_comp_sep(self.components, self.instrument,
-                               self.freq_maps[:, :1, :])
-        aac(res_T.x, np.array(self.input), rtol=3e-5)
-        aaae(res_T.chi, 0, decimal=2)
-
+                               self.freq_maps[:, :1, :], tol=1e-12)
+        aac(res_T.x, np.array(self.input), rtol=1e-4)
+        aac(res_T.chi, 0, atol=0.05)
 
     def test_basic_comp_sep_P(self):
         res_P = basic_comp_sep(self.components[:-1], self.instrument,
                                self.freq_maps[:, 1:, :])
         aac(res_P.x, np.array(self.input[:-1]), rtol=1e-5)
-        aaae(res_P.chi, 0, decimal=2)
+        aac(res_P.chi, 0, atol=0.01)
 
 
 class TestEnd2EndNoisy(unittest.TestCase):
