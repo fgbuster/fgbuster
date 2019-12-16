@@ -10,7 +10,7 @@ import healpy as hp
 from fgbuster.observation_helpers import get_instrument, get_sky
 from fgbuster.algebra import _mtv
 import fgbuster.component_model as cm
-from fgbuster.separation_recipies import basic_comp_sep
+from fgbuster.separation_recipes import basic_comp_sep
 import pysm
 from pysm import convert_units
 

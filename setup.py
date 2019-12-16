@@ -1,5 +1,5 @@
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 # Utility function to read the README file.
 def read(fname):
@@ -14,8 +14,7 @@ setup(
     license = 'GPLv3',
     keywords = 'statistics cosmology cmb foregrounds',
     url = 'https://github.com/fgbuster/fgbuster',
-    packages = ['fgbuster'],
-    package_data={'': ['fgbuster/templates/*.fits']},
+    packages = find_packages(),
     include_package_data=True,
     long_description = read('README.rst'),
     install_requires = [
@@ -24,6 +23,8 @@ setup(
         'numdifftools',
         'sympy',
         'healpy',
+        'pysm @ git+https://github.com/bthorne93/PySM_public.git@master#egg=pysm',
+        'setuptools_git'
     ],
     test_suite = 'fgbuster.test'
 )

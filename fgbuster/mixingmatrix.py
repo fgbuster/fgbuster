@@ -63,7 +63,7 @@ class MixingMatrix(tuple):
 
     @property
     def comp_of_dB(self):
-        return [np.s_[..., c] for c in self.__comp_of_param]
+        return self.__comp_of_param
 
     def eval(self, nu, *params):
         if params:
@@ -76,11 +76,11 @@ class MixingMatrix(tuple):
             res[..., i_c] += c.eval(nu, *params[i_fp: i_fp + c.n_param])
         return res
 
-    def evaluator(self, nu, shape=(-1,)):
+    def evaluator(self, nu, unpack=(lambda x: x.reshape((-1,)))):
         if self.n_param:
             def f(param_array):
                 param_array = np.array(param_array)
-                return self.eval(nu, *[p for p in param_array.reshape(shape)])
+                return self.eval(nu, *[p for p in unpack(param_array)])
         else:
             A = self.eval(nu)
             def f():
@@ -94,7 +94,7 @@ class MixingMatrix(tuple):
         for i_c, c in enumerate(self):
             param_slice = slice(self.__first_param_of_comp[i_c],
                                 self.__first_param_of_comp[i_c] + c.n_param)
-            res += [g.reshape(-1, 1)
+            res += [g[..., np.newaxis]
                     for g in c.diff(nu, *params[param_slice])]
         return res
 

@@ -5,7 +5,7 @@ from numpy.testing import assert_allclose as aac
 import pysm
 from fgbuster.observation_helpers import get_instrument, get_sky
 from fgbuster import xForecast, CMB, Dust, Synchrotron
-from .test_end2end import suppress_stdout
+from fgbuster.test.test_end2end import suppress_stdout
 
 class TestXfCompSep(unittest.TestCase):
 
