@@ -18,7 +18,9 @@
 
 """
 from six import string_types
+import logging
 import numpy as np
+from scipy.optimize import OptimizeResult
 import healpy as hp
 from . import algebra as alg
 from .mixingmatrix import MixingMatrix
@@ -27,6 +29,8 @@ from .mixingmatrix import MixingMatrix
 __all__ = [
     'basic_comp_sep',
     'weighted_comp_sep',
+    'ilc',
+    'harmonic_ilc',
     'multi_res_comp_sep',
 ]
 
@@ -416,6 +420,265 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
             x[x_mask] = hp.UNSEEN
 
     res.mask_good = ~mask
+    return res
+
+
+def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3):
+    """ Internal Linear Combination
+
+    Parameters
+    ----------
+    components: list or tuple of lists
+        `Components` of the mixing matrix. They must have no free parameter.
+    instrument: dict or PySM.Instrument
+        Instrument object used to define the mixing matrix
+        It is required to have:
+
+        - Frequencies
+
+        It may have
+
+        - Beams (FWHM in arcmin) they are deconvolved before ILC
+
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
+        1, 3 or absent.
+        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        neglected during the component separation process.
+    lbins: array
+        It stores the edges of the bins that will have the same ILC weights.
+    weights: array
+        If provided data are multiplied by the weights map before computing alms
+
+    Returns
+    -------
+    result : dict
+	It includes
+
+        - **W**: *(ndarray)* - ILC weights for each component and possibly each
+          patch.
+        - **freq_cov**: *(ndarray)* - Empirical covariance for each bin
+        - **s**: *(ndarray)* - Component maps
+        - **cl_in**: *(ndarray)* - anafast output of the input
+        - **cl_out**: *(ndarray)* - anafast output of the output
+
+    Note
+    ----
+
+    * During the component separation, a pixel is masked if at least one of its
+      frequencies is masked.
+    * Output spectra are divided by the fsky. fsky is computed with the MASTER
+      formula if `weights` is provided, otherwise it is the fraction of unmasked
+      pixels
+
+    """
+    instrument = _force_keys_as_attributes(instrument)
+    nside = hp.get_nside(data[0])
+    lmax = 3 * nside - 1
+    lmax = min(lmax, lbins.max())
+    n_comp = len(components)
+    if weights is not None:
+        assert not np.any(_intersect_mask(data) * weights.astype(bool)), \
+            "Weights are non-zero where the data is masked"
+        fsky = np.mean(weights**2)**2 / np.mean(weights**4)
+    else:
+        mask = _intersect_mask(data)
+        fsky = float(mask.sum()) / mask.size
+
+    logging.info('Computing alms')
+    try:
+        assert np.any(instrument.Beams)
+    except (AttributeError, AssertionError):
+        beams = None
+    else:  # Deconvolve the beam
+        beams = instrument.Beams
+
+    alms = _get_alms(data, beams, lmax, weights, iter=iter)
+
+    logging.info('Computing ILC')
+    res = _harmonic_ilc_alm(components, instrument, alms, lbins, fsky)
+
+    logging.info('Back to real')
+    res.s = np.empty((n_comp,) + data.shape[1:], dtype=data.dtype)
+    for c in range(n_comp):
+        res.s[c] = hp.alm2map(alms[c], nside)
+
+    return res
+
+
+def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
+    alms = []
+    for f, fdata in enumerate(data):
+        if weights is None:
+            alms.append(hp.map2alm(fdata, lmax=lmax, iter=iter))
+        else:
+            alms.append(hp.map2alm(hp.ma(fdata)*weights, lmax=lmax, iter=iter))
+        logging.info('%i of %i complete' % (f+1, len(data)))
+    alms = np.array(alms)
+
+    if beams is not None:
+        logging.info('Correcting alms for the beams')
+        for fwhm, alm in zip(beams, alms):
+            bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax, pol=(alm.ndim==2))
+            if alm.ndim == 1:
+                alm = [alm]
+                bl = [bl]
+
+            for i_alm, i_bl in zip(alm, bl.T):
+                hp.almxfl(i_alm, 1.0/i_bl, inplace=True)
+
+    return alms
+
+
+def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
+    cl_in = np.array([hp.alm2cl(alm) for alm in alms])
+
+    # Multipoles for the ILC bins
+    lmax = hp.Alm.getlmax(alms.shape[-1])
+    ell = hp.Alm.getlm(lmax)[0]
+    if lbins is not None:
+        ell = np.digitize(ell, lbins)
+    # NOTE: use lmax for indexing alms, ell.max() is the maximum bin index
+
+    # Make alms real
+    alms = np.asarray(alms, order='C')
+    alms = alms.view(np.float64)
+    alms[..., np.arange(1, 2*(lmax+1), 2)] = hp.UNSEEN  # Mask imaginary m = 0
+    ell = np.stack((ell, ell), axis=-1).reshape(-1)
+    if alms.ndim > 2:  # TEB -> ILC indipendently on each Stokes
+        n_stokes = alms.shape[1]
+        assert n_stokes in [1, 3], "Alms must be either T only or T E B"
+        alms[:, 1:, [0, 2, 2*lmax+2, 2*lmax+3]] = hp.UNSEEN  # EB for ell < 2
+        ell = np.stack([ell] * n_stokes)  # Replicate ell for every Stokes
+        ell += np.arange(n_stokes).reshape(-1, 1) * (ell.max() + 1) # Add offset
+
+    res = ilc(components, instrument, alms, ell)
+
+    # Craft output
+    res.s[res.s == hp.UNSEEN] = 0.
+    res.s = np.asarray(res.s, order='C').view(np.complex128)
+    cl_out = np.array([hp.alm2cl(alm) for alm in res.s])
+
+    res.cl_in = cl_in
+    res.cl_out = cl_out
+    if fsky:
+        res.cl_in /= fsky
+        res.cl_out /= fsky
+
+    res.fsky = fsky
+    lrange = np.arange(lmax+1)
+    ldigitized = np.digitize(lrange, lbins)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        res.l_ref = (np.bincount(ldigitized, lrange * 2*lrange+1)
+                     / np.bincount(ldigitized, 2*lrange+1))
+    res.freq_cov *= 2  # sqrt(2) missing between complex-real alm conversion
+    if res.s.ndim > 2:
+        res.freq_cov = res.freq_cov.reshape(n_stokes, -1, *res.freq_cov.shape[1:])
+        res.W = res.W.reshape(n_stokes, -1, *res.W.shape[1:])
+
+    return res
+
+
+def ilc(components, instrument, data, patch_ids=None):
+    """ Internal Linear Combination
+
+    Parameters
+    ----------
+    components: list or tuple of lists
+        `Components` of the mixing matrix. They must have no free parameter.
+    instrument: PySM.Instrument
+        Instrument object used to define the mixing matrix
+        It is required to have:
+
+        - Frequencies
+
+        It's only role is to evaluate the `components` at the
+        `instrument.Frequencies`.
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
+        also absent.
+        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        neglected during the component separation process.
+    patch_ids: array
+        It stores the id of the region over which the ILC weights are computed
+        independently. It must be broadcast-compatible with data.
+
+    Returns
+    -------
+    result : dict
+	It includes
+
+        - **W**: *(ndarray)* - ILC weights for each component and possibly each
+          patch.
+        - **freq_cov**: *(ndarray)* - Empirical covariance for each patch
+        - **s**: *(ndarray)* - Component maps
+
+    Note
+    ----
+    * During the component separation, a pixel is masked if at least one of its
+      frequencies is masked.
+    """
+    # Checks
+    instrument = _force_keys_as_attributes(instrument)
+    np.broadcast(data, patch_ids)
+    n_freq = data.shape[0]
+    assert len(instrument.Frequencies) == n_freq,\
+        "The number of frequencies does not match the number of maps provided"
+    n_comp = len(components)
+
+    # Prepare mask and set to zero all the frequencies in the masked pixels:
+    # NOTE: mask are good pixels
+    mask = ~_intersect_mask(data)
+
+    mm = MixingMatrix(*components)
+    A = mm.eval(instrument.Frequencies)
+
+    data = data.T
+    res = OptimizeResult()
+    res.s = np.full(data.shape[:-1] + (n_comp,), hp.UNSEEN)
+
+    def ilc_patch(ids_i, i_patch):
+        if not np.any(ids_i):
+            return
+        data_patch = data[ids_i]  # data_patch is a copy (advanced indexing)
+        cov = np.cov(data_patch.reshape(-1, n_freq).T)
+        # Perform the inversion of the correlation instead of the covariance.
+        # This allows to meaninfully invert covariances that have very noisy
+        # channels.
+        assert cov.ndim == 2
+        cov_regularizer = np.diag(cov)**0.5 * np.diag(cov)[:, np.newaxis]**0.5
+        correlation = cov / cov_regularizer
+        try:
+            inv_freq_cov = np.linalg.inv(correlation) / cov_regularizer
+        except np.linalg.LinAlgError:
+            np.set_printoptions(precision=2)
+            logging.error(
+                f"Empirical covariance matrix cannot be reliably inverted.\n"
+                f"The domain that failed is {i_patch}.\n"
+                f"Covariance matrix diagonal {np.diag(cov)}\n"
+                f"Correlation matrix\n{correlation}")
+            raise
+        res.freq_cov[i_patch] = cov
+        res.W[i_patch] = alg.W(A, inv_freq_cov)
+        res.s[ids_i] = alg._mv(res.W[i_patch], data_patch)
+
+    if patch_ids is None:
+        res.freq_cov = np.full((n_freq, n_freq), hp.UNSEEN)
+        res.W = np.full((n_comp, n_freq), hp.UNSEEN)
+        ilc_patch(mask, np.s_[:])
+    else:
+        n_id = patch_ids.max() + 1
+        res.freq_cov = np.full((n_id, n_freq, n_freq), hp.UNSEEN)
+        res.W = np.full((n_id, n_comp, n_freq), hp.UNSEEN)
+        patch_ids_bak = patch_ids.copy().T
+        patch_ids_bak[~mask] = -1
+        for i in range(n_id):
+            ids_i = np.where(patch_ids_bak == i)
+            ilc_patch(ids_i, i)
+
+    res.s = res.s.T
+    res.components = mm.components
+
     return res
 
 
