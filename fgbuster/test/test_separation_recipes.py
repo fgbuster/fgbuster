@@ -56,9 +56,11 @@ def _get_mask(tag, nside):
         gal_cut = int(tag.split('gal')[-1])
         pix = np.arange(hp.nside2npix(nside))
         return np.abs(hp.pix2vec(nside, pix)[2]) < np.sin(np.radians(gal_cut))
+    elif 'pole' in tag:
+        pix = np.arange(hp.nside2npix(nside))
+        return hp.pix2vec(nside, pix)[2] < 0
     else:
         raise ValueError('Unsupported tag: %s'%tag)
-
 
 
 def _get_instrument(tag, nside=None):
@@ -154,17 +156,17 @@ def _make_tag(stokes, nside, nsidepar, components, mask, instrument):
 
 
 class TestBasicCompSep(unittest.TestCase):
-    stokess = 'IPN'
+    stokess = 'PIN'
     nsides = [2]
     nsidepars = [[0], [1], [2]]
     componentss = ['powerlaw_curvedpowerlaw', 'fixedpowerlaw',
                    'fixedpowerlaw_powerlaw', 'curvedpowerlaw']
-    masks = ['nomask', 'maskgal30']
+    masks = ['nomask', 'maskgal30', 'maskpole']
     instruments = ['dict_homo', 'pysm']
 
     tags = []
     tags += [_make_tag(*args) for args in product(stokess[:], nsides[:1],
-                                                  nsidepars[:1], componentss[:1],
+                                                  nsidepars[:2], componentss[:1],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:],
                                                   nsidepars[:1], componentss[:1],
@@ -173,13 +175,13 @@ class TestBasicCompSep(unittest.TestCase):
                                                   nsidepars[:], componentss[:1],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                  nsidepars[:1], componentss[:],
+                                                  nsidepars[:2], componentss[:],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                  nsidepars[:1], componentss[:1],
+                                                  nsidepars[:2], componentss[:1],
                                                   masks[:], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                  nsidepars[:1], componentss[:1],
+                                                  nsidepars[:2], componentss[:1],
                                                   masks[:1], instruments[:])]
 
     @parameterized.expand(tags)
@@ -213,27 +215,27 @@ class TestWeightedCompSep(unittest.TestCase):
     nsidepars = [[0], [1], [2]]
     componentss = ['powerlaw_curvedpowerlaw', 'fixedpowerlaw',
                    'fixedpowerlaw_powerlaw', 'curvedpowerlaw']
-    masks = ['nomask', 'maskgal30']
+    masks = ['nomask', 'maskgal30', 'maskpole']
     instruments = ['dict_vary', 'dict_homo', 'pysm']
 
     tags = []
     tags += [_make_tag(*args) for args in product(stokess[:], nsides[:1],
-                                                  nsidepars[:1], componentss[:1],
+                                                  nsidepars[:2], componentss[:1],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:],
-                                                  nsidepars[:1], componentss[:1],
+                                                  nsidepars[:2], componentss[:1],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
                                                   nsidepars[:], componentss[:1],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                  nsidepars[:1], componentss[:],
+                                                  nsidepars[:2], componentss[:],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                  nsidepars[:1], componentss[:1],
+                                                  nsidepars[:2], componentss[:1],
                                                   masks[:], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                  nsidepars[:1], componentss[:1],
+                                                  nsidepars[:2], componentss[:1],
                                                   masks[:1], instruments[:])]
 
     @parameterized.expand(tags)
@@ -312,28 +314,28 @@ class TestWeightedCompSep(unittest.TestCase):
                 raise ValueError(stokes)
 
 class TestMultiResCompSep(unittest.TestCase):
-    stokess = 'IPN'
+    stokess = 'PIN'
     nsides = [2]
     nsidepars = [[0], [1], [2]]
     componentss = ['powerlaw_curvedpowerlaw', 'curvedpowerlaw']
-    masks = ['nomask', 'maskgal30']
+    masks = ['nomask', 'maskgal30', 'maskpole']
     instruments = ['dict_homo', 'pysm']
 
     tags = []
     tags += [_make_tag(*args) for args in product(stokess[:], nsides[:1],
-                                                  nsidepars[:1], componentss[:1],
+                                                  nsidepars[:2], componentss[:1],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:],
-                                                  nsidepars[:1], componentss[:1],
+                                                  nsidepars[:2], componentss[:1],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
                                                   nsidepars[:], componentss[:1],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                  nsidepars[:1], componentss[:],
+                                                  nsidepars[:2], componentss[:],
                                                   masks[:1], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
-                                                  nsidepars[:1], componentss[:1],
+                                                  nsidepars[:2], componentss[:1],
                                                   masks[:], instruments[:1])]
     tags += [_make_tag(*args) for args in product(stokess[:1], nsides[:1],
                                                   nsidepars[:1], componentss[:1],
