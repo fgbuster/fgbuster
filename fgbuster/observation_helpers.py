@@ -197,3 +197,20 @@ def _dict_instrument_cmbs4(nside=None, units='uK_CMB'):
         'output_prefix': 'cmbs4',
         'use_smoothing': False,
     }
+
+def _dict_instrument_so_la(nside=None, units='uK_CMB'):
+    sens = np.array([52., 27., 5.8, 6.3, 15., 37.])
+    return {
+        'frequencies': np.array([27.,39.,93.,145.,225.,280.]),
+        'sens_I': sens / np.sqrt(2),
+        'sens_P': sens,
+        'beams': np.array([7.4, 5.1, 2.2, 1.4, 1.0, 0.9]),
+        'nside': nside,
+        'add_noise': True,
+        'noise_seed': 1234,
+        'use_bandpass': False,
+        'output_units': units,
+        'output_directory': '/dev/null',
+        'output_prefix': 'so_la',
+        'use_smoothing': False,
+    }

@@ -139,11 +139,14 @@ def _svd_sqrt_invN_A(A, invN=None, L=None):
         try:
             L = np.linalg.cholesky(invN)
         except np.linalg.LinAlgError:
+            # Cholesky of the blocks that contain a non-zero diagonal element
             L = np.zeros_like(invN)
-            mask = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
-                                   axis=-1))
-            if np.any(mask):
-                L[mask] = np.linalg.cholesky(invN[mask])
+            good_idx = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
+                                       axis=-1))
+            if invN.ndim > 2:
+                L[good_idx] = np.linalg.cholesky(invN[good_idx])
+            elif good_idx[0].size:
+                L = np.linalg.cholesky(invN)
 
     if L is not None:
         A = _mtm(L, A)
@@ -178,7 +181,15 @@ def _invAtNA_svd(u_e_v):
 
 
 def invAtNA(A, invN=None, return_svd=False):
-    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    try:
+        u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    except np.linalg.LinAlgError:
+        # invN is ill conditioned -> Cholesky failed
+        # invAtNA can still be well defined -> compute it brute-force
+        if return_svd:
+            raise
+        return np.linalg.inv(_mmm(_T(A), invN, A))
+
     res = _invAtNA_svd(u_e_v)
     if return_svd:
         return res, (u_e_v, L)
@@ -212,7 +223,15 @@ def _W_svd(u_e_v):
 
 
 def W(A, invN=None, return_svd=False):
-    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    try:
+        u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    except np.linalg.LinAlgError:
+        # invN is ill conditioned -> Cholesky failed
+        # W can still be well defined -> compute it brute-force
+        if return_svd:
+            raise
+        return _mmm(np.linalg.inv(_mmm(_T(A), invN, A)), _T(A), invN)
+
     if L is None:
         res = _W_svd(u_e_v)
     else:
@@ -865,8 +884,9 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
                      for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
             res.chi_dB = []
             for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
-                res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
-                                  / np.linalg.norm(As_dB_i, axis=-1))
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
+                                      / np.linalg.norm(As_dB_i, axis=-1))
         try:
             res.Sigma = np.linalg.inv(fisher)
         except np.linalg.LinAlgError:
