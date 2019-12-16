@@ -884,8 +884,9 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
                      for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
             res.chi_dB = []
             for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
-                res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
-                                  / np.linalg.norm(As_dB_i, axis=-1))
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
+                                      / np.linalg.norm(As_dB_i, axis=-1))
         try:
             res.Sigma = np.linalg.inv(fisher)
         except np.linalg.LinAlgError:

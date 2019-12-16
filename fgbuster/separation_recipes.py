@@ -567,8 +567,9 @@ def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
     res.fsky = fsky
     lrange = np.arange(lmax+1)
     ldigitized = np.digitize(lrange, lbins)
-    res.l_ref = (np.bincount(ldigitized, lrange * 2*lrange+1)
-                 / np.bincount(ldigitized, 2*lrange+1))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        res.l_ref = (np.bincount(ldigitized, lrange * 2*lrange+1)
+                     / np.bincount(ldigitized, 2*lrange+1))
     res.freq_cov *= 2  # sqrt(2) missing between complex-real alm conversion
     if res.s.ndim > 2:
         res.freq_cov = res.freq_cov.reshape(n_stokes, -1, *res.freq_cov.shape[1:])
