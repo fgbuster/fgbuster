@@ -139,14 +139,11 @@ def _svd_sqrt_invN_A(A, invN=None, L=None):
         try:
             L = np.linalg.cholesky(invN)
         except np.linalg.LinAlgError:
-            # Cholesky of the blocks that contain a non-zero diagonal element
             L = np.zeros_like(invN)
-            good_idx = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
-                                       axis=-1))
-            if invN.ndim > 2:
-                L[good_idx] = np.linalg.cholesky(invN[good_idx])
-            elif good_idx[0].size:
-                L = np.linalg.cholesky(invN)
+            mask = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
+                                   axis=-1))
+            if np.any(mask):
+                L[mask] = np.linalg.cholesky(invN[mask])
 
     if L is not None:
         A = _mtm(L, A)
@@ -181,15 +178,7 @@ def _invAtNA_svd(u_e_v):
 
 
 def invAtNA(A, invN=None, return_svd=False):
-    try:
-        u_e_v, L = _svd_sqrt_invN_A(A, invN)
-    except np.linalg.LinAlgError:
-        # invN is ill conditioned -> Cholesky failed
-        # invAtNA can still be well defined -> compute it brute-force
-        if return_svd:
-            raise
-        return np.linalg.inv(_mmm(_T(A), invN, A))
-
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
     res = _invAtNA_svd(u_e_v)
     if return_svd:
         return res, (u_e_v, L)
@@ -223,15 +212,7 @@ def _W_svd(u_e_v):
 
 
 def W(A, invN=None, return_svd=False):
-    try:
-        u_e_v, L = _svd_sqrt_invN_A(A, invN)
-    except np.linalg.LinAlgError:
-        # invN is ill conditioned -> Cholesky failed
-        # W can still be well defined -> compute it brute-force
-        if return_svd:
-            raise
-        return _mmm(np.linalg.inv(_mmm(_T(A), invN, A)), _T(A), invN)
-
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
     if L is None:
         res = _W_svd(u_e_v)
     else:
@@ -691,13 +672,113 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
     _raise_if_not_simple_comp_of_dB(comp_of_dB)
     u, _, _ = u_e_v
 
+    # if not _is_simple_comp_of_dB(comp_of_dB):
+    # if _is_simple_comp_of_dB(comp_of_dB):
     D_A_dB_s = []
     for i in range(len(A_dB)):
         A_dB_s = _mv(A_dB[i], s[(Ellipsis,) + comp_of_dB[i]])
         D_A_dB_s.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
 
     return np.array([[np.sum(i*j) for i in D_A_dB_s] for j in D_A_dB_s])
+    """
+    else:
+        D_A_dB_s = []
+        # comp_of_dB is a list of (slice, patches ids)
+        # defined for each spectral parameters
+        for par_comp_of_dB, par_A_dB in zip(comp_of_dB, A_dB):
+            try:
+                # ids are the sky pixels actually contained
+                # by the patch ids mentioned above
+                ids = np.array(np.broadcast_to(par_comp_of_dB[1].T,
+                                               s.T[0].shape)).T
+            except IndexError:
+                for i in range(len(par_A_dB)):
+                    A_dB_s = _mv(par_A_dB[i], s[(Ellipsis,) + par_comp_of_dB[i]])
+                    D_A_dB_s.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
+            else:
+                # we select the dimension of the sky signal
+                # corresponding to the derivative
+                s_comp = s[..., par_comp_of_dB[0]]
 
+                # dA/dB . s
+                A_dB_s = _mv(par_A_dB, s_comp)
+
+                # filtering the ids pixels
+                D_A_dB_s_loc =  np.bincount(
+                        ids.ravel(), (A_dB_s - _mv(u, _mtv(u, A_dB_s))).sum(-1).ravel())
+
+                # keep on acccumulating products
+                # each element is of size len(patch ids = number of free spectral parameters)
+                D_A_dB_s.append(D_A_dB_s_loc)
+
+        # total number of free spectral parameters
+        Nfreespec=0
+        for i in range(len(D_A_dB_s)):
+            for p in range(len(D_A_dB_s[i])):
+                Nfreespec += 1
+
+        import healpy as hp
+        ### fisher is of size number of free spectral parameters ** 2
+        fisher = np.zeros((Nfreespec, Nfreespec))
+        # loop over free parameters
+        # nlarge_pixels = np.zeros((len(D_A_dB_s), len(D_A_dB_s)))
+        # nsmall_pixels = np.zeros((len(D_A_dB_s), len(D_A_dB_s)))
+        # blocks_shape = []
+
+        ind = 0
+        for i in range(len(D_A_dB_s)):
+            npix_beta_i = len(D_A_dB_s[i])
+            for pixi in range(npix_beta_i):
+                ind_ = 0
+                for j in range(len(D_A_dB_s)):
+                    npix_beta_j = len(D_A_dB_s[j])
+                    for pixj in range(npix_beta_j):
+
+                        if npix_beta_j != npix_beta_i:
+                            # the two spectral indices have different 
+                            # resolutions. Only the pixels which are 
+                            # overlapping can have non-zero contribution
+                            # case 1. npix_i > npix_j 
+                            if npix_beta_i > npix_beta_j:
+                                map_one = np.zeros(npix_beta_j)
+                                map_one[pixj] = 1.0
+                                if npix_beta_j == 1:
+                                    # in case nside=0 for the largest resolution
+                                    pix_within_pix = range(npix_beta_i)
+                                else:
+                                    pix_within_pix = np.where( hp.ud_grade(map_one, 
+                                        nside_out=hp.npix2nside(npix_beta_i)) == 1)[0]
+                                fisher[ind,ind_] += np.sum(D_A_dB_s[i][pix_within_pix]*D_A_dB_s[j][pixj])
+                            # case 2. npix_j > npix_i 
+                            else:
+                                map_one = np.zeros(npix_beta_i)
+                                map_one[pixi] = 1.0
+                                if npix_beta_i == 1:
+                                    # in case nside=0 for the largest resolution
+                                    pix_within_pix = range(npix_beta_j)
+                                else:
+                                    pix_within_pix = np.where( hp.ud_grade(map_one, 
+                                        nside_out=hp.npix2nside(npix_beta_j)) == 1)[0]
+                                fisher[ind,ind_] += np.sum(D_A_dB_s[i][pixi]*D_A_dB_s[j][pix_within_pix])
+                        else:
+                            if pixi == pixj:
+                                fisher[ind,ind_] += D_A_dB_s[i][pixi]*D_A_dB_s[j][pixj]
+                        ind_ += 1
+                ind += 1
+        
+        print fisher
+        import pylab as pl
+        pl.figure()
+        pl.semilogy(np.abs(np.diag(fisher)))
+
+        pl.figure()
+        pl.matshow(np.log10(np.abs(fisher)))
+        pl.colorbar()
+        pl.show()
+        exit()
+
+        return fisher
+    """        
 
 def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
     A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
@@ -874,6 +955,22 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
     res.chi = pw_d[0] - _As_svd(u_e_v_last[0], res.s)
     
+    """
+    fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
+                            A_dB_last[0], comp_of_dB)
+    print np.shape(fisher)
+    print 'fisher = ', fisher 
+    import pylab as pl
+    pl.figure()
+    # pl.matshow(np.log10(np.abs(fisher)))
+    pl.matshow(fisher)
+    pl.colorbar()
+    # pl.loglog(np.abs(np.diag(fisher)))
+    # print np.diag(fisher)
+    pl.show()
+    exit()
+    """
+
     if _is_simple_comp_of_dB(comp_of_dB):
         if A_dB_ev is None:
             fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
@@ -884,9 +981,8 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
                      for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
             res.chi_dB = []
             for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
-                with np.errstate(divide='ignore', invalid='ignore'):
-                    res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
-                                      / np.linalg.norm(As_dB_i, axis=-1))
+                res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
+                                  / np.linalg.norm(As_dB_i, axis=-1))
         try:
             res.Sigma = np.linalg.inv(fisher)
         except np.linalg.LinAlgError:
@@ -1037,8 +1133,6 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
     except TypeError:
         n_param = 0
 
-    #TODO: This multipatch chi_dB needs better definition (or should be removed)
-    """
     try:
         # Does not work if patch_ids has more than one dimension
         for i in range(n_param):
@@ -1046,6 +1140,7 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             if i == 0:
                 res.chi_dB = []
             res.chi_dB.append(np.full(shape_chi_dB, np.NaN)) # NaN for testing
+    #except (AttributeError, TypeError):  # No chi_dB (no A_dB_ev)
     except AttributeError:  # No chi_dB (no A_dB_ev)
         pass
     else:
@@ -1058,7 +1153,6 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             for r in res.patch_res:
                 if r is not None:
                     del r.chi_dB
-    """
 
     return res
 
