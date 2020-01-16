@@ -249,12 +249,20 @@ class SemiBlind(Component):
     ----------
     A_blind: ndarray
         Column of the mixing matrix for blind component
+    pos: int
+        Position of the column in the mixing matrix
+    blind: ndarray
+        Position of column elements to remove from parameters list
 
     """
 
-    def __init__(self, A_blind, pos):
-        self._params = ['blind_' + str(i) + str(pos) for i in np.arange(len(A_blind))] #name of parameters
-        self._defaults = A_blind
+    def __init__(self, A_blind, pos, blind):
+        self._pos = pos
+        self._blind = blind
+        mask = np.ones(len(A_blind), dtype=bool)
+        mask[self._blind] = False
+        self._params = ['blind_' + str(i) + str(self._pos) for i in np.arange(len(A_blind))[mask]] #name of parameters
+        self._defaults = A_blind[mask]
 
     def eval(self, nu, *params):
         """ Evaluate the SED
@@ -273,7 +281,10 @@ class SemiBlind(Component):
 
         """
         assert len(params) == self.n_param
-        return params
+
+        bl_start = np.amin(self._blind)
+        elements = np.insert(params, bl_start, np.eye(len(self._blind))[:, self._pos-bl_start])
+        return elements
 
     def diff(self, nu, *params):
         """ Evaluate the derivative of the SED
@@ -295,8 +306,8 @@ class SemiBlind(Component):
         assert len(params) == self.n_param
         if not params:
             return []
-
-        return [np.eye(len(nu))[:,i_p] for i_p in np.arange(self.n_param)]
+        
+        return [np.insert(np.eye(self.n_param)[:,i_p], np.amin(self._blind), np.zeros(len(self._blind))) for i_p in np.arange(self.n_param)]
 
     def diff_diff(self, nu, *params):
         assert len(params) == self.n_param
