@@ -19,6 +19,7 @@
 """
 from six import string_types
 import numpy as np
+import scipy as sp
 from scipy.optimize import OptimizeResult
 import healpy as hp
 from . import algebra as alg
@@ -243,15 +244,6 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         components, instrument)
     if not len(x0):
         A_ev = A_ev()
-    else: #modification by Clement Leloup
-        #A1 = np.eye(A_ev(x0).shape[1])
-        #A1[1:,1:] =
-        A1 = A_ev(x0)[1:A_ev(x0).shape[1],1:A_ev(x0).shape[1]]
-        B = np.concatenate((A_ev(x0)[:,0, np.newaxis], np.dot(A_ev(x0)[:,1:], np.linalg.inv(A1))), axis=1)
-        print('A = ', A_ev(x0))
-        print('A1 = ', A1)
-        print('B = ', B)
-        exit()
         
     if prewhiten_factors is None:
         prewhitened_data = data.T
@@ -338,10 +330,13 @@ def harmonic_semiblind(components, instrument, templates, data, nside, invN=None
     instrument = _force_keys_as_attributes(instrument)
     lmax = 3 * nside - 1
     n_comp = len(components)
-    mask = _intersect_mask(data)
+    #mask = _intersect_mask(data)
     #fsky = float(mask.sum()) / mask.size
-    data[..., mask] = 0
-
+    #data[..., mask] = 0
+    mask = hp.read_map("fgbuster/templates/HFI_Mask_GalPlane-apo2_2048_R2.00.fits", field=(2))
+    mask = hp.ud_grade(mask, nside_out=nside)
+    data *= mask
+    
     print('Computing alms')
     try:
         assert np.any(instrument.Beams)
@@ -351,82 +346,310 @@ def harmonic_semiblind(components, instrument, templates, data, nside, invN=None
         beams = instrument.Beams
 
     alms = _get_alms(data, beams, lmax)[:,1:,:]
-    #alms = np.swapaxes(alms, 0, 2)
     ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
 
-    print('alms : ', alms.shape)
+    #Add noise to data alms
+    nlms_E = [hp.synalm(alg._inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+    nlms_B = [hp.synalm(alg._inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+    nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
+    alms += nlms
+
+    #Produce alms from maps
+    lmin = 30
     alms = np.asarray(alms, order='C')
     alms = alms.view(np.float64)
     alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN  # Mask imaginary m = 0
-    #alms[..., np.arange(1, lmax+1, 2)] = 0  # Mask imaginary m = 0
     mask_alms = _intersect_mask(alms)
     alms[..., mask_alms] = 0  # Thus no contribution to the spectral likelihood
     alms = np.swapaxes(alms, 0, 2)
-    print('alms : ', alms.shape)
     ell = np.stack((ell, ell), axis=-1).reshape(-1)
-    print('ell : ', ell.shape)
-    #print('lm : ', hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0])
-    #cl_out = np.array([hp.alm2cl(alm) for alm in alms])[:,1:,:] #Take only polarization
-    #cl_out = np.swapaxes(cl_out, 0, 2)
-    #print('cl_out : ', cl_out.shape)
+    mask_lmin = [l < lmin for l in ell]
+    alms[mask_lmin, ...] = 0
+    print('alms : ', alms.shape)
+
 
     print('Computing prior')
-    cl_in = hp.read_cl(templates)[1:3,:lmax+1] #Take only polarization
-
+    if isinstance(templates, np.ndarray):
+        ell_in = np.arange(2, lmax+1)
+        cl_in = np.concatenate((np.zeros((2, 2)), 2*np.pi*templates[1:3,:lmax-1]/(ell_in*(ell_in+1))), axis=1) #Take only polarization hard coded here
+    else:
+        cl_in = hp.read_cl(templates)[1:3,:lmax+1] #Take only polarization
+        
     #Format the prior shape
     with np.errstate(divide='ignore'):
         EE_in = np.array([np.diag(np.append(1/cl, np.zeros(n_comp-1))) for cl in cl_in[0,:]]) #Should modify here in case several non-blind components
         BB_in = np.array([np.diag(np.append(1/cl, np.zeros(n_comp-1))) for cl in cl_in[1,:]])
         cl_in = np.stack((EE_in, BB_in), axis=1) #Probably a better way to do that
     cl_in[~np.isfinite(cl_in)] = 0.
-    #print('cl_in : ', cl_in[:,0,,0])
     prior = np.array([cl_in[l,:,:] for l in ell])#hp.Alm.getlm(lmax, np.arange(alms.shape[0]))[0]])
-    print('prior : ', prior.shape)
-    #print('invN : ', invN.shape)
-    invNlm = np.array([invN[l,:,:]/(2.0*l+1.0) for l in ell])[:,np.newaxis,:,:]#hp.Alm.getlm(lmax, np.arange(alms.shape[0]))[0]])[:,np.newaxis,:,:]
-    print('invNlm : ', invNlm.shape)
+    #prior = None
+
+    
+    #Format the inverse noise matrix
+    invNlm = np.array([invN[l,:,:] for l in ell])[:,np.newaxis,:,:]#hp.Alm.getlm(lmax, np.arange(alms.shape[0]))[0]])[:,np.newaxis,:,:]
 
     print('Computing mixing matrix')
     #A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components, instrument)
     A_ev, A_dB_ev, comp_of_param, x0, params = init_semiblind_mixmat(components, instrument)
     if not len(x0):
         A_ev = A_ev()
-    else: #modification by Clement Leloup
-        print('A = ', A_ev(x0))
   
-    print('Separating components')
-    res = alg.semiblind_comp_sep(A_ev, alms, invNlm, prior, A_dB_ev, comp_of_param, x0, **minimize_kwargs)
+    #print('Separating components')
+    #res = alg.semiblind_comp_sep(A_ev(x0), alms, invNlm, prior, A_dB_ev, comp_of_param, x0, **minimize_kwargs)
+
+    x, y, res = grid_test(x0, 50, 0.003, 0.003, A_ev, alms, prior, invNlm)
+
+    x = np.asarray(x)
+    y = np.asarray(y)
+    res = np.asarray(res)
+    
+
+    #return cl_in, invN
+    return x, y, res
+
+
+#Added by Clement Leloup
+def semiblind(components, instrument, templates, data, nside, invN=None, **minimize_kwargs):
+    """ Semi-blind method
+
+    Parameters
+    ----------
+    components: list or tuple of lists
+        `Components` of the mixing matrix. They must have no free parameter.
+    instrument: dict or PySM.Instrument
+        Instrument object used to define the mixing matrix
+        It is required to have:
+
+        - Frequencies
+
+        It may have
+
+        - Beams (FWHM in arcmin) they are deconvolved before ILC
+
+    templates: str
+        Name of templates file.
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
+        1, 3 or absent.
+        Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+        neglected during the component separation process.
+    invN: ndarray
+        Inverse noise matrix
+
+    Returns
+    -------
+    result : dict
+	It includes
+
+        - **s**: *(ndarray)* - Component maps
+
+    Note
+    ----
+
+    * During the component separation, a pixel is masked if at least one of its
+      frequencies is masked.
+    * Works just with polarization at the moment
+
+    """
+    instrument = _force_keys_as_attributes(instrument)
+    lmax = 3 * nside - 1
+    n_comp = len(components)
+    #mask = _intersect_mask(data)
+    #data[..., mask] = 0
+    #mask = hp.read_map("fgbuster/templates/HFI_Mask_GalPlane-apo2_2048_R2.00.fits", field=(2))
+    #mask = hp.ud_grade(mask, nside_out=nside)
+    #data *= mask
+    #fsky = float(mask.sum()) / mask.size
+    #print('fsky = {}%'.format(fsky*100))
+
+    try:
+        assert np.any(instrument.Beams)
+    except (KeyError, AssertionError):
+        beams = None
+    else:  # Deconvolve the beam
+        beams = instrument.Beams
+
+    print('Computing mixing matrix')
+    #A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components, instrument)
+    A_ev, A_dB_ev, comp_of_param, x0, params = init_semiblind_mixmat(components, instrument)
+    if not len(x0):
+        A_ev = A_ev()
+  
+    print('Computing prior')
+    data = np.swapaxes(data, 0, 2)
+    #prior = np.zeros((data.shape[0], data.shape[1], A_ev(x0).shape[1], A_ev(x0).shape[1]))
+    prior = None
+    #print('prior : ', prior.shape)
+    print('data : ', data.shape)
+
+    #print('Separating components')
+    #res = alg.semiblind_comp_sep(A_ev, alms, invNlm, prior, A_dB_ev, comp_of_param, x0, **minimize_kwargs)
+
+    '''
+    print('Testing likelihood computation')
+    #prior = np.zeros(prior.shape)
+    x = [x0 for i in np.arange(40)]
+    x = np.asarray(x)
+    print(x0)
+    for i in np.arange(x.shape[0]):
+        x[i,2] = x0[2]+0.49*i-10
+    res = [alg.semiblind_logL(A_ev(x[i,:]), alms, prior, invNlm) for i in np.arange(x.shape[0])]
+    res2 = [alg.semiblind_logL_bruteforce(A_ev(x[i,:]), alms, prior, invNlm) for i in np.arange(x.shape[0])]
+    res3 = [alg.logL(A_ev(x[i,:]), alms,invNlm) for i in np.arange(x.shape[0])]
+    #res = [alg.semiblind_logL_dB(A_ev(x[i,:]), alms, prior, invNlm, A_dB_ev((x[i,:])), comp_of_param) for i in np.arange(x.shape[0])]
+    #res2 = [alg.semiblind_logL_dB_bruteforce(A_ev(x[i,:]), alms, prior, invNlm, A_dB_ev((x[i,:])), comp_of_param) for i in np.arange(x.shape[0])]
+    #res3 = [alg.logL_dB(A_ev(x[i,:]), alms, invNlm, A_dB_ev((x[i,:])), comp_of_param) for i in np.arange(x.shape[0])]
+
+    res = np.asarray(res)
+    res2 = np.asarray(res2)
+    res3 = np.asarray(res3)
     
     #Craft output
     #Empty atm
-    
-    return res
+    '''
+
+    #prior = np.zeros(prior.shape)
+    print('x0 = ', x0)
+    x, y, res = grid_test(x0, 20, 10, 10, A_ev, data, prior, invN)
+
+    x = np.asarray(x)
+    y = np.asarray(y)
+    res = np.asarray(res)
+
+    #return x[:,2], res, res2, res3
+    #return x[:,2], res[:,2], res2[:,2], res3[:,2]
+
+    return x, y, res
+
 
 #Added by Clement Leloup
-def init_semiblind_mixmat(components, instrument, prewhiten_factors=None):
+def grid_test(x0, n_pts, gap1, gap2, A_ev, data, prior, invN):
+
+    #print(x0)
+    x0 = np.array([0.458394863178, 1.0, 2.34401664336])
+    
+    x1 = [x0[0]-gap1+2*gap1*i/n_pts for i in np.arange(n_pts)]
+    y1 = [x0[-1]-gap2+2*gap2*i/n_pts for i in np.arange(n_pts)]
+    xy = np.meshgrid(x1, y1)
+    x_flat = xy[0].flatten()
+    y_flat = xy[1].flatten()
+
+    x = [x0 for i in np.arange(n_pts**2)]
+    x = np.asarray(x)
+    #for i in np.arange(n_pts**2):
+    x[:,0] = np.asarray(x_flat)
+    x[:,-1] = np.asarray(y_flat)
+
+    res = [alg.semiblind_logL(A_ev(x[i,:]), data, prior, invN) for i in np.arange(x.shape[0])]
+
+    return x[:, 0], x[:, -1], res
+
+
+#Added by Clement Leloup
+def test_fisher():
+
+
+#Added by Clement Leloup
+def noise_real_max(components, instrument, templates, data, fsky, nside, invN, noise_seed, nblind, **minimize_kwargs):
+
+    instrument = _force_keys_as_attributes(instrument)
+    lmax = 3 * nside - 1
+    n_comp = len(components)
+
+    print('Computing prior')
+    if isinstance(templates, np.ndarray):
+        ell_in = np.arange(2, lmax+1)
+        cl_in = np.concatenate((np.zeros((2, 2)), 2*np.pi*templates[1:3,:lmax-1]/(ell_in*(ell_in+1))), axis=1) #Take only polarization hard coded here
+    else:
+        cl_in = hp.read_cl(templates)[1:3,:lmax+1] #Take only polarization
+        
+    #Format the prior shape
+    with np.errstate(divide='ignore'):
+        EE_in = np.array([np.diag(np.append(1/cl, np.zeros(n_comp-1))) for cl in cl_in[0,:]]) #Should modify here in case several non-blind components
+        BB_in = np.array([np.diag(np.append(1/cl, np.zeros(n_comp-1))) for cl in cl_in[1,:]])
+        cl_in = np.stack((EE_in, BB_in), axis=1) #Probably a better way to do that
+    cl_in[~np.isfinite(cl_in)] = 0.
+    
+
+    print('Computing mixing matrix')
+    A_ev, A_dB_ev, comp_of_param, x0, params = init_semiblind_mixmat(components, instrument, nblind)
+    if not len(x0):
+        print("Nothing to maximize !")
+        return x0
+
+    print('x0 : ', x0)
+        
+    print('Computing alms')
+    try:
+        assert np.any(instrument.Beams)
+    except (KeyError, AssertionError):
+        beams = None
+    else:  # Deconvolve the beam
+        beams = instrument.Beams
+    alms = _get_alms(data, beams, lmax)[:,1:,:]
+    ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
+    ell = np.stack((ell, ell), axis=-1).reshape(-1)
+    lmin = 30
+    mask_lmin = [l < lmin for l in ell]
+
+    #Add noise to data alms
+    np.random.seed(noise_seed)
+    nlms_E = [hp.synalm(alg._inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+    nlms_B = [hp.synalm(alg._inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+    nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
+    alms = alms+nlms
+    
+    #Produce alms from maps
+    alms = np.asarray(alms, order='C')
+    alms = alms.view(np.float64)
+    alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN  # Mask imaginary m = 0
+    mask_alms = _intersect_mask(alms)
+    alms[..., mask_alms] = 0  # Thus no contribution to the spectral likelihood
+    alms = np.swapaxes(alms, 0, 2)
+    alms[mask_lmin, ...] = 0
+    
+    prior = np.array([cl_in[l,:,:] for l in ell])/fsky
+    invNlm = np.array([invN[l,:,:] for l in ell])[:,np.newaxis,:,:]
+    
+    #Maximize likelihood
+    A_dB_ev, comp_of_dB = alg._A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_param, x0)
+    fun, jac, last_values = alg._semiblind_build_bound_inv_logL_and_logL_dB(
+        A_ev, alms, invNlm, prior, A_dB_ev, comp_of_dB) #modification here
+    minimize_kwargs['jac'] = jac
+    res = sp.optimize.minimize(fun, x0, **minimize_kwargs)
+    m = res.x
+    print('xmax = ', res.x)
+
+    return m
+
+
+#Added by Clement Leloup
+def init_semiblind_mixmat(components, instrument, nblind, prewhiten_factors=None):
     A = MixingMatrix(*components)
     A_ev = A.evaluator(instrument.Frequencies)
     x0 = np.array([x for c in components for x in c.defaults])
     if not len(x0):
         A_ev = A_ev()
-        A1 = A_ev[1:A_ev.shape[1],1:]
-        B = np.concatenate((A_ev[:,0, np.newaxis], np.dot(A_ev[:,1:], np.linalg.inv(A1))), axis=1)
+        notblind = A_ev.shape[1]-nblind
+        A1 = A_ev[notblind:A_ev.shape[1],notblind:]
+        B = np.concatenate((A_ev[:,0:notblind, np.newaxis], np.dot(A_ev[:,notblind:], np.linalg.inv(A1))), axis=1)
     else: #modification by Clement Leloup
         A_ev = A_ev(x0)
-        A1 = A_ev[1:A_ev.shape[1],1:]
-        B_mat = np.concatenate((A_ev[:,0, np.newaxis], np.dot(A_ev[:,1:], np.linalg.inv(A1))), axis=1)
-        print('B_mat = ', B_mat)
+        notblind = A_ev.shape[1]-nblind
+        A1 = A_ev[notblind:A_ev.shape[1],notblind:]
+        B_mat = np.concatenate((A_ev[:,0:notblind], np.dot(A_ev[:,notblind:], np.linalg.inv(A1))), axis=1)
+        #print('B_mat = ', B_mat)
 
     #comp = [CMB()], SemiBlind(B_mat[:,1], 1), SemiBlind(B_mat[:,2], 2)]
-    comp = np.append([CMB()], [SemiBlind(B_mat[:,i], i) for i in np.arange(1, len(components))])
+    #comp = np.append([CMB()], [SemiBlind(B_mat[:,i], i) for i in np.arange(1, len(components))])
+    comp = np.append(components[:notblind], [SemiBlind(B_mat[:,i], i, np.arange(notblind, len(components))) for i in np.arange(notblind, len(components))])
     B = MixingMatrix(*comp)
     B_ev = B.evaluator(instrument.Frequencies)
     B_dB_ev = B.diff_evaluator(instrument.Frequencies)
     comp_of_dB = B.comp_of_dB
     xB0 = np.array([x for c in comp for x in c.defaults])
     params = B.params
-    print('B = ', B_ev(xB0))
-    exit()
+    #print('B = ', B_ev(xB0))
 
     if prewhiten_factors is None:
         return B_ev, B_dB_ev, comp_of_dB, xB0, params
