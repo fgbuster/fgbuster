@@ -26,6 +26,7 @@ from . import algebra as alg
 from .mixingmatrix import MixingMatrix
 from .component_model import CMB, SemiBlind
 import sys
+import numdifftools
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -546,7 +547,93 @@ def grid_test(x0, n_pts, gap1, gap2, A_ev, data, prior, invN):
 
 
 #Added by Clement Leloup
-def test_fisher():
+def test_fisher(components, instrument, templates, data, nside, nblind, invN=None, **minimize_kwargs):
+
+    instrument = _force_keys_as_attributes(instrument)
+    lmax = 3 * nside - 1
+    n_comp = len(components)
+    mask = hp.read_map("fgbuster/templates/HFI_Mask_GalPlane-apo2_2048_R2.00.fits", field=(2))
+    mask = hp.ud_grade(mask, nside_out=nside)
+    data *= mask
+    fsky = float(mask.sum()) / mask.size
+    
+    print('Computing alms')
+    try:
+        assert np.any(instrument.Beams)
+    except (KeyError, AssertionError):
+        beams = None
+    else:  # Deconvolve the beam
+        beams = instrument.Beams
+
+    alms = _get_alms(data, beams, lmax)[:,1:,:]
+    ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
+
+    #Add noise to data alms
+    nlms_E = [hp.synalm(alg._inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+    nlms_B = [hp.synalm(alg._inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+    nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
+    alms += nlms
+
+    #Produce alms from maps
+    lmin = 30
+    alms = np.asarray(alms, order='C')
+    alms = alms.view(np.float64)
+    alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN  # Mask imaginary m = 0
+    mask_alms = _intersect_mask(alms)
+    alms[..., mask_alms] = 0  # Thus no contribution to the spectral likelihood
+    alms = np.swapaxes(alms, 0, 2)
+    ell = np.stack((ell, ell), axis=-1).reshape(-1)
+    mask_lmin = [l < lmin for l in ell]
+    alms[mask_lmin, ...] = 0
+
+
+    print('Computing prior')
+    if isinstance(templates, np.ndarray):
+        ell_in = np.arange(2, lmax+1)
+        cl_in = np.concatenate((np.zeros((2, 2)), 2*np.pi*templates[1:3,:lmax-1]/(ell_in*(ell_in+1))), axis=1) #Take only polarization hard coded here
+    else:
+        cl_in = hp.read_cl(templates)[1:3,:lmax+1] #Take only polarization
+        
+    #Format the prior shape
+    with np.errstate(divide='ignore'):
+        EE_in = np.array([np.diag(np.append(1/cl, np.zeros(n_comp-1))) for cl in cl_in[0,:]]) #Should modify here in case several non-blind components
+        BB_in = np.array([np.diag(np.append(1/cl, np.zeros(n_comp-1))) for cl in cl_in[1,:]])
+        cl_in = np.stack((EE_in, BB_in), axis=1) #Probably a better way to do that
+    cl_in[~np.isfinite(cl_in)] = 0.
+    prior = np.array([cl_in[l,:,:] for l in ell])/fsky
+    #prior = None
+
+    
+    #Format the inverse noise matrix
+    invNlm = np.array([invN[l,:,:] for l in ell])[:,np.newaxis,:,:]
+
+    print('Computing mixing matrix')
+    A_ev, A_dB_ev, comp_of_param, x0, params = init_semiblind_mixmat(components, instrument, nblind)
+    if not len(x0):
+        A_ev = A_ev()
+
+    print(x0)
+        
+    #Maximize likelihood
+    A_dB_ev, comp_of_dB = alg._A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_param, x0)
+    fun, jac, last_values = alg._semiblind_build_bound_inv_logL_and_logL_dB(
+        A_ev, alms, invNlm, prior, A_dB_ev, comp_of_dB) #modification here
+    minimize_kwargs['jac'] = jac
+    res = sp.optimize.minimize(fun, x0, **minimize_kwargs)
+
+    # Gather results
+    u_e_v_last, A_dB_last, x_last, pw_d = last_values
+    if not np.all(x_last[0] == res.x):
+        fun(res.x) #  Make sure that last_values refer to the minimum
+    res.s = alg._semiblind_Wd_svd(u_e_v_last[0], prior, pw_d[0])
+
+    #prior = np.zeros(prior.shape)
+    #L_brute = numdifftools.Hessian(fun)(res.x)
+    #L_param = alg._fisher_logL_dB_dB_svd(u_e_v_last[0], res.s, A_dB_last[0], comp_of_dB)
+    L_ana = alg._semiblind_fisher_logL_dB_dB_svd(u_e_v_last[0], res.s, prior, A_dB_last[0], comp_of_dB)
+    
+    #return L_brute, L_param, L_ana
+    return L_ana
 
 
 #Added by Clement Leloup

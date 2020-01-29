@@ -48,7 +48,7 @@ In that case, you have two options
 #     - foo can return the SVD, which can then be reused in _bar_svd(...)
 
 import inspect
-from time import time
+import time
 import six
 import numpy as np
 import scipy as sp
@@ -85,10 +85,12 @@ def _inv(m):
 def _mv(m, v):
     return np.einsum('...ij,...j->...i', m, v, optimize=OPTIMIZE)
 
+#Added by Clement Leloup
+def _uvt(u, v):
+    return np.einsum('...i,...j->...ij', u, v)
 
 def _utmv(u, m, v):
     return np.einsum('...i,...ij,...j', u, m, v, optimize=OPTIMIZE)
-
 
 def _mtv(m, v):
     return np.einsum('...ji,...j->...i', m, v, optimize=OPTIMIZE)
@@ -157,43 +159,34 @@ def _svd_sqrt_invN_A(A, invN=None, L=None):
 
 def _logL_svd(u_e_v, d):
 
-    u1d = _mtv(u_e_v[0], d)
-    print('u1d : ', u1d.shape)
-    like = np.ravel(u1d, order='K')
-    test = np.dot(like, like)
-    print('test : ', 0.5*test)
-    print('likelihood : ', 0.5 * np.linalg.norm(_mtv(u_e_v[0], d))**2)
+    print('likelihood = ', 0.5 * np.linalg.norm(_mtv(u_e_v[0], d))**2)
     
     return 0.5 * np.linalg.norm(_mtv(u_e_v[0], d))**2
 
 
 #Added by Clement Leloup
 def _semiblind_logL_svd(u_e_v, invS, d):
-    print("_semiblind_logL_svd")
-    u, e, v = u_e_v #u is U_1, e is a vector of singular values, v is V^T
-    utd = _mtv(u, d) #(U_1)^T * d (cf my notes)
-#    print('v : ', v)
-#    print('e : ', e)
-    v = _T(v)/e[...,np.newaxis,:] #V' (cf my notes)
-#    print('v_prime :', v)
 
-    vtsv_prime = _mtmm(v, invS, v) #(V')^T S^-1 V'
+    if invS is None:
+        utd = np.ravel(_mtv(u_e_v[0], d))
+        mutd = utd
+    else:
+        u, e, v = u_e_v #u is U_1, e is a vector of singular values, v is V^T
+        utd = _mtv(u, d) #(U_1)^T * d (cf my notes)
+        v = _T(v)/e[...,np.newaxis,:] #V' (cf my notes)
 
-    try:
-        m = _mm(vtsv_prime, _inv(vtsv_prime + np.eye(invS.shape[-1])[np.newaxis, np.newaxis, ...]))
-    except np.linalg.linalg.LinAlgError:
-        print('Inversion of semi-blind correlation matrix failed !')
+        vtsv_prime = _mtmm(v, invS, v) #(V')^T S^-1 V'
 
-#    print('m : ', m)
-    m = np.eye(m.shape[-1])[np.newaxis, np.newaxis, ...] - m
+        try:
+            m = _inv(vtsv_prime + np.eye(invS.shape[-1])[np.newaxis, np.newaxis, ...])
+        except np.linalg.linalg.LinAlgError:
+            print('Inversion of semi-blind correlation matrix failed !')
 
-    mutd = np.ravel(_mv(m, utd))
-    utd = np.ravel(utd)
+        mutd = np.ravel(_mv(m, utd))
+        utd = np.ravel(utd)
 
-    like = np.dot(utd, mutd)
-    print('utd : ', utd.shape)
-    print('m : ', m.shape)
-    print('likelihood : ', 0.5*like)
+    like = np.dot(utd, mutd)        
+    #print('likelihood : ', 0.5*like)
     
     return 0.5 * like
 
@@ -214,6 +207,37 @@ def logL(A, d, invN=None, return_svd=False):
     return res
 
 
+#Added by Clement Leloup
+def semiblind_logL(A, d, invS, invN=None, return_svd=False):
+    try:
+        u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    except np.linalg.linalg.LinAlgError:
+        print('SVD of A failed -> logL = -inf')
+        return - np.inf
+    
+    if L is not None:
+        d = _mtv(L, d)
+    res = _semiblind_logL_svd(u_e_v, invS, d)
+
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
+#Added by Clement Leloup
+#To be removed
+def semiblind_logL_bruteforce(A, d, invS, invN=None):
+
+    cov = _inv(_mtmm(A, invN, A) + invS)
+    data = _mtmv(A, invN, d)
+    cdata = np.ravel(_mv(cov, data))
+    data = np.ravel(data)
+
+    res = 0.5*np.dot(data, cdata)
+
+    return res
+
+
 def _invAtNA_svd(u_e_v):
     _, e, v = u_e_v
     return _mtm(v, v / e[..., np.newaxis]**2)
@@ -221,7 +245,6 @@ def _invAtNA_svd(u_e_v):
 
 #Added by Clement Leloup
 def _invAtNAS_svd(u_e_v, invS=None):
-    print("_invAtNAS")
     if invS is None: #so that parametric case is included
         
         return _invAtNA_svd(u_e_v)
@@ -259,13 +282,12 @@ def _Wd_svd(u_e_v, d):
 
 #Added by Clement Leloup
 def _semiblind_Wd_svd(u_e_v, invS, d): #add wiener filtering here ?
-    print("_semiblind_Wd_svd")
     u, e, v = u_e_v
     utd = _mtv(u, d)
     v_prime = _T(v)/e[..., np.newaxis, :]
     vtsv = _mtmm(v_prime, invS, v_prime) #(V')^T S^-1 V' (cf my notes)
-    m = _mm(vtsv, _inv(vtsv + np.eye(vtsv.shape[-1])[np.newaxis, np.newaxis, ...]))
-    return _mmv(v_prime, np.eye(m.shape[-1])[np.newaxis, np.newaxis, ...] - m, utd)
+
+    return _mmv(v_prime, _inv(vtsv + np.eye(vtsv.shape[-1])[np.newaxis, np.newaxis, ...]), utd)
 
 
 def Wd(A, d, invN=None, return_svd=False):
@@ -280,7 +302,6 @@ def Wd(A, d, invN=None, return_svd=False):
 
 #Added by Clement Leloup
 def semiblind_Wd(A, d, invN=None, invS=None, return_svd=False):
-    print("semiblind_Wd")
     if invS is None: #so that parametric case is included
         return Wd(A, d, invN, return_svd)
     
@@ -627,36 +648,24 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
 
 #Added by Clement Leloup
 def _semiblind_logL_dB_svd(u_e_v, invS, d, A_dB, comp_of_dB):
-    print("_semiblind_logL_dB_svd")
+
     u, e, v = u_e_v
     utd = _mtv(u, d) #(U_1)^T * d (cf my notes)
-    print('e : ', e[..., np.newaxis,:].shape)
-    print('v :', v.shape)
-    print('invS :', invS.shape)
     vtsv = _mmm(v, invS, _T(v)/e[..., np.newaxis,:]**2) #V^T S^-1 V (Sigma^T Sigma)^-1
-    print('vtsv :', vtsv.shape)
     v_prime = _T(v)/e[..., np.newaxis, :] #V' (cf my notes)
-    print('v_prime :', v_prime.shape)
 
     vtsv_prime = _mtmm(v_prime, invS, v_prime) #(V')^T S^-1 V'
 
     try:
-        m = _mm(vtsv, _inv(vtsv + np.eye(invS.shape[-1])[np.newaxis, np.newaxis, ...]))
-        m_prime = _mm(vtsv_prime, _inv(vtsv_prime + np.eye(invS.shape[-1])[np.newaxis, np.newaxis, ...]))
+        m = _inv(vtsv + np.eye(invS.shape[-1])[np.newaxis, np.newaxis, ...])
+        m_prime = _inv(vtsv_prime + np.eye(invS.shape[-1])[np.newaxis, np.newaxis, ...])
     except np.linalg.linalg.LinAlgError:
         print('Inversion of semi-blind correlation matrices failed (derivative) !')
-
-    print('m : ', m.shape)
-    print('m_prime : ', m_prime.shape)
-    m = np.eye(m.shape[-1])[np.newaxis, np.newaxis, ...] - m
-    m_prime = np.eye(m_prime.shape[-1])[np.newaxis, np.newaxis, ...] - m_prime
-    print('m2 : ', m.shape)
-    print('m2_prime : ', m_prime.shape)
 
     Dd = d - _mmv(u, m_prime, utd)
 
     with np.errstate(divide='ignore'):
-        s = _mtmv(v, m, utd / e)
+        s = _mtmv(v, _T(m), utd / e)
     s[~np.isfinite(s)] = 0.
 
     n_param = len(A_dB)
@@ -710,6 +719,76 @@ def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
     res = _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB)
     if return_svd:
         return res, (u_e_v, L)
+    return res
+
+
+#Added by Clement Leloup
+def semiblind_logL_dB(A, d, invS, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
+    """ Derivative of the log likelihood
+
+    Parameters
+    ----------
+    A: ndarray
+        Mixing matrix. Shape *(..., n_freq, n_comp)*
+    d: ndarray
+        The data vector. Shape *(..., n_freq)*.
+    invN: ndarray or None
+        The inverse noise matrix. Shape *(..., n_freq, n_freq)*.
+    A_dB : ndarray or list of ndarray
+        The derivative of the mixing matrix. If list, each entry is the
+        derivative with respect to a different parameter.
+    comp_of_dB: IndexExpression or list of IndexExpression
+        It allows to provide in *A_dB* only the non-zero columns *A*.
+        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
+        If a list is provided, also *A_dB* has to be a list and
+        ``A_dB[i]`` is assumed to be the derivative of ``A[comp_of_dB[i]]``.
+
+    Returns
+    -------
+    diff : array
+        Derivative of the spectral likelihood. If *A_dB* is a list, ``diff[i]``
+        is computed from ``A_dB[i]``.
+
+    Note
+    ----
+    The *...* in the shape of the arguments denote any extra set of dimensions.
+    They have to be compatible among different arguments in the `numpy`
+    broadcasting sense.
+    """
+    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
+
+    u_e_v, L = _svd_sqrt_invN_A(A, invN)
+    if L is not None:
+        A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
+        d = _mtv(L, d)
+    res = _semiblind_logL_dB_svd(u_e_v, invS, d, A_dB, comp_of_dB)
+    if return_svd:
+        return res, (u_e_v, L)
+    return res
+
+
+#Added by Clement Leloup
+#To be removed
+def semiblind_logL_dB_bruteforce(A, d, invS, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
+  
+    A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
+
+    A_dB = np.asarray(A_dB)
+    A_dB = np.concatenate((np.zeros(A_dB.shape), A_dB), axis=2)
+        
+    cov = _inv(_mtmm(A, invN, A) + invS)
+    AtinvN = _mtm(A, invN)
+    P = invN - _mtmm(AtinvN, cov, AtinvN)
+    
+    covd_dB = [_mv(cov, _mtmv(A_dB[i,...], P, d)) for i in np.arange(A_dB.shape[0])]
+    covd_dB = np.asarray(covd_dB)
+    D = _mv(AtinvN, d)
+    covd_dB = [np.ravel(covd_dB[i,...]) for i in np.arange(covd_dB.shape[0])]
+    covd_dB = np.asarray(covd_dB)
+    D = np.ravel(D)
+    
+    res = [np.dot(D, covd_dB[i,:]) for i in np.arange(covd_dB.shape[0])]
+    
     return res
 
 
@@ -780,12 +859,73 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
     return np.array([[np.sum(i*j) for i in D_A_dB_s] for j in D_A_dB_s])
 
 
-def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
+#Added by Clement Leloup
+def _semiblind_fisher_logL_dB_dB_svd(u_e_v, s, invS, A_dB, comp_of_dB):
+    u, e, v = u_e_v
+    vprime = _T(v)/e[...,np.newaxis,:] #V' (cf my notes)
+    vtsv = _mtmm(vprime, invS, vprime)
+    m = _inv(vtsv + np.eye(invS.shape[-1])[np.newaxis, np.newaxis, ...])
+
+    # Expand A_dB
+    n_dB = len(A_dB)
+    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
+                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
+    A_dB_full = np.zeros((n_dB,)+u.shape)
+    A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
+    for i in range(n_dB):
+        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+
+    L_dB_dB = np.zeros((len(A_dB), len(A_dB)))
+
+    #Define CMB average of s*T(s)
+    sst_avg = np.zeros(invS.shape)
+    with np.errstate(divide='ignore'):
+        sst_avg[..., 0, 0] = 1.0/invS[..., 0, 0]
+    sst_avg[~np.isfinite(sst_avg)] = 0.
+    sst_avg[..., 1:, 1:] = _uvt(s[..., 1:], s[..., 1:])
+
+    for i in range(len(A_dB)):
+        for j in range(len(A_dB)):
+            #A_dB_s = _mv(A_dB_full[i], s)
+            H_dB = _mm(A_dB_full[i], vprime)
+            H_dB_prime = _mm(A_dB_full[j], vprime)
+            #D_A_dB_s.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
+            m1 = _mtmm(_mmm(H_dB, m, _inv(vprime)), np.eye(u.shape[-2])[np.newaxis, np.newaxis, ...] - _mmm(u, m, _T(u)), _mmm(H_dB_prime, m, _inv(vprime)))
+            
+            m2 = _mmm(_mtm(np.matmul(u, e[..., None]*v),
+                           _mmm(_mm(u, m), _mtm(H_dB_prime, u), _mm(m, _T(H_dB)))
+                           + _mmm(_mm(u, m), _mtm(H_dB, u), _mm(m, _T(H_dB_prime)))
+                           )
+                      + _mmm(_mmm(invS, vprime, m), _mtm(u, H_dB_prime), _mm(m, _T(H_dB))),
+                      _mm(u, m),
+                      _mtmm(vprime, invS, sst_avg)
+                      ) # warning: no second derivative here
+            m3 = _mtmm(_mm(vprime, m), _mmm(invS, vprime, m),
+                       _mtmm(_mtm(H_dB, u) + _mtm(u, H_dB), m, _mtm(H_dB_prime, u) + _mtm(u, H_dB_prime))
+                       - _mtm(H_dB, H_dB_prime)
+                       ) # warning: no second derivative here
+
+            d1 = np.sum(np.trace(_mm(m1, sst_avg), axis1=-1, axis2=-2))
+            print(d1)
+            d2 = np.sum(np.trace(m2, axis1=-1, axis2=-2))
+            print(d2)
+            d3 = np.sum(np.trace(m3, axis1=-1, axis2=-2))
+            print(d3)
+            L_dB_dB[i, j] = d1 + d2 + d3
+
+    w, v = np.linalg.eig(L_dB_dB)
+    print("eigenvalues : ", w)
+            
+    return L_dB_dB
+
+
+#Added by Clement Leloup
+def semiblind_fisher_logL_dB_dB(A, s, invS, A_dB, comp_of_dB, invN=None, return_svd=False):
     A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
     u_e_v, L = _svd_sqrt_invN_A(A, invN)
     if L is not None:
         A_dB = [_mtm(L, A_dB_i) for A_dB_i in A_dB]
-    res = _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB)
+    res = _semiblind_fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB)
     if return_svd:
         return res, (u_e_v, L)
     return res
@@ -859,7 +999,6 @@ def _semiblind_build_bound_inv_logL_and_logL_dB(A_ev, d, invN, invS,
     -logL_dB for the same x.
     """
 
-    print("_semiblind_build_bound_inv_logL_and_logL_dB")
     L = [None]
     x_old = [None]
     u_e_v_old = [None]
@@ -1248,7 +1387,6 @@ def semiblind_comp_sep(A_ev, d, invN, invS, A_dB_ev, comp_of_dB,
     be compatible among different arguments in the `numpy` broadcasting sense.
     """
 
-    print("semiblind_comp_sep")
     # If mixing matrix is fixed, separate and return
     if isinstance(A_ev, np.ndarray):
         res = sp.optimize.OptimizeResult()
