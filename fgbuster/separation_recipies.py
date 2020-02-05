@@ -22,7 +22,7 @@ import numpy as np
 import scipy as sp
 from scipy.optimize import OptimizeResult
 import healpy as hp
-from . import algebra as alg
+import algebra as alg
 from .mixingmatrix import MixingMatrix
 from .component_model import CMB, SemiBlind
 import sys
@@ -554,8 +554,9 @@ def test_fisher(components, instrument, templates, data, nside, nblind, invN=Non
     n_comp = len(components)
     mask = hp.read_map("fgbuster/templates/HFI_Mask_GalPlane-apo2_2048_R2.00.fits", field=(2))
     mask = hp.ud_grade(mask, nside_out=nside)
-    data *= mask
-    fsky = float(mask.sum()) / mask.size
+    #data *= mask
+    #fsky = float(mask.sum()) / mask.size
+    fsky = 1
     
     print('Computing alms')
     try:

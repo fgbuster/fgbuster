@@ -1,0 +1,10 @@
+from __future__ import print_function
+import sys, os
+sys.path.insert(0,os.path.realpath(os.path.join(os.getcwd(),'..')))
+from getdist import plots, MCSamples
+import getdist
+# use this *after* importing getdist if you want to use interactive plots
+# %matplotlib notebook
+import matplotlib.pyplot as plt
+import IPython
+print('GetDist Version: %s, Matplotlib version: %s'%(getdist.__version__, plt.matplotlib.__version__))

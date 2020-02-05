@@ -1,0 +1,46 @@
+import pylab
+pylab.rcParams['figure.figsize'] = 12, 16
+
+import healpy as hp
+import pysm
+import matplotlib.pyplot as plt
+
+from fgbuster.observation_helpers import get_instrument, get_sky  # Predefined instrumental and sky-creation configurations
+from fgbuster.visualization import corner_norm
+
+# Imports needed for component separation
+from fgbuster import (CMB, Dust, Synchrotron,  # sky-fitting model
+                      basic_comp_sep)  # separation routine
+
+
+
+NSIDE = 64
+sky_conf_simple = get_sky(NSIDE, 'c1d0s0')
+instrument = pysm.Instrument(get_instrument('cmbs4', NSIDE))
+freq_maps_simple, noise = instrument.observe(pysm.Sky(sky_conf_simple), write_outputs=False)
+
+
+freq_maps_simple = freq_maps_simple[:, 1:]  # Select polarization
+
+
+NSIDE_PATCH = 8
+sky_conf_vary = get_sky(NSIDE, 'c1d1s1')
+
+
+for comp, param in [('dust', 'spectral_index'),
+                    ('dust', 'temp'),
+                    ('synchrotron', 'spectral_index')
+                   ]:
+    spectral_param = sky_conf_vary[comp][0][param]
+    spectral_param[:] = hp.ud_grade(hp.ud_grade(spectral_param, NSIDE_PATCH),
+                                    NSIDE)
+
+
+comp = 'dust'
+param = 'spectral_index'
+#hp.mollview(sky_conf_simple[comp][0][param], sub=(1,3,1), title='Constant index')
+#hp.mollview(sky_conf_vary[comp][0][param], sub=(1,3,2), title='Varying indices')
+hp.mollview(get_sky(NSIDE, 'c1d1s1')[comp][0][param], sub=(1,3,3), title='Full resolution indices')
+
+
+plt.show()
