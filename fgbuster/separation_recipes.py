@@ -277,7 +277,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
-def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
+def multi_res_comp_sep(components, instrument, data, nsides, patch_ids=None, **minimize_kwargs):
     """ Basic component separation
 
     Parameters
@@ -306,6 +306,13 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     nsides: seq
         Specify the ``nside`` for each free parameter of the components
 
+    patch_ids: list of pixels
+        Each element of the list corresponds to a spectral index.
+        For a given spectral index, the element of patch_ids collects
+        the pixels ids belonging to a given cluster
+        e.g. patch_ids = [clusters_b0, clusters_b1, ...]
+        with clusters_b0 = [[sky pixels in cluster#1], [sky pixels in cluster#2], ...]
+        
     Returns
     -------
     result: dict
@@ -355,48 +362,94 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     invN = _get_prewhiten_factors(instrument, data.shape, data_nside)
     invN = np.diag(invN**2)
 
-    def array2maps(x):
-        i = 0
-        maps = []
-        for nside in nsides:
-            npix = _my_nside2npix(nside)
-            maps.append(x[i:i+npix])
-            i += npix
-        return maps
+    if patch_ids is None:
+        def array2maps(x):
+            i = 0
+            maps = []
+            for nside in nsides:
+                npix = _my_nside2npix(nside)
+                maps.append(x[i:i+npix])
+                i += npix
+            return maps
 
-    extra_dim = [1]*(data.ndim-1)
-    unpack = lambda x: [
-        _my_ud_grade(m, max_nside).reshape(-1, *extra_dim)
-        for m in array2maps(x)]
+        extra_dim = [1]*(data.ndim-1)
+        unpack = lambda x: [
+            _my_ud_grade(m, max_nside).reshape(-1, *extra_dim)
+            for m in array2maps(x)]
 
-    # Traspose the the data and put the pixels that share the same spectral
-    # indices next to each other
-    n_pix_max_nside = hp.nside2npix(max_nside)
-    pix_ids = np.argsort(hp.ud_grade(np.arange(n_pix_max_nside), data_nside))
-    data = data.T[pix_ids].reshape(
-        n_pix_max_nside, (data_nside // max_nside)**2, *data.T.shape[1:])
-    back_pix_ids = np.argsort(pix_ids)
+        # Transpose the data and put the pixels that share the same spectral
+        # indices next to each other
+        n_pix_max_nside = hp.nside2npix(max_nside)
+        pix_ids = np.argsort(hp.ud_grade(np.arange(n_pix_max_nside), data_nside))
+        data = data.T[pix_ids].reshape(
+            n_pix_max_nside, (data_nside // max_nside)**2, *data.T.shape[1:])
+        back_pix_ids = np.argsort(pix_ids)
+
+        x0 = [x for c in components for x in c.defaults]
+        x0 = [np.full(_my_nside2npix(nside), px0) for nside, px0 in zip(nsides, x0)]
+        x0 = np.concatenate(x0)
+
+    else:
+        ## new unpack
+        # unpack x |-> list of full resolution maps
+        # patch_ids will be new argument of the above function
+        # giving the list of [patch_ids_Bd,patch_ids_Td, ...]
+        # with patch_ids_Bd = a list of lists of pixels which 
+        # will define each cluster.
+        N_params = len(patch_ids)
+        N_clusters = [len(patch_ids[b]) for b in range(len(patch_ids))]
+        extra_dim = [1]*(data.ndim-1)
+        def array2maps(x):
+            clustered_map = []
+            i = 0
+            # loop over spectral indices
+            for b in range(N_params):
+                c_map = np.zeros(hp.nside2npix(data_nside), dtype=type(x[0]))
+                # loop over clusters for a five spectral index
+                for c in range(N_clusters[b]):
+                    # and looping over pixels now
+                    for p in patch_ids[b][c]:
+                        c_map[p] = x[i]
+                    i+=1
+                clustered_map.append(c_map)
+            return clustered_map
+        unpack = lambda x: [c.reshape(-1,*extra_dim) for c in array2maps(x)]
+
+        x0_ = [x for c in components for x in c.defaults]
+        x0 = []
+        for ix in range(len(x0_)):
+            for nc in range(len(patch_ids[ix])):
+                x0.append(x0_[ix])
+        
+        data = data.T.reshape(
+            data.T.shape[0], 1, *data.T.shape[1:])
+        pix_ids = np.argsort(np.arange(hp.nside2npix(data_nside)))
+        back_pix_ids = np.argsort(pix_ids)
 
     A = MixingMatrix(*components)
     assert A.n_param == len(nsides), (
         "%i free parameters but %i nsides" % (len(A.defaults), len(nsides)))
     A_ev = A.evaluator(instrument.Frequencies, unpack)
     A_dB_ev = A.diff_evaluator(instrument.Frequencies, unpack)
-    x0 = [x for c in components for x in c.defaults]
-    x0 = [np.full(_my_nside2npix(nside), px0) for nside, px0 in zip(nsides, x0)]
-    x0 = np.concatenate(x0)
 
     if not len(x0):
         A_ev = A_ev()
 
-    comp_of_dB = [
-        (c_db, _my_ud_grade(np.arange(_my_nside2npix(p_nside)), max_nside))
-        for p_nside, c_db in zip(nsides, A.comp_of_dB)]
+    if patch_ids is None:
+        comp_of_dB = [
+            (c_db, _my_ud_grade(np.arange(_my_nside2npix(p_nside)), max_nside))
+            for p_nside, c_db in zip(nsides, A.comp_of_dB)]
+    else:
+        vec = []
+        for b in range(N_params):
+            vec += list(np.arange(N_clusters[b]))
+        comp_of_dB = [
+            (c_db, _my_ud_grade(v, data_nside))
+            for v, c_db in zip(array2maps(vec), A.comp_of_dB)]
 
     # Component separation
     res = alg.comp_sep(A_ev, data, invN, A_dB_ev, comp_of_dB, x0,
                        **minimize_kwargs)
-
     # Craft output
     # 1) Apply the mask, if any
     # 2) Restore the ordering of the input data (pixel dimension last)
@@ -413,11 +466,15 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
             res.chi_dB[i] = restore_index_mask_transpose(res.chi_dB[i])
 
     if len(x0):
-        x_masks = [_my_ud_grade(mask.astype(float), nside) == 1.
+        if patch_ids is None:
+            x_masks = [_my_ud_grade(mask.astype(float), nside) == 1.
                    for nside in nsides]
+        else: 
+            x_masks = [_my_ud_grade(mask.astype(float), data_nside) == 1.
+                   for b in range(N_params)]            
         res.x = array2maps(res.x)
         for x, x_mask in zip(res.x, x_masks):
-            x[x_mask] = hp.UNSEEN
+                x[x_mask] = hp.UNSEEN
 
     res.mask_good = ~mask
     return res
@@ -653,10 +710,10 @@ def ilc(components, instrument, data, patch_ids=None):
         except np.linalg.LinAlgError:
             np.set_printoptions(precision=2)
             logging.error(
-                f"Empirical covariance matrix cannot be reliably inverted.\n"
-                f"The domain that failed is {i_patch}.\n"
-                f"Covariance matrix diagonal {np.diag(cov)}\n"
-                f"Correlation matrix\n{correlation}")
+                "Empirical covariance matrix cannot be reliably inverted.\n"
+                "The domain that failed is {i_patch}.\n"
+                "Covariance matrix diagonal {np.diag(cov)}\n"
+                "Correlation matrix\n{correlation}")
             raise
         res.freq_cov[i_patch] = cov
         res.W[i_patch] = alg.W(A, inv_freq_cov)
