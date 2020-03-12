@@ -82,9 +82,16 @@ def get_instrument(tag=''):
             df['depth_p'] = (np.linspace(20, 40, 10) - 30)**2
             df['depth_i'] = (np.linspace(20, 40, 10) - 30)**2
         else:
+            from importlib.util import find_spec
+            exp_file = find_spec('cmbdb').submodule_search_locations[0]
+            exp_file += '/experiments.yaml'
+            github = 'https://github.com/dpole/cmbdb'
             raise ValueError(
                 (f"Instrument(s) {tag} not available." if tag else "") +
-                f"Choose between: {' '.join(cmbdb.experiment.unique())}")
+                f"Choose between: {' '.join(cmbdb.experiment.unique())}{_NL}"
+                f"Add your instrument to your local copy of cmbdb: {exp_file}\n"
+                f"Beware, you might lose changes when you update: "
+                f"push your new configuration to {github}")
     return df.dropna(1, 'all')
 
 
@@ -126,7 +133,7 @@ def get_observation(instrument='', sky=None,
         instrument = standardize_instrument(instrument)
     if nside is None:
         nside = sky.nside
-    else:
+    elif not isinstance(sky, str):
         try:
             assert nside == sky.nside, (
                 "Mismatch between the value of the nside of the pysm.Sky "
