@@ -23,7 +23,7 @@ import healpy as hp
 import scipy as sp
 from .algebra import comp_sep, W_dBdB, W_dB, W, _mmm, _utmv, _mmv
 from .mixingmatrix import MixingMatrix
-from .separation_recipes import _force_keys_as_attributes
+from .observation_helpers import standardize_instrument
 
 
 __all__ = [
@@ -51,17 +51,15 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     ----------
     components: list
          `Components` of the mixing matrix
-    instrument: PySM.Instrument
-        Instrument object used to define the mixing matrix and the
-        frequency-dependent noise weight.
-        It is required to have:
+    instrument:
+        Object that provides the following as a key or an attribute.
 
-         - frequencies
+        - **frequency**
+        - **depth_p** (optional, frequencies are inverse-noise
+          weighted according to these noise levels)
+        - **fwhm** (optional)
 
-        however, also the following are taken into account, if provided
-
-         - sens_P (define the frequency inverse noise)
-
+        They can be anything that is convertible to a float numpy array.
     d_fgs: ndarray
         The foreground maps. No CMB. Shape `(n_freq, n_stokes, n_pix)`.
         If some pixels have to be masked, set them to zero.
@@ -101,11 +99,11 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
 
     """
     # Preliminaries
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument)
     nside = hp.npix2nside(d_fgs.shape[-1])
     n_stokes = d_fgs.shape[1]
     n_freqs = d_fgs.shape[0]
-    invN = np.diag(hp.nside2resol(nside, arcmin=True) / (instrument.Sens_P))**2
+    invN = np.diag(hp.nside2resol(nside, arcmin=True) / (instrument.depth_p))**2
     mask = d_fgs[0, 0, :] != 0.
     fsky = mask.astype(float).sum() / mask.size
     ell = np.arange(lmin, lmax+1)
@@ -116,8 +114,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     # grab the max-L spectra parameters with the associated error bars
     print('======= ESTIMATION OF SPECTRAL PARAMETERS =======')
     A = MixingMatrix(*components)
-    A_ev = A.evaluator(instrument.Frequencies)
-    A_dB_ev = A.diff_evaluator(instrument.Frequencies)
+    A_ev = A.evaluator(instrument.frequency)
+    A_dB_ev = A.diff_evaluator(instrument.frequency)
 
     x0 = np.array([x for c in components for x in c.defaults])
     if n_stokes == 3:  # if T and P were provided, extract P
@@ -132,7 +130,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     res.s = res.s.T
     A_maxL = A_ev(res.x)
     A_dB_maxL = A_dB_ev(res.x)
-    A_dBdB_maxL = A.diff_diff_evaluator(instrument.Frequencies)(res.x)
+    A_dBdB_maxL = A.diff_diff_evaluator(instrument.frequency)(res.x)
 
     print('res.x = ', res.x)
 
@@ -358,8 +356,13 @@ def _get_Cl_cmb(Alens=1., r=0.):
 
 
 def _get_Cl_noise(instrument, A, lmax):
-    bl = [hp.gauss_beam(np.radians(b/60.), lmax=lmax) for b in instrument.Beams]
-    nl = (np.array(bl) / np.radians(instrument.Sens_P/60.)[:, np.newaxis])**2
+    try:
+        bl = np.array([hp.gauss_beam(np.radians(b/60.), lmax=lmax)
+                       for b in instrument.fwhm])
+    except AttributeError:
+        bl = np.ones((len(instrument.frequency), lmax+1))
+
+    nl = (bl / np.radians(instrument.depth_p/60.)[:, np.newaxis])**2
     AtNA = np.einsum('fi, fl, fj -> lij', A, nl, A)
     inv_AtNA = np.linalg.inv(AtNA)
     return inv_AtNA.swapaxes(-3, -1)
