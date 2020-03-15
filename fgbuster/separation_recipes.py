@@ -17,13 +17,13 @@
 """ High-level component separation routines
 
 """
-from six import string_types
 import logging
 import numpy as np
 from scipy.optimize import OptimizeResult
 import healpy as hp
 from . import algebra as alg
 from .mixingmatrix import MixingMatrix
+from .observation_helpers import standardize_instrument
 
 
 __all__ = [
@@ -45,12 +45,11 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
     components: list or tuple of lists
         List storing the :class:`Component` s of the mixing matrix
     instrument:
-        Instrument used to define the mixing matrix.
-        It can be any object that has what follows either as a key or as an
-        attribute (e.g. `dict`, `PySM.Instrument`)
+        Object that provides the following as a key or an attribute.
 
-        - **Frequencies**
+        - **frequency**
 
+        It can be anything that is convertible to a float numpy array.
     data: ndarray or MaskedArray
         Data vector to be separated. Shape *(n_freq, ..., n_pix)*. *...* can be
         also absent.
@@ -92,7 +91,7 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
     its frequencies is masked, either in *data* or in *cov*.
 
     """
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument)
     # Make sure that cov has the frequency dimension and is equal to n_freq
     cov_shape = list(np.broadcast(cov, data).shape)
     if cov.ndim < 2 or (data.ndim == 3 and cov.shape[-2] == 1):
@@ -115,7 +114,7 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
 
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components,
                                                             instrument)
-    if not len(x0):
+    if len(x0) == 0:
         A_ev = A_ev()
 
     # Component separation
@@ -169,15 +168,14 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     ----------
     components: list
         List storing the :class:`Component` s of the mixing matrix
-    instrument
-        Instrument object used to define the mixing matrix.
-        It can be any object that has what follows either as a key or as an
-        attribute (e.g. `dict`, `PySM.Instrument`)
+    instrument:
+        Object that provides the following as a key or an attribute.
 
-        - **Frequencies**
-        - **Sens_I** or **Sens_P** (optional, frequencies are inverse-noise
+        - **frequency**
+        - **depth_i** or **depth_p** (optional, frequencies are inverse-noise
           weighted according to these noise levels)
 
+        They can be anything that is convertible to a float numpy array.
     data: ndarray or MaskedArray
         Data vector to be separated. Shape *(n_freq, ..., n_pix).*
         *...* can be
@@ -222,7 +220,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
       >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
 
     """
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument)
     # Prepare mask and set to zero all the frequencies in the masked pixels:
     # NOTE: mask are bad pixels
     mask = _intersect_mask(data)
@@ -237,7 +235,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
                                                data_nside)
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(
         components, instrument, prewhiten_factors=prewhiten_factors)
-    if not len(x0):
+    if len(x0) == 0:
         A_ev = A_ev()
     if prewhiten_factors is None:
         prewhitened_data = data.T
@@ -286,15 +284,14 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
     ----------
     components: list
         List storing the :class:`Component` s of the mixing matrix
-    instrument
-        Instrument object used to define the mixing matrix.
-        It can be any object that has what follows either as a key or as an
-        attribute (e.g. `dict`, `PySM.Instrument`)
+    instrument:
+        Object that provides the following as a key or an attribute.
 
-        - **Frequencies**
-        - **Sens_I** or **Sens_P** (optional, frequencies are inverse-noise
+        - **frequency**
+        - **depth_i** or **depth_p** (optional, frequencies are inverse-noise
           weighted according to these noise levels)
 
+        They can be anything that is convertible to a float numpy array.
     data: ndarray or MaskedArray
         Data vector to be separated. Shape *(n_freq, ..., n_pix).*
         *...* can be
@@ -337,7 +334,7 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
       >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
 
     """
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument)
 
     # Prepare mask and set to zero all the frequencies in the masked pixels:
     # NOTE: mask are bad pixels
@@ -376,8 +373,8 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
     assert A.n_param == len(patch_ids), (
         "%i free parameters but %i patch_ids"
         % (len(A.defaults), len(patch_ids)))
-    A_ev = A.evaluator(instrument.Frequencies, unpack)
-    A_dB_ev = A.diff_evaluator(instrument.Frequencies, unpack)
+    A_ev = A.evaluator(instrument.frequency, unpack)
+    A_dB_ev = A.diff_evaluator(instrument.frequency, unpack)
 
     comp_of_dB = list(zip(A.comp_of_dB, patch_ids))
 
@@ -419,15 +416,14 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     ----------
     components: list
         List storing the :class:`Component` s of the mixing matrix
-    instrument
-        Instrument object used to define the mixing matrix.
-        It can be any object that has what follows either as a key or as an
-        attribute (e.g. `dict`, `PySM.Instrument`)
+    instrument:
+        Object that provides the following as a key or an attribute.
 
-        - **Frequencies**
-        - **Sens_I** or **Sens_P** (optional, frequencies are inverse-noise
+        - **frequency**
+        - **depth_i** or **depth_p** (optional, frequencies are inverse-noise
           weighted according to these noise levels)
 
+        They can be anything that is convertible to a float numpy array.
     data: ndarray or MaskedArray
         Data vector to be separated. Shape *(n_freq, ..., n_pix).*
         *...* can be
@@ -474,19 +470,16 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
     ----------
     components: list or tuple of lists
         `Components` of the mixing matrix. They must have no free parameter.
-    instrument: dict or PySM.Instrument
-        Instrument object used to define the mixing matrix
-        It is required to have:
+    instrument:
+        Object that provides the following as a key or an attribute.
 
-        - Frequencies
+        - **frequency**
+        - **fwhm** (arcmin) they are deconvolved before ILC
 
-        It may have
-
-        - Beams (FWHM in arcmin) they are deconvolved before ILC
-
+        They can be anything that is convertible to a float numpy array.
     data: ndarray or MaskedArray
-        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
-        1, 3 or absent.
+        Data vector to be separated. Shape ``(n_freq, ..., n_pix)``.
+        ``...`` can be 1, 3 or absent.
         Values equal to hp.UNSEEN or, if MaskedArray, masked values are
         neglected during the component separation process.
     lbins: array
@@ -516,7 +509,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
       pixels
 
     """
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument)
     nside = hp.get_nside(data[0])
     lmax = 3 * nside - 1
     lmax = min(lmax, lbins.max())
@@ -557,7 +550,7 @@ def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
             alms.append(hp.map2alm(fdata, lmax=lmax, iter=iter))
         else:
             alms.append(hp.map2alm(hp.ma(fdata)*weights, lmax=lmax, iter=iter))
-        logging.info('%i of %i complete' % (f+1, len(data)))
+        logging.info(f"{f+1} of {len(data)} complete")
     alms = np.array(alms)
 
     if beams is not None:
@@ -630,17 +623,15 @@ def ilc(components, instrument, data, patch_ids=None):
     ----------
     components: list or tuple of lists
         `Components` of the mixing matrix. They must have no free parameter.
-    instrument: PySM.Instrument
-        Instrument object used to define the mixing matrix
-        It is required to have:
+    instrument:
+        Object that provides the following as a key or an attribute.
 
-        - Frequencies
+        - **frequency**
 
-        It's only role is to evaluate the `components` at the
-        `instrument.Frequencies`.
+        They can be anything that is convertible to a float numpy array.
     data: ndarray or MaskedArray
-        Data vector to be separated. Shape `(n_freq, ..., n_pix)`. `...` can be
-        also absent.
+        Data vector to be separated. Shape ``(n_freq, ..., n_pix)``.
+        ``...`` can be also absent.
         Values equal to hp.UNSEEN or, if MaskedArray, masked values are
         neglected during the component separation process.
     patch_ids: array
@@ -663,10 +654,10 @@ def ilc(components, instrument, data, patch_ids=None):
       frequencies is masked.
     """
     # Checks
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument)
     np.broadcast(data, patch_ids)
     n_freq = data.shape[0]
-    assert len(instrument.Frequencies) == n_freq,\
+    assert len(instrument.frequency) == n_freq,\
         "The number of frequencies does not match the number of maps provided"
     n_comp = len(components)
 
@@ -675,7 +666,7 @@ def ilc(components, instrument, data, patch_ids=None):
     mask = ~_intersect_mask(data)
 
     mm = MixingMatrix(*components)
-    A = mm.eval(instrument.Frequencies)
+    A = mm.eval(instrument.frequency)
 
     data = data.T
     res = OptimizeResult()
@@ -697,10 +688,10 @@ def ilc(components, instrument, data, patch_ids=None):
         except np.linalg.LinAlgError:
             np.set_printoptions(precision=2)
             logging.error(
-                "Empirical covariance matrix cannot be reliably inverted.\n"
-                "The domain that failed is {i_patch}.\n"
-                "Covariance matrix diagonal {np.diag(cov)}\n"
-                "Correlation matrix\n{correlation}")
+                f"Empirical covariance matrix cannot be reliably inverted.\n"
+                f"The domain that failed is {i_patch}.\n"
+                f"Covariance matrix diagonal {np.diag(cov)}\n"
+                f"Correlation matrix\n{correlation}")
             raise
         res.freq_cov[i_patch] = cov
         res.W[i_patch] = alg.W(A, inv_freq_cov)
@@ -749,12 +740,12 @@ def _get_prewhiten_factors(instrument, data_shape, nside):
     """
     try:
         if len(data_shape) < 3 or data_shape[1] == 1:
-            sens = instrument.Sens_I
+            sens = instrument.depth_i
         elif data_shape[1] == 2:
-            sens = instrument.Sens_P
+            sens = instrument.depth_p
         elif data_shape[1] == 3:
             sens = np.stack(
-                (instrument.Sens_I, instrument.Sens_P, instrument.Sens_P))
+                (instrument.depth_i, instrument.depth_p, instrument.depth_p))
         else:
             raise ValueError(data_shape)
     except AttributeError:  # instrument has no sensitivity -> do not prewhite
@@ -769,8 +760,8 @@ def _get_prewhiten_factors(instrument, data_shape, nside):
 
 def _A_evaluator(components, instrument, prewhiten_factors=None):
     A = MixingMatrix(*components)
-    A_ev = A.evaluator(instrument.Frequencies)
-    A_dB_ev = A.diff_evaluator(instrument.Frequencies)
+    A_ev = A.evaluator(instrument.frequency)
+    A_dB_ev = A.diff_evaluator(instrument.frequency)
     comp_of_dB = A.comp_of_dB
     x0 = np.array([x for c in components for x in c.defaults])
     params = A.params
@@ -801,7 +792,7 @@ def _my_ud_grade(map_in, nside_out, **kwargs):
     # which in this module means a single float or lenght-1 array
     if nside_out == 0:
         try:
-            # Both input and output hace nside = 0
+            # Both input and output have nside = 0
             return np.array([float(map_in)])
         except TypeError:
             # This is really clunky...
@@ -832,44 +823,3 @@ def _intersect_mask(maps):
 
     # Mask entire pixel if any of the frequencies in the pixel is masked
     return np.any(mask, axis=tuple(range(maps.ndim-1)))
-
-
-# What are _LowerCaseAttrDict and _force_keys_as_attributes?
-# Why are you so twisted?!? Because we decided that instrument can be either a
-# PySM.Instrument or a dictionary (especially the one used to construct a
-# PySM.Instrument).
-#
-# Suppose I want the frequencies.
-# * Pysm.Instrument 
-#     freqs = instrument.Frequencies
-# * the configuration dict of a Pysm.Instrument
-#     freqs = instrument['frequencies']
-# We force the former API in the dictionary case by
-# * setting all string keys to lower-case
-# * making dictionary entries accessible as attributes
-# * Catching upper-case attribute calls and returning the lower-case version
-# Shoot us any simpler idea. Maybe dropping the PySM.Instrument support...
-class _LowerCaseAttrDict(dict):
-    def __init__(self, *args, **kwargs):
-        super(_LowerCaseAttrDict, self).__init__(*args, **kwargs)
-        keys = list(self.keys())
-        for key in keys:
-            if isinstance(key, string_types):
-                str_key = str(key)
-                if str_key.lower() != str_key:
-                    self[str_key.lower()] = self[key]
-                    del self[key]
-        self.__dict__ = self
-
-    def __getattr__(self, key):
-        try:
-            return self[key.lower()]
-        except KeyError:
-            raise AttributeError("No attribute named '%s'" % key)
-
-
-def _force_keys_as_attributes(instrument):
-    if hasattr(instrument, 'Frequencies'):
-        return instrument
-    else:
-        return _LowerCaseAttrDict(instrument)
