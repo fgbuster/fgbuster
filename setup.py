@@ -7,7 +7,7 @@ def read(fname):
 
 setup(
     name = 'fgbuster',
-    version = '1.1.0',
+    version = '2.0.0',
     author = 'Davide Poletti, Josquin Errard and the FGBuster developers',
     author_email = 'davide.pole@gmail.com, josquin@apc.in2p3.fr',
     description = ('Handy parametric component separation tools'),
@@ -23,8 +23,9 @@ setup(
         'numdifftools',
         'sympy',
         'healpy',
-        'pysm @ git+https://github.com/bthorne93/PySM_public.git@master#egg=pysm',
-        'setuptools_git'
+        'setuptools_git',
+        'pysm3 @ git+http://github.com/healpy/pysm.git@master#egg=pysm',
+        'cmbdb @ git+http://github.com/dpole/cmbdb.git@master#egg=cmbdb',
     ],
     test_suite = 'fgbuster.test'
 )
