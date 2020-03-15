@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from .observation_helpers import *
 from .separation_recipes import *
 from .component_model import *
 from .mixingmatrix import *
