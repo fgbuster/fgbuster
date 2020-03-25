@@ -3,9 +3,9 @@ import unittest
 import numpy as np
 from numpy.testing import assert_allclose as aac
 import pysm
-from fgbuster.observation_helpers import get_instrument, get_sky
-from fgbuster import xForecast, CMB, Dust, Synchrotron
-from fgbuster.test.test_end2end import suppress_stdout
+from fgbuster import (xForecast, CMB, Dust, Synchrotron,
+                      get_instrument, get_sky, get_observation)
+from fgbuster.test.test_separation_recipes import suppress_stdout
 
 class TestXfCompSep(unittest.TestCase):
 
@@ -23,12 +23,16 @@ class TestXfCompSep(unittest.TestCase):
 
         nside = 16
         # define sky and foregrounds simulations
-        sky = pysm.Sky(get_sky(nside, 'd0s0'))
+        sky = get_sky(nside, 'd0s0')
         # define instrument
-        instrument = pysm.Instrument(get_instrument('litebird', nside))
+        instrument = {
+            'frequency': np.array([40.0, 50.0, 60.0, 68.4, 78.0, 88.5, 100.0, 118.9, 140.0, 166.0, 195.0, 234.9, 280.0, 337.4, 402.1]),
+            'depth_i': np.array([36.1, 19.6, 20.2, 11.3, 10.3, 8.4, 7.0, 5.8, 4.7, 7.0, 5.8, 8.0, 9.1, 11.4, 19.6]) / 1.41,
+            'depth_p': np.array([36.1, 19.6, 20.2, 11.3, 10.3, 8.4, 7.0, 5.8, 4.7, 7.0, 5.8, 8.0, 9.1, 11.4, 19.6])
+        }
+
         # get noiseless frequency maps
-        with suppress_stdout():
-            freq_maps = instrument.observe(sky, write_outputs=False)[0]
+        freq_maps = get_observation(instrument, sky)
         # take only the Q and U maps
         freq_maps = freq_maps[:,1:]
         # define components used in the modeling
