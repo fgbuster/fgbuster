@@ -5,8 +5,9 @@ from parameterized import parameterized
 import scipy
 import numpy as np
 from fgbuster.component_model import AnalyticComponent, Dust
-from fgbuster.observation_helpers import get_sky, get_instrument
+from fgbuster.observation_helpers import get_sky, get_instrument, _jysr2rj
 import pysm
+import pysm.units as u
 
 class TestModifiedBlackBody(unittest.TestCase):
 
@@ -33,7 +34,7 @@ class TestAnalyticComponent(unittest.TestCase):
     
     funcs = ['eval', 'diff']
     vals = ['float', 'scal', 'vec', 'vecbcast']
-    bands = ['centers', 'integral', 'weighted']
+    bands = ['centers', 'bandpass']
     tags = ['__'.join(args) for args in product(funcs, vals, vals, bands)]
 
     def setUp(self):
@@ -46,12 +47,6 @@ class TestAnalyticComponent(unittest.TestCase):
         nu = np.array(nu)
         if nu.ndim == 1: # No bandpass
             return nu * param0 + nu**param1 + 100.
-        elif nu.ndim == 2: # Bandpass but no weights
-            nu_shape = nu.shape
-            nu = nu.flatten()
-            res = nu * param0 + nu**param1 + 100.
-            return np.trapz(res.reshape(res.shape[:-1] + nu_shape),
-                            nu.reshape(nu_shape), -1)
         elif nu.ndim == 3: # Bandpass and trasmission
             nu, weight = np.swapaxes(nu, 0, 1)
             nu_shape = nu.shape
@@ -59,7 +54,8 @@ class TestAnalyticComponent(unittest.TestCase):
             res = nu * param0 + nu**param1 + 100.
             res *= weight.flatten()
             return np.trapz(res.reshape(res.shape[:-1] + nu_shape),
-                            nu.reshape(nu_shape), -1)
+                            nu.reshape(nu_shape) * 1e9, -1)
+        raise
 
     def hard_diff(self, nu, param0, param1):
         param0 = self._add_dim_if_ndarray(param0)
@@ -67,13 +63,6 @@ class TestAnalyticComponent(unittest.TestCase):
         nu = np.array(nu)
         if nu.ndim == 1: # No bandpass
             return [nu, nu**param1 * np.log(nu)]
-        elif nu.ndim == 2: # Bandpass but no weights
-            nu_shape = nu.shape
-            nu = nu.flatten()
-            res = nu**param1 * np.log(nu)
-            nu = nu.reshape(nu_shape)
-            res = np.trapz(res.reshape(res.shape[:-1] + nu_shape), nu, -1)
-            return [nu.mean(-1) * (nu.max(-1) - nu.min(-1)), res]
         elif nu.ndim == 3: # Bandpass and trasmission
             nu, weight = np.swapaxes(nu, 0, 1)
             nu_shape = nu.shape
@@ -81,8 +70,9 @@ class TestAnalyticComponent(unittest.TestCase):
             res = nu**param1 * np.log(nu)
             res *= weight.flatten()
             nu = nu.reshape(nu_shape)
-            res = np.trapz(res.reshape(res.shape[:-1] + nu_shape), nu, -1)
-            return [np.trapz(nu*weight, nu, -1), res]
+            res = np.trapz(res.reshape(res.shape[:-1] + nu_shape), nu * 1e9, -1)
+            return [np.trapz(nu*weight, nu * 1e9, -1), res]
+        raise
 
     def _add_dim_if_ndarray(self, param):
         if isinstance(param, np.ndarray):
@@ -92,11 +82,7 @@ class TestAnalyticComponent(unittest.TestCase):
     def _get_nu(self, tag):
         if tag == 'centers':
             return np.arange(1, 4) * 10
-        elif tag == 'integral':
-            bandpass = np.arange(1, 4) * 10
-            bandpass = bandpass[:, np.newaxis] * np.linspace(0.9, 1.1, 11)
-            return tuple(bandpass)
-        elif tag == 'weighted':
+        elif tag == 'bandpass':
             bandpass = np.arange(1, 4) * 10
             bandpass = bandpass[:, np.newaxis] * np.linspace(0.9, 1.1, 11)
             weight = np.random.uniform(0.5, 1.5, bandpass.size)
@@ -145,33 +131,21 @@ class TestAnalyticComponent(unittest.TestCase):
             np.testing.assert_allclose(*args)
 
     def test_bandpass_integration_against_pysm(self):
-        NSIDE = 1
+        NSIDE = 2
         N_SAMPLE_BAND = 10
-        sky_conf = get_sky(NSIDE, 'd1')
-        sky = pysm.Sky(sky_conf)
-        instr_conf = get_instrument('litebird', NSIDE)
-        bandpasses = [
-            (np.linspace(0.8, 1.2, N_SAMPLE_BAND)*f, np.ones(N_SAMPLE_BAND))
-            for f in instr_conf['frequencies']]
-        instr_conf['channels'] = bandpasses
-        instr_conf['channel_names'] = map(str, instr_conf['frequencies'])
-        instr_conf['use_bandpass'] = True
-        instrument = pysm.Instrument(instr_conf)
-        pysm_freq_maps, _ = instrument.observe(sky, write_outputs=False)
-        pysm_freq_maps = pysm_freq_maps[:, 1:]
+        sky = get_sky(NSIDE, 'd1')
+        freqs = np.linspace(80, 120, N_SAMPLE_BAND)
+        weights = np.ones(N_SAMPLE_BAND)
+        weights /= np.trapz(weights, freqs*1e9)
+        pysm_map = sky.get_emission(freqs * u.GHz, weights)[1].value  # Select Q
 
-        beta = sky_conf['dust'][0]['spectral_index'][:, np.newaxis]
-        temp = sky_conf['dust'][0]['temp'][:, np.newaxis]
-        bandpasses = [(f, t / pysm.common.convert_units('Jysr', 'K_CMB', f))
-                      for f, t in bandpasses]
-        bandpasses = [(f, t / scipy.integrate.trapz(t, f))
-                      for f, t in bandpasses]
-        fgb_freq_maps = Dust(sky_conf['dust'][0]['nu_0_P']).eval(
-            instrument.Frequencies, beta, temp)
-        fgb_freq_maps = fgb_freq_maps.T * np.stack((sky_conf['dust'][0]['A_Q'],
-                                                    sky_conf['dust'][0]['A_U']))
-        print((fgb_freq_maps- pysm_freq_maps)/ fgb_freq_maps)
-        
+        breakpoint()
+        weights = weights * _jysr2rj(freqs)
+        dust = sky.components[0]
+        fgb_map = Dust(dust.freq_ref_P.value, units='uK_RJ').eval(
+            [(freqs, weights)], dust.mbb_index.value, dust.mbb_temperature.value)
+        fgb_map = fgb_map[..., 0] * dust.Q_ref.value
+        np.testing.assert_allclose(pysm_map, fgb_map)
 
 
 if __name__ == '__main__':

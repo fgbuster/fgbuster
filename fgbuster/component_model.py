@@ -95,22 +95,15 @@ def bandpass_integration(f):
         transmittance in such a way that you get the correct result.
     '''
     def integrated_f(nu, *params, **kwargs):
-        # It is user's responsibility to provide weights in the same units as the
-        # components
+        # It is user's responsibility to provide weights in the same units
+        # as the components
         if isinstance(nu, (list, tuple)):
             out_shape = f(np.array(100.), *params, **kwargs).shape[:-1]
             res = np.empty(out_shape + (len(nu),))
-            for i, bandpass in enumerate(nu):
-                try:
-                    # Try to separate frequency and bandpass weights
-                    band_nu, band_w = bandpass
-                    band_nu[0]  # Raise if bandpass stores the two edge freq
-                    res[..., i] = np.trapz(
-                        f(band_nu, *params, **kwargs) * band_w, band_nu * 1e9)
-                except (ValueError, IndexError):
-                    # No weights were provided
-                    res[..., i] = np.trapz(f(bandpass, *params, **kwargs),
-                                           bandpass * 1e9)
+            for i, (band_nu, band_w) in enumerate(nu):
+                res[..., i] = np.trapz(
+                    f(band_nu, *params, **kwargs) * band_w,
+                    band_nu * 1e9)
             return res
         return f(nu, *params)
 
