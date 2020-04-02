@@ -251,3 +251,22 @@ def _rj2cmb(freqs):
 def _cmb2rj(freqs):
     return (np.ones_like(freqs) * u.K_CMB).to(
         u.K_RJ, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value
+
+def _rj2jysr(freqs):
+    return (np.ones_like(freqs) * u.K_RJ).to(
+        u.Jy / u.sr, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value
+
+
+def _jysr2rj(freqs):
+    return (np.ones_like(freqs) * u.Jy / u.sr).to(
+        u.K_RJ, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value
+
+
+def _cmb2jysr(freqs):
+    return (np.ones_like(freqs) * u.K_CMB).to(
+        u.Jy / u.sr, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value
+
+
+def _jysr2cmb(freqs):
+    return (np.ones_like(freqs) * u.Jy / u.sr).to(
+        u.K_CMB, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value
