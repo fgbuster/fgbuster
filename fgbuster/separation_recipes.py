@@ -347,9 +347,10 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
     except TypeError:
         raise ValueError("data has to be a stack of healpix maps")
 
-    invN = _get_prewhiten_factors(instrument, data.shape, data_nside)
-    invN = np.diag(invN**2)
-
+    prewhiten_factors = _get_prewhiten_factors(instrument, data.shape, data_nside)
+    invN = np.zeros(prewhiten_factors.shape+prewhiten_factors.shape[-1:])
+    np.einsum('...ii->...i', invN)[:] = prewhiten_factors**2
+	
     for ids in patch_ids:
         assert np.all(ids >= 0)
     n_clusters = [ids.max()+1 for ids in patch_ids]
