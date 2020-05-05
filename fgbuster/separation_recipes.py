@@ -350,9 +350,10 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape, data_nside)
     invN = np.zeros(prewhiten_factors.shape+prewhiten_factors.shape[-1:])
     np.einsum('...ii->...i', invN)[:] = prewhiten_factors**2
-	
+
     for ids in patch_ids:
         assert np.all(ids >= 0)
+        assert ids.dtype.kind in 'ui'
     n_clusters = [ids.max()+1 for ids in patch_ids]
 
     def array2maps(x):
@@ -378,6 +379,9 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
     A_dB_ev = A.diff_evaluator(instrument.frequency, unpack)
 
     comp_of_dB = list(zip(A.comp_of_dB, patch_ids))
+    bounds = minimize_kwargs.get('bounds')
+    if bounds is not None:
+        minimize_kwargs['bounds'] = _get_bounds(patch_ids, bounds)
 
     # Component separation
     res = alg.comp_sep(A_ev, data.T, invN, A_dB_ev, comp_of_dB, x0,
@@ -458,8 +462,9 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
 
     """
     nside_data = hp.get_nside(data[0])
-    patch_ids = [_my_ud_grade(np.arange(_my_nside2npix(nside)), nside_data)
-                 for nside in nsides]
+    patch_ids = [
+        _my_ud_grade(np.arange(_my_nside2npix(nside)), nside_data).astype(int)
+        for nside in nsides]
     return adaptive_comp_sep(components, instrument, data, patch_ids,
                              **minimize_kwargs)
 
@@ -781,6 +786,14 @@ def _A_evaluator(components, instrument, prewhiten_factors=None):
     return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
 
 
+def _get_bounds(idss, bounds):
+    res = []
+    for ids, bound in zip(idss, bounds):
+        n_clusters = ids.max(-1) + 1
+        res += [bound] * n_clusters
+    return res
+
+
 def _my_nside2npix(nside):
     if nside:
         return hp.nside2npix(nside)
@@ -810,9 +823,11 @@ def _my_ud_grade(map_in, nside_out, **kwargs):
             res = hp.ud_grade(out, 1, **kwargs)
             return res[:1]
     try:
-        return hp.ud_grade(np.full(12, map_in.item()),
+        # Input has nside = 0 (or 1)
+        return hp.ud_grade(np.ones(12) * map_in,
                            nside_out, **kwargs)
     except ValueError:
+        # Fall back to standard healpy ud_grade
         return hp.ud_grade(map_in, nside_out, **kwargs)
 
 
