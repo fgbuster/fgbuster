@@ -17,7 +17,8 @@ from fgbuster.separation_recipes import (basic_comp_sep, weighted_comp_sep,
                                          multi_res_comp_sep,
                                          _my_ud_grade,
                                          _my_nside2npix,
-                                         ilc, harmonic_ilc)
+                                         ilc, harmonic_ilc,
+                                         _empirical_harmonic_covariance)
 
 from contextlib import contextmanager
 @contextmanager
@@ -418,6 +419,39 @@ class TestMultiResCompSep(unittest.TestCase):
         aac(res_multires.s, s, rtol=2e-5)
         for res_x, xx in zip(res_multires.x, x):
             aac(res_x, xx, rtol=2e-5)
+
+
+class TestEmpiricalHarmonicCovariance(unittest.TestCase):
+
+    def test_no_stokes(self):
+        NFREQ = 3
+        NSIDE = 2
+        np.random.seed(0)
+        alms = [hp.map2alm(np.random.normal(size=(12*NSIDE**2)))
+                for i in range(NFREQ)]
+        res = _empirical_harmonic_covariance(alms)
+        ref = np.empty_like(res)
+        for f1 in range(NFREQ):
+            for f2 in range(NFREQ):
+                ref[f1, f2] = hp.alm2cl(alms[f1], alms[f2])
+
+        aac(ref, res)
+
+    def test_stokes(self):
+        NFREQ = 2
+        NSIDE = 2
+        np.random.seed(0)
+        alms = [hp.map2alm(np.random.normal(size=(3, 12*NSIDE**2)))
+                for i in range(NFREQ)]
+        res = _empirical_harmonic_covariance(alms)
+        ref = np.empty_like(res)
+        for s in range(3):
+            for f1 in range(NFREQ):
+                for f2 in range(NFREQ):
+                    ref[s, f1, f2] = hp.alm2cl(alms[f1][s], alms[f2][s])
+
+        aac(ref, res)
+
 
 
 class TestILC(unittest.TestCase):

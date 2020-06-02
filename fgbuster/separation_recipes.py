@@ -573,6 +573,28 @@ def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
     return res
 
 
+def _empirical_harmonic_covariance(alms):
+    alms = np.array(alms, copy=False, order='C')
+    alms = alms.view(np.float64).reshape(alms.shape+(2,))
+    if alms.ndim > 3:  # Shape has to be ([Stokes], freq, lm, ri)
+        alms = alms.transpose(1, 0, 2, 3)
+    lmax = hp.Alm.getlmax(alms.shape[-2])
+
+    res = (alms[..., np.newaxis, :, :lmax+1, 0]
+           * alms[..., :, np.newaxis, :lmax+1, 0])  # (Stokes, freq, freq, ell)
+
+
+    consumed = lmax + 1
+    for i in range(1, lmax+1):
+        n_m = lmax + 1 - i
+        alms_m = alms[..., consumed:consumed+n_m, :]
+        res[..., i:] += 2 * np.einsum('...fli,...nli->...fnl', alms_m, alms_m)
+        consumed += n_m
+
+    res /= 2 * np.arange(lmax + 1) + 1
+    return res
+
+
 def ilc(components, instrument, data, patch_ids=None):
     """ Internal Linear Combination
 
