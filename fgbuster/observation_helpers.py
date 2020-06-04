@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-""" Provide handy access to pysm ojects
+""" Provide handy access to pysm3 functionalities
 """
 import types
 import numpy as np
 import pandas as pd
 import healpy as hp
-import pysm
-import pysm.units as u
+import pysm3
+import pysm3.units as u
 from cmbdb import cmbdb
 
 
@@ -51,12 +51,12 @@ def get_sky(nside, tag='c1d0s0'):
 
     Returns
     -------
-    sky: pysm.Sky
+    sky: pysm3.Sky
         See the `pysm documentation
         <https://pysm3.readthedocs.io/en/latest/api/pysm.Sky.html#pysm.Sky>`_
     """
     preset_strings = [tag[i:i+2] for i in range(0, len(tag), 2)]
-    return pysm.Sky(nside, preset_strings=preset_strings)
+    return pysm3.Sky(nside, preset_strings=preset_strings)
 
 
 def get_instrument(tag=''):
@@ -112,12 +112,12 @@ def get_observation(instrument='', sky=None,
         They can be anything that is convertible to a float numpy array.
         If only one of ``depth_p`` or ``depth_i`` is provided, the other is
         inferred assuming that the former is sqrt(2) higher than the latter.
-    sky: str of pysm.Sky
-        Sky to observe. It can be a `pysm.Sky` or a tag to create one.
+    sky: str of pysm3.Sky
+        Sky to observe. It can be a `pysm3.Sky` or a tag to create one.
     noise: bool
         If true, add Gaussian, uncorrelated, isotropic noise.
     nside: int
-        Desired output healpix nside. It is optional if `sky` is a `pysm.Sky`,
+        Desired output healpix nside. It is optional if `sky` is a `pysm3.Sky`,
         and required if it is a `str` or ``None``.
     unit: str
         Unit of the output. Only K_CMB and K_RJ (and multiples) are supported.
@@ -136,10 +136,10 @@ def get_observation(instrument='', sky=None,
     elif not isinstance(sky, str):
         try:
             assert nside == sky.nside, (
-                "Mismatch between the value of the nside of the pysm.Sky "
+                "Mismatch between the value of the nside of the pysm3.Sky "
                 "argument and the one passed in the nside argument.")
         except AttributeError:
-            raise ValueError("Either provide a pysm.Sky as sky argument "
+            raise ValueError("Either provide a pysm3.Sky as sky argument "
                              " or specify the nside argument.")
 
     if noise:
@@ -181,8 +181,8 @@ def get_noise_realization(nside, instrument, unit='uK_CMB'):
         inferred assuming that the former is sqrt(2) higher than the latter.
     unit: str
         Unit of the output. Only K_CMB and K_RJ (and multiples) are supported.
-    sky: str of pysm.Sky
-        Sky to observe. It can be a `pysm.Sky` or a tag to create one.
+    sky: str of pysm3.Sky
+        Sky to observe. It can be a `pysm3.Sky` or a tag to create one.
     noise: bool
         If true, add Gaussian, uncorrelated, isotropic noise.
 

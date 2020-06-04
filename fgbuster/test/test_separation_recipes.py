@@ -8,7 +8,6 @@ import numpy as np
 from numpy.testing import assert_allclose as aac
 from scipy.stats import kstest
 import healpy as hp
-import pysm
 from fgbuster.algebra import _mv
 from fgbuster.mixingmatrix import MixingMatrix
 from fgbuster.observation_helpers import get_instrument, standardize_instrument
@@ -622,7 +621,7 @@ class TestHILC(unittest.TestCase):
 
         aac(norm_diff[..., 2: int(2.5*self.nside)],
             np.zeros_like(norm_diff[..., 2: int(2.5*self.nside)]),
-            atol=5)
+            atol=3)
 
         # This is a very weak test:
         # recovery is bad at small scales at the poles, especially in Q and U
@@ -656,7 +655,7 @@ class TestHILC(unittest.TestCase):
 
         aac(norm_diff[..., 2:],
             np.zeros_like(norm_diff[..., 2:]),
-            atol=5)
+            atol=3)
 
         # This is a weak test:
         # recovery is bad in polarization, mostly at small scales

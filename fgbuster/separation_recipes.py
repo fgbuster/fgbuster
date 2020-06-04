@@ -493,6 +493,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
     res = _harmonic_ilc_alm(components, instrument, alms, lbins, fsky)
 
     logging.info('Back to real')
+    alms = res.s
     res.s = np.empty((n_comp,) + data.shape[1:], dtype=data.dtype)
     for c in range(n_comp):
         res.s[c] = hp.alm2map(alms[c], nside)
@@ -527,32 +528,39 @@ def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
 def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
     cl_in = np.array([hp.alm2cl(alm) for alm in alms])
 
-    # Multipoles for the ILC bins
-    lmax = hp.Alm.getlmax(alms.shape[-1])
-    ell = hp.Alm.getlm(lmax)[0]
+    mm = MixingMatrix(*components)
+    A = mm.eval(instrument.frequency)
+
+    cov = _empirical_harmonic_covariance(alms)
     if lbins is not None:
-        ell = np.digitize(ell, lbins)
-    # NOTE: use lmax for indexing alms, ell.max() is the maximum bin index
+        for lmin, lmax in zip(lbins[:-1], lbins[1:]):
+            # Average the covariances in the bin
+            lmax = min(lmax, cov.shape[-1])
+            dof = 2 * np.arange(lmin, lmax) + 1
+            cov[..., lmin:lmax] = (
+                (dof / dof.sum() * cov[..., lmin:lmax]).sum(-1)
+                )[..., np.newaxis]
+    for i in range(cov.ndim - A.ndim):
+        A = A[np.newaxis]
+    At_invC = np.linalg.solve(cov.swapaxes(-1, -3),
+                              A).swapaxes(-1, -2) # ([Stokes], ell, comp, freq)
+    del cov, dof
+    ilc_filter = np.linalg.solve(At_invC @ A, At_invC)
+    del At_invC
 
-    # Make alms real
-    alms = np.asarray(alms, order='C')
-    alms = alms.view(np.float64)
-    alms[..., np.arange(1, 2*(lmax+1), 2)] = hp.UNSEEN  # Mask imaginary m = 0
-    ell = np.stack((ell, ell), axis=-1).reshape(-1)
-    if alms.ndim > 2:  # TEB -> ILC indipendently on each Stokes
-        n_stokes = alms.shape[1]
-        assert n_stokes in [1, 3], "Alms must be either T only or T E B"
-        alms[:, 1:, [0, 2, 2*lmax+2, 2*lmax+3]] = hp.UNSEEN  # EB for ell < 2
-        ell = np.stack([ell] * n_stokes)  # Replicate ell for every Stokes
-        ell += np.arange(n_stokes).reshape(-1, 1) * (ell.max() + 1) # Add offset
-
-    res = ilc(components, instrument, alms, ell)
+    lmax = hp.Alm.getlmax(alms.shape[-1])
+    res = OptimizeResult()
+    res.s = np.full((len(components),) + alms.shape[1:], np.nan, dtype=alms.dtype)
+    start = 0
+    for i in range(0, lmax+1):
+        n_m = lmax + 1 - i
+        res.s[..., start:start+n_m] = np.einsum('...lcf,f...l->c...l',
+                                                ilc_filter[..., i:, :, :],
+                                                alms[..., start:start+n_m])
+        start += n_m
 
     # Craft output
-    res.s[res.s == hp.UNSEEN] = 0.
-    res.s = np.asarray(res.s, order='C').view(np.complex128)
     cl_out = np.array([hp.alm2cl(alm) for alm in res.s])
-
     res.cl_in = cl_in
     res.cl_out = cl_out
     if fsky:
@@ -560,15 +568,7 @@ def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
         res.cl_out /= fsky
 
     res.fsky = fsky
-    lrange = np.arange(lmax+1)
-    ldigitized = np.digitize(lrange, lbins)
-    with np.errstate(divide='ignore', invalid='ignore'):
-        res.l_ref = (np.bincount(ldigitized, lrange * 2*lrange+1)
-                     / np.bincount(ldigitized, 2*lrange+1))
-    res.freq_cov *= 2  # sqrt(2) missing between complex-real alm conversion
-    if res.s.ndim > 2:
-        res.freq_cov = res.freq_cov.reshape(n_stokes, -1, *res.freq_cov.shape[1:])
-        res.W = res.W.reshape(n_stokes, -1, *res.W.shape[1:])
+    res.W = ilc_filter
 
     return res
 
@@ -593,6 +593,16 @@ def _empirical_harmonic_covariance(alms):
 
     res /= 2 * np.arange(lmax + 1) + 1
     return res
+
+
+def _regularized_inverse(cov):
+    """ Regularize the covariance with the diagonal before inversion
+    """
+    inv_std = np.einsum('...ii->...i', cov)**(-0.5)
+    inv_cov = np.linalg.inv(cov
+                            * inv_std[..., np.newaxis]
+                            * inv_std[..., np.newaxis, :])
+    return inv_cov * inv_std[..., np.newaxis] * inv_std[..., np.newaxis, :]
 
 
 def ilc(components, instrument, data, patch_ids=None):
