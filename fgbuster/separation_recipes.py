@@ -525,6 +525,20 @@ def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
     return alms
 
 
+def _apply_harmonic_W(W,  # (..., ell, comp, freq)
+                      alms):  # (freq, ..., lm)
+    lmax = hp.Alm.getlmax(alms.shape[-1])
+    res = np.full((W.shape[-2],) + alms.shape[1:], np.nan, dtype=alms.dtype)
+    start = 0
+    for i in range(0, lmax+1):
+        n_m = lmax + 1 - i
+        res[..., start:start+n_m] = np.einsum('...lcf,f...l->c...l',
+                                              W[..., i:, :, :],
+                                              alms[..., start:start+n_m])
+        start += n_m
+    return res
+
+
 def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
     cl_in = np.array([hp.alm2cl(alm) for alm in alms])
 
@@ -540,24 +554,12 @@ def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
             cov[..., lmin:lmax] = (
                 (dof / dof.sum() * cov[..., lmin:lmax]).sum(-1)
                 )[..., np.newaxis]
-    for i in range(cov.ndim - A.ndim):
-        A = A[np.newaxis]
-    At_invC = np.linalg.solve(cov.swapaxes(-1, -3),
-                              A).swapaxes(-1, -2) # ([Stokes], ell, comp, freq)
+    cov = _regularized_inverse(cov.swapaxes(-1, -3))
+    ilc_filter = np.linalg.inv(A.T @ cov @ A) @ A.T @ cov
     del cov, dof
-    ilc_filter = np.linalg.solve(At_invC @ A, At_invC)
-    del At_invC
 
-    lmax = hp.Alm.getlmax(alms.shape[-1])
     res = OptimizeResult()
-    res.s = np.full((len(components),) + alms.shape[1:], np.nan, dtype=alms.dtype)
-    start = 0
-    for i in range(0, lmax+1):
-        n_m = lmax + 1 - i
-        res.s[..., start:start+n_m] = np.einsum('...lcf,f...l->c...l',
-                                                ilc_filter[..., i:, :, :],
-                                                alms[..., start:start+n_m])
-        start += n_m
+    res.s = _apply_harmonic_W(ilc_filter, alms)
 
     # Craft output
     cl_out = np.array([hp.alm2cl(alm) for alm in res.s])
@@ -596,12 +598,23 @@ def _empirical_harmonic_covariance(alms):
 
 
 def _regularized_inverse(cov):
-    """ Regularize the covariance with the diagonal before inversion
+    """ Covariance pseudo-inverse
+
+    Regularize cov with the diagonal (i.e. invert the correlation matrix).
+    If a row/col is noise-dominated and the noise is mostly diagonal, this
+    regularization prevents the signal from being lost in the pseudo-inverse.
+
+    Infinity and NaN are set to zero, thus overflows due to noise explosions
+    (e.g. due to beam corrections) are properly handled
     """
-    inv_std = np.einsum('...ii->...i', cov)**(-0.5)
-    inv_cov = np.linalg.inv(cov
-                            * inv_std[..., np.newaxis]
-                            * inv_std[..., np.newaxis, :])
+    inv_std = np.einsum('...ii->...i', cov)
+    inv_std = 1 / np.sqrt(inv_std)
+    np.nan_to_num(inv_std, False, 0, 0, 0)
+    np.nan_to_num(cov, False, 0, 0, 0)
+
+    inv_cov = np.linalg.pinv(cov
+                             * inv_std[..., np.newaxis]
+                             * inv_std[..., np.newaxis, :])
     return inv_cov * inv_std[..., np.newaxis] * inv_std[..., np.newaxis, :]
 
 
