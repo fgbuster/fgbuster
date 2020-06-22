@@ -18,6 +18,7 @@ setup(
     include_package_data=True,
     long_description = read('README.rst'),
     install_requires = [
+        'importlib_resources', # Remove after pysm3 fix https://github.com/healpy/pysm/issues/58
         'parameterized',
         'corner',
         'numdifftools',
