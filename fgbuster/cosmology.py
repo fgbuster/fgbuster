@@ -324,7 +324,11 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         bound_1 = sr_grid[ind_sr_min+1]
     print('bounds on sigma(r) = ', bound_0, ' / ', bound_1)
     print('starting point = ', sr0)
-    res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, [sr0], bounds=[(bound_0,bound_1)], **minimize_kwargs)
+    res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, sr0,
+            bounds=[(bound_0.item(),bound_1.item())],
+            # item required for test to pass but reason unclear. sr_grid has
+            # extra dimension?
+            **minimize_kwargs)
     print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
     res.cosmo_params = {}
     res.cosmo_params['r'] = (res_Lr['x'], res_sr['x']- res_Lr['x'])
