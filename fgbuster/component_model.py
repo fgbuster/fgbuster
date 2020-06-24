@@ -99,6 +99,7 @@ class Component(object):
             same `nu`.
 
         """
+        nu = np.array(nu)
         assert len(params) == self.n_param
         if params and np.broadcast(*params).ndim == 0:
             # Parameters are all scalars.
@@ -129,6 +130,7 @@ class Component(object):
             :meth:`eval` for more details about the format of the
             evaluated derivative
         """
+        nu = np.array(nu)
         assert len(params) == self.n_param
         if not params:
             return []
@@ -149,6 +151,7 @@ class Component(object):
         return res
 
     def diff_diff(self, nu, *params):
+        nu = np.array(nu)
         assert len(params) == self.n_param
         if not params:
             return [[]]
@@ -166,7 +169,7 @@ class Component(object):
 
         res = []
         for i_p in range(self.n_param):
-            res.append([self._lambda_diff[i_p][j_p](nu, *new_params)
+            res.append([self._lambda_diff_diff[i_p][j_p](nu, *new_params)
                         for j_p in range(self.n_param)])
         return res
 
@@ -209,7 +212,7 @@ class Component(object):
         self._defaults = new_defaults
 
     def __getattr__(self, attr):
-        # Helpful messages when virtual attribute are not defined
+        # Helpful messages when virtual attributes are not defined
         message = ("Attempt to either use a bare 'Component' object or to"
                    "use an incomplete child class.")
         if attr == '_lambda':
