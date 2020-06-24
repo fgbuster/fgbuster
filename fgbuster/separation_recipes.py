@@ -31,6 +31,7 @@ __all__ = [
     'weighted_comp_sep',
     'ilc',
     'harmonic_ilc',
+    'harmonic_ilc_alm',
     'multi_res_comp_sep',
 ]
 
