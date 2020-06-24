@@ -31,6 +31,7 @@ __all__ = [
     'weighted_comp_sep',
     'ilc',
     'harmonic_ilc',
+    'harmonic_ilc_alm',
     'multi_res_comp_sep',
 ]
 
@@ -421,7 +422,7 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
 
 
 def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3):
-    """ Internal Linear Combination
+    """ Harmonic Internal Linear Combination
 
     Parameters
     ----------
@@ -436,11 +437,14 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
         They can be anything that is convertible to a float numpy array.
     data: ndarray or MaskedArray
         Data vector to be separated. Shape ``(n_freq, ..., n_pix)``.
-        ``...`` can be 1, 3 or absent.
+        ``...`` can be 1, 3 or absent. If 3, the separation is done independently
+	fot T, E and B.
         Values equal to hp.UNSEEN or, if MaskedArray, masked values are
         neglected during the component separation process.
     lbins: array
         It stores the edges of the bins that will have the same ILC weights.
+        If a multipole is not in a bin but is the alms, an independent bin
+	will be assigned to it
     weights: array
         If provided data are multiplied by the weights map before computing alms
 
@@ -449,12 +453,12 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
     result : dict
 	It includes
 
-        - **W**: *(ndarray)* - ILC weights for each component and possibly each
-          patch.
-        - **freq_cov**: *(ndarray)* - Empirical covariance for each bin
+        - **W**: *(ndarray)* - ILC weights for each component and possibly
+	  each index of the `...` dimension in the alms.
         - **s**: *(ndarray)* - Component maps
-        - **cl_in**: *(ndarray)* - anafast output of the input
-        - **cl_out**: *(ndarray)* - anafast output of the output
+        - **cl_in**: *(ndarray)* - Spectra of the input alm
+        - **cl_out**: *(ndarray)* - Spectra of the output alm
+        - **fsky**: *(ndarray)* - The input fsky used to correct the cls 
 
     Note
     ----
@@ -490,7 +494,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
     alms = _get_alms(data, beams, lmax, weights, iter=iter)
 
     logging.info('Computing ILC')
-    res = _harmonic_ilc_alm(components, instrument, alms, lbins, fsky)
+    res = harmonic_ilc_alm(components, instrument, alms, lbins, fsky)
 
     logging.info('Back to real')
     alms = res.s
@@ -539,7 +543,43 @@ def _apply_harmonic_W(W,  # (..., ell, comp, freq)
     return res
 
 
-def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
+def harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
+    """ Internal Linear Combination of alms
+
+    Parameters
+    ----------
+    components: list or tuple of lists
+        `Components` of the mixing matrix. They must have no free parameter.
+    instrument:
+        Object that provides the following as a key or an attribute.
+
+        - **frequency**
+
+        It can be anything that is convertible to a float numpy array.
+    alms: ndarray
+        Data vector to be separated. Shape ``(n_freq, ..., lm)``.
+        ``...`` can be 1, 3 or absent. The ILC weights are computed
+	independently for each of its indices.
+    lbins: array
+        It stores the edges of the bins that will have the same ILC weights.
+	If a multipole is not in a bin but is the alms, an independent bin
+	will be assigned to it
+    fsky: array
+        If provided the output power spectra are corrected for this factor
+
+    Returns
+    -------
+    result : dict
+	It includes
+
+        - **W**: *(ndarray)* - ILC weights for each component and possibly
+	  each index of the `...` dimension in the alms.
+        - **s**: *(ndarray)* - Alms of the cleaned components
+        - **cl_in**: *(ndarray)* - Spectra of the input alm
+        - **cl_out**: *(ndarray)* - Spectra of the output alm
+        - **fsky**: *(ndarray)* - The input fsky used to correct the cls
+
+    """
     cl_in = np.array([hp.alm2cl(alm) for alm in alms])
 
     mm = MixingMatrix(*components)
