@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,43 +11,48 @@
   
 
   
-  
-  
-  
-
-  
-
-  
-  
-    
-
-  
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="fgbuster.component_model" href="fgbuster.component_model.html" />
-    <link rel="prev" title="fgbuster.separation_recipies" href="fgbuster.separation_recipies.html" /> 
 
   
-  <script src="../_static/js/modernizr.min.js"></script>
+  
+  
+  
 
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="fgbuster.mixingmatrix" href="fgbuster.mixingmatrix.html" />
+    <link rel="prev" title="fgbuster.observation_helpers" href="fgbuster.observation_helpers.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
-            <a href="../index.html" class="icon icon-home"> FGBuster
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FGBuster
           
 
           
@@ -75,6 +79,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -85,9 +90,10 @@
               <p class="caption"><span class="caption-text">Documentation</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="fgbuster.separation_recipies.html">fgbuster.separation_recipies</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">fgbuster.cosmology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.separation_recipes.html">fgbuster.separation_recipes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fgbuster.component_model.html">fgbuster.component_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.observation_helpers.html">fgbuster.observation_helpers</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">fgbuster.cosmology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fgbuster.mixingmatrix.html">fgbuster.mixingmatrix</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fgbuster.algebra.html">fgbuster.algebra</a></li>
 </ul>
@@ -99,6 +105,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -137,7 +144,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../api.html">API</a> &raquo;</li>
         
@@ -165,103 +172,99 @@
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
+.nbinput.nblast.container,
+.nboutput.nblast.container {
     margin-bottom: 19px;  /* padding has already 5px */
 }
 
 /* ... except between code cells! */
-.nblast + .nbinput {
+.nblast.container + .nbinput.container {
     margin-top: -19px;
 }
 
 .admonition > p:before {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
 </style>
 <div class="section" id="module-fgbuster.cosmology">
 <span id="fgbuster-cosmology"></span><h1>fgbuster.cosmology<a class="headerlink" href="#module-fgbuster.cosmology" title="Permalink to this headline">¶</a></h1>
 <p>Forecasting toolbox</p>
 <p class="rubric">Functions</p>
-<table border="1" class="longtable docutils">
+<table class="longtable docutils align-default">
 <colgroup>
-<col width="10%" />
-<col width="90%" />
+<col style="width: 10%" />
+<col style="width: 90%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.cosmology.xForecast" title="fgbuster.cosmology.xForecast"><code class="xref py py-obj docutils literal"><span class="pre">xForecast</span></code></a>(components,&nbsp;instrument,&nbsp;d_fgs,&nbsp;…)</td>
-<td>Run XForcast (Stompor et al, 2016) using the provided instrumental specifications and input foregrounds maps.</td>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.cosmology.xForecast" title="fgbuster.cosmology.xForecast"><code class="xref py py-obj docutils literal notranslate"><span class="pre">xForecast</span></code></a>(components, instrument, d_fgs, …)</p></td>
+<td><p>Run XForcast (Stompor et al, 2016) using the provided instrumental specifications and input foregrounds maps.</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="function">
 <dt id="fgbuster.cosmology.xForecast">
-<code class="descclassname">fgbuster.cosmology.</code><code class="descname">xForecast</code><span class="sig-paren">(</span><em>components</em>, <em>instrument</em>, <em>d_fgs</em>, <em>lmin</em>, <em>lmax</em>, <em>Alens=1.0</em>, <em>r=0.001</em>, <em>make_figure=False</em>, <em>**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/cosmology.html#xForecast"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.cosmology.xForecast" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">fgbuster.cosmology.</code><code class="sig-name descname">xForecast</code><span class="sig-paren">(</span><em class="sig-param">components</em>, <em class="sig-param">instrument</em>, <em class="sig-param">d_fgs</em>, <em class="sig-param">lmin</em>, <em class="sig-param">lmax</em>, <em class="sig-param">Alens=1.0</em>, <em class="sig-param">r=0.001</em>, <em class="sig-param">make_figure=False</em>, <em class="sig-param">**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/cosmology.html#xForecast"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.cosmology.xForecast" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run XForcast (Stompor et al, 2016) using the provided instrumental
 specifications and input foregrounds maps. If the foreground maps match the
 components provided (constant spectral indices are assumed), it reduces to
 CMB4cast (Errard et al, 2011). Currently, only polarization is considered
 fot component separation and only the BB power spectrum for cosmological
 analysis.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>components</strong> (<em>list</em>) – <cite>Components</cite> of the mixing matrix</li>
-<li><strong>instrument</strong> (<em>PySM.Instrument</em>) – <p>Instrument object used to define the mixing matrix and the
-frequency-dependent noise weight.
-It is required to have:</p>
-<blockquote>
-<div><ul>
-<li>frequencies</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>components</strong> (<em>list</em>) – <cite>Components</cite> of the mixing matrix</p></li>
+<li><p><strong>instrument</strong> – <p>Object that provides the following as a key or an attribute.</p>
+<ul>
+<li><p><strong>frequency</strong></p></li>
+<li><p><strong>depth_p</strong> (optional, frequencies are inverse-noise
+weighted according to these noise levels)</p></li>
+<li><p><strong>fwhm</strong> (optional)</p></li>
 </ul>
-</div></blockquote>
-<p>however, also the following are taken into account, if provided</p>
-<blockquote>
-<div><ul>
-<li>sens_P (define the frequency inverse noise)</li>
-</ul>
-</div></blockquote>
-</li>
-<li><strong>d_fgs</strong> (<em>ndarray</em>) – The foreground maps. No CMB. Shape <cite>(n_freq, n_stokes, n_pix)</cite>.
+<p>They can be anything that is convertible to a float numpy array.</p>
+</p></li>
+<li><p><strong>d_fgs</strong> (<em>ndarray</em>) – The foreground maps. No CMB. Shape <cite>(n_freq, n_stokes, n_pix)</cite>.
 If some pixels have to be masked, set them to zero.
 Since (cross-)spectra of the maps will be computed, you might want to
-apodize your mask (use the same apodization for all the frequency).</li>
-<li><strong>lmin</strong> (<em>int</em>) – minimum multipole entering the likelihood computation</li>
-<li><strong>lmax</strong> (<em>int</em>) – maximum multipole entering the likelihood computation</li>
-<li><strong>Alens</strong> (<em>float</em>) – Amplitude of the lensing B-modes entering the likelihood on r</li>
-<li><strong>r</strong> (<em>float</em>) – tensor-to-scalar ratio assumed in the likelihood on r</li>
-<li><strong>minimize_kwargs</strong> (<em>dict</em>) – Keyword arguments to be passed to <cite>scipy.optimize.minimize</cite> during
+apodize your mask (use the same apodization for all the frequency).</p></li>
+<li><p><strong>lmin</strong> (<em>int</em>) – minimum multipole entering the likelihood computation</p></li>
+<li><p><strong>lmax</strong> (<em>int</em>) – maximum multipole entering the likelihood computation</p></li>
+<li><p><strong>Alens</strong> (<em>float</em>) – Amplitude of the lensing B-modes entering the likelihood on r</p></li>
+<li><p><strong>r</strong> (<em>float</em>) – tensor-to-scalar ratio assumed in the likelihood on r</p></li>
+<li><p><strong>minimize_kwargs</strong> (<em>dict</em>) – Keyword arguments to be passed to <cite>scipy.optimize.minimize</cite> during
 the fitting of the spectral parameters.
 A good choice for most cases is
 <cite>minimize_kwargs = {‘tol’: 1, options: {‘disp’: True}}</cite>. <cite>tol</cite> depends
 on both the solver and your signal to noise: it should ensure that the
 difference between the best fit -logL and and the minimum is well less
 then 1, without exagereting (a difference of 1e-4 is useless).
-<cite>disp</cite> also triggers a verbose callback that monitors the convergence.</li>
+<cite>disp</cite> also triggers a verbose callback that monitors the convergence.</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>xFres</strong> – xForecast result. It includes</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>xFres</strong> – xForecast result. It includes</p>
 <ul class="simple">
-<li>the fitted spectral parameters</li>
-<li>noise-averaged post-component separation CMB power spectrum<ul>
-<li>noise spectrum</li>
-<li>statistical residuals spectrum</li>
-<li>systematic residuals spectrum</li>
+<li><p>the fitted spectral parameters</p></li>
+<li><p>noise-averaged post-component separation CMB power spectrum</p>
+<ul>
+<li><p>noise spectrum</p></li>
+<li><p>statistical residuals spectrum</p></li>
+<li><p>systematic residuals spectrum</p></li>
 </ul>
 </li>
-<li>noise-averaged cosmological likelihood</li>
+<li><p>noise-averaged cosmological likelihood</p></li>
 </ul>
 </p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
 </dd></dl>
 
 </div>
@@ -274,10 +277,10 @@ then 1, without exagereting (a difference of 1e-4 is useless).
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="fgbuster.component_model.html" class="btn btn-neutral float-right" title="fgbuster.component_model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="fgbuster.mixingmatrix.html" class="btn btn-neutral float-right" title="fgbuster.mixingmatrix" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="fgbuster.separation_recipies.html" class="btn btn-neutral" title="fgbuster.separation_recipies" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="fgbuster.observation_helpers.html" class="btn btn-neutral float-left" title="fgbuster.observation_helpers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -286,11 +289,19 @@ then 1, without exagereting (a difference of 1e-4 is useless).
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -302,37 +313,16 @@ then 1, without exagereting (a difference of 1e-4 is useless).
   </div>
   
 
-
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'1.0.0',
-              LANGUAGE:'en',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

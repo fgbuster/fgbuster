@@ -1,7 +1,11 @@
-fgbuster\.component\_model
-==========================
+fgbuster.component\_model
+=========================
 
 .. automodule:: fgbuster.component_model
+
+   
+   
+   
 
    
    
@@ -19,7 +23,6 @@ fgbuster\.component\_model
 
    .. autosummary::
    
-      AME
       AnalyticComponent
       CMB
       Component
@@ -28,9 +31,13 @@ fgbuster\.component\_model
       ModifiedBlackBody
       PowerLaw
       Synchrotron
+      ThermalSZ
    
    
 
    
    
    
+
+
+

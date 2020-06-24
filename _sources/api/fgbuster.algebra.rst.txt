@@ -1,7 +1,11 @@
-fgbuster\.algebra
-=================
+fgbuster.algebra
+================
 
 .. automodule:: fgbuster.algebra
+
+   
+   
+   
 
    
    
@@ -33,3 +37,6 @@ fgbuster\.algebra
    
    
    
+
+
+

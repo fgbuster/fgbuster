@@ -1,7 +1,11 @@
-fgbuster\.mixingmatrix
-======================
+fgbuster.mixingmatrix
+=====================
 
 .. automodule:: fgbuster.mixingmatrix
+
+   
+   
+   
 
    
    
@@ -20,3 +24,6 @@ fgbuster\.mixingmatrix
    
    
    
+
+
+

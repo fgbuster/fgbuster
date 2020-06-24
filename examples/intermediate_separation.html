@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,43 +11,48 @@
   
 
   
-  
-  
-  
-
-  
-
-  
-  
-    
-
-  
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Simple ILC example" href="simple_ilc.html" />
-    <link rel="prev" title="SED evaluation" href="component_and_mixingmatrix.html" /> 
 
   
-  <script src="../_static/js/modernizr.min.js"></script>
+  
+  
+  
 
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Multi-resolution separation" href="multi_res_separation.html" />
+    <link rel="prev" title="SED evaluation" href="component_and_mixingmatrix.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
-            <a href="../index.html" class="icon icon-home"> FGBuster
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FGBuster
           
 
           
@@ -75,6 +79,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -97,8 +102,9 @@
 <li class="toctree-l3"><a class="reference internal" href="#Component-separation-with-varying-indices">Component separation with varying indices</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="simple_ilc.html">Simple ILC example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="multi_res_separation.html">Multi-resolution separation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="simple_separation.html">Simple component separation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_separation-Copy1.html">Simple component separation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="xForecast.html">Forecasting</a></li>
 </ul>
 </li>
@@ -108,6 +114,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -146,7 +153,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../examples.html">Examples</a> &raquo;</li>
         
@@ -174,16 +181,16 @@
 /* CSS for nbsphinx extension */
 
 /* remove conflicting styling from Sphinx themes */
-div.nbinput,
-div.nbinput div.prompt,
-div.nbinput div.input_area,
-div.nbinput div[class*=highlight],
-div.nbinput div[class*=highlight] pre,
-div.nboutput,
-div.nbinput div.prompt,
-div.nbinput div.output_area,
-div.nboutput div[class*=highlight],
-div.nboutput div[class*=highlight] pre {
+div.nbinput.container,
+div.nbinput.container div.prompt,
+div.nbinput.container div.input_area,
+div.nbinput.container div[class*=highlight],
+div.nbinput.container div[class*=highlight] pre,
+div.nboutput.container,
+div.nboutput.container div.prompt,
+div.nboutput.container div.output_area,
+div.nboutput.container div[class*=highlight],
+div.nboutput.container div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -192,13 +199,13 @@ div.nboutput div[class*=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class*=highlight] pre {
+div.nboutput.container div[class*=highlight] pre {
     line-height: normal;
 }
 
 /* input/output containers */
-div.nbinput,
-div.nboutput {
+div.nbinput.container,
+div.nboutput.container {
     display: -webkit-flex;
     display: flex;
     align-items: flex-start;
@@ -206,92 +213,104 @@ div.nboutput {
     width: 100%;
 }
 @media (max-width: 540px) {
-    div.nbinput,
-    div.nboutput {
+    div.nbinput.container,
+    div.nboutput.container {
         flex-direction: column;
     }
 }
 
 /* input container */
-div.nbinput {
+div.nbinput.container {
     padding-top: 5px;
 }
 
 /* last container */
-div.nblast {
+div.nblast.container {
     padding-bottom: 5px;
 }
 
 /* input prompt */
-div.nbinput div.prompt pre {
-    color: #303F9F;
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
 }
 
 /* output prompt */
-div.nboutput div.prompt pre {
-    color: #D84315;
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
 }
 
 /* all prompts */
-div.nbinput div.prompt,
-div.nboutput div.prompt {
-    min-width: 8ex;
-    padding-top: 0.4em;
-    padding-right: 0.4em;
-    text-align: right;
-    flex: 0;
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
 }
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
 @media (max-width: 540px) {
-    div.nbinput div.prompt,
-    div.nboutput div.prompt {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
         text-align: left;
         padding: 0.4em;
     }
-    div.nboutput div.prompt.empty {
+    div.nboutput.container div.prompt.empty {
         padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
     }
 }
 
 /* disable scrollbars on prompts */
-div.nbinput div.prompt pre,
-div.nboutput div.prompt pre {
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
     overflow: hidden;
 }
 
 /* input/output area */
-div.nbinput div.input_area,
-div.nboutput div.output_area {
-    padding: 0.4em;
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
 @media (max-width: 540px) {
-    div.nbinput div.input_area,
-    div.nboutput div.output_area {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
         width: 100%;
     }
 }
 
 /* input area */
-div.nbinput div.input_area {
-    border: 1px solid #cfcfcf;
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
     border-radius: 2px;
-    background: #f7f7f7;
+    background: #f5f5f5;
 }
 
 /* override MathJax center alignment in output cells */
-div.nboutput div[class*=MathJax] {
+div.nboutput.container div[class*=MathJax] {
     text-align: left !important;
 }
 
-/* override sphinx.ext.pngmath center alignment in output cells */
-div.nboutput div.math p {
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
     text-align: left;
 }
 
 /* standard error */
-div.nboutput div.output_area.stderr {
+div.nboutput.container div.output_area.stderr {
     background: #fdd;
 }
 
@@ -335,31 +354,90 @@ div.nboutput div.output_area.stderr {
 .ansi-bold { font-weight: bold; }
 .ansi-underline { text-decoration: underline; }
 
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt a.copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
+.nbinput.nblast.container,
+.nboutput.nblast.container {
     margin-bottom: 19px;  /* padding has already 5px */
 }
 
 /* ... except between code cells! */
-.nblast + .nbinput {
+.nblast.container + .nbinput.container {
     margin-top: -19px;
 }
 
 .admonition > p:before {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
 </style>
 <div class="section" id="Intermediate-component-separation">
 <h1>Intermediate component separation<a class="headerlink" href="#Intermediate-component-separation" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
 <span class="o">%</span><span class="k">autoreload</span> 2
 <span class="o">%</span><span class="k">matplotlib</span> inline
@@ -367,73 +445,74 @@ div.nboutput div.output_area.stderr {
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">pylab</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pylab</span>
 <span class="n">pylab</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">16</span>
 
 <span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
-<span class="kn">import</span> <span class="nn">pysm</span>
+<span class="kn">import</span> <span class="nn">pysm3</span>
+<span class="kn">import</span> <span class="nn">pysm3.units</span> <span class="k">as</span> <span class="nn">u</span>
 
-<span class="kn">from</span> <span class="nn">fgbuster.observation_helpers</span> <span class="k">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span>  <span class="c1"># Predefined instrumental and sky-creation configurations</span>
-<span class="kn">from</span> <span class="nn">fgbuster.visualization</span> <span class="k">import</span> <span class="n">corner_norm</span>
+<span class="kn">from</span> <span class="nn">fgbuster</span> <span class="kn">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span><span class="p">,</span> <span class="n">get_observation</span>  <span class="c1"># Predefined instrumental and sky-creation configurations</span>
+<span class="kn">from</span> <span class="nn">fgbuster.visualization</span> <span class="kn">import</span> <span class="n">corner_norm</span>
 
 <span class="c1"># Imports needed for component separation</span>
-<span class="kn">from</span> <span class="nn">fgbuster</span> <span class="k">import</span> <span class="p">(</span><span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span><span class="p">,</span>  <span class="c1"># sky-fitting model</span>
+<span class="kn">from</span> <span class="nn">fgbuster</span> <span class="kn">import</span> <span class="p">(</span><span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span><span class="p">,</span>  <span class="c1"># sky-fitting model</span>
                       <span class="n">basic_comp_sep</span><span class="p">)</span>  <span class="c1"># separation routine</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="Input-frequency-maps">
 <h2>Input frequency maps<a class="headerlink" href="#Input-frequency-maps" title="Permalink to this headline">¶</a></h2>
-<p>You have some frequency maps to clean, they can be either data or
-simulations.</p>
+<p>You have some frequency maps to clean, they can be either data or simulations.</p>
 <div class="section" id="Simple-case">
 <h3>Simple case<a class="headerlink" href="#Simple-case" title="Permalink to this headline">¶</a></h3>
-<p>Let’s simulate a simple sky with <code class="docutils literal"><span class="pre">pysm</span></code>. ForeGroundBuster adds a
-couple of functions that make the process even easier.</p>
+<p>Let’s simulate a simple sky with <code class="docutils literal notranslate"><span class="pre">pysm</span></code>. ForeGroundBuster adds a couple of functions that make the process even easier.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">NSIDE</span> <span class="o">=</span> <span class="mi">64</span>
-<span class="n">sky_conf_simple</span> <span class="o">=</span> <span class="n">get_sky</span><span class="p">(</span><span class="n">NSIDE</span><span class="p">,</span> <span class="s1">&#39;c1d0s0&#39;</span><span class="p">)</span>
-<span class="n">instrument</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Instrument</span><span class="p">(</span><span class="n">get_instrument</span><span class="p">(</span><span class="s1">&#39;cmbs4&#39;</span><span class="p">,</span> <span class="n">NSIDE</span><span class="p">))</span>
-<span class="n">freq_maps_simple</span><span class="p">,</span> <span class="n">noise</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">observe</span><span class="p">(</span><span class="n">pysm</span><span class="o">.</span><span class="n">Sky</span><span class="p">(</span><span class="n">sky_conf_simple</span><span class="p">),</span> <span class="n">write_outputs</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">sky_simple</span> <span class="o">=</span> <span class="n">get_sky</span><span class="p">(</span><span class="n">NSIDE</span><span class="p">,</span> <span class="s1">&#39;c1d0s0&#39;</span><span class="p">)</span>
+<span class="n">instrument</span> <span class="o">=</span> <span class="n">get_instrument</span><span class="p">(</span><span class="s1">&#39;LiteBIRD&#39;</span><span class="p">)</span>
+<span class="n">freq_maps_simple</span> <span class="o">=</span> <span class="n">get_observation</span><span class="p">(</span><span class="n">instrument</span><span class="p">,</span> <span class="n">sky_simple</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
+<div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-nu (GHz) | sigma_I (uK_CMB amin) | sigma_P (uK_CMB amin) | FWHM (arcmin)
-
-0020.00 | 16.66 | 13.60 | 00.00
-0030.00 | 10.62 | 08.67 | 00.00
-0040.00 | 10.07 | 08.22 | 00.00
-0085.00 | 02.01 | 01.64 | 00.00
-0095.00 | 01.59 | 01.30 | 00.00
-0145.00 | 04.53 | 02.03 | 00.00
-0155.00 | 04.53 | 02.03 | 00.00
-0220.00 | 11.61 | 05.19 | 00.00
-0270.00 | 15.84 | 07.08 | 00.00
-Instrument attribute &#39;pixel_indices&#39; not set.
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/camb_lenspotentialCls.dat (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/delens_ells.txt (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_t_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_q_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_u_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_t_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_q_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_u_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
 </pre></div></div>
 </div>
 <p>We will focus on polarization-only component separation</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">freq_maps_simple</span> <span class="o">=</span> <span class="n">freq_maps_simple</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>  <span class="c1"># Select polarization</span>
 </pre></div>
 </div>
@@ -441,51 +520,70 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 </div>
 <div class="section" id="Spatially-varying-spectral-indices">
 <h3>Spatially varying spectral indices<a class="headerlink" href="#Spatially-varying-spectral-indices" title="Permalink to this headline">¶</a></h3>
-<p>Let’s prepare also maps with spatially varying spectral indices.
-Similarly to the simple case above, we run the following (notice
-<code class="docutils literal"><span class="pre">d1s1</span></code>)</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">NSIDE_PATCH</span> <span class="o">=</span> <span class="mi">8</span>
-<span class="n">sky_conf_vary</span> <span class="o">=</span> <span class="n">get_sky</span><span class="p">(</span><span class="n">NSIDE</span><span class="p">,</span> <span class="s1">&#39;c1d1s1&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<p>We can still modify the sky configuration. In this case, we change the
-nside over which the spectral indices are allowed to vary</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">for</span> <span class="n">comp</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="p">[(</span><span class="s1">&#39;dust&#39;</span><span class="p">,</span> <span class="s1">&#39;spectral_index&#39;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s1">&#39;dust&#39;</span><span class="p">,</span> <span class="s1">&#39;temp&#39;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s1">&#39;synchrotron&#39;</span><span class="p">,</span> <span class="s1">&#39;spectral_index&#39;</span><span class="p">)</span>
-                   <span class="p">]:</span>
-    <span class="n">spectral_param</span> <span class="o">=</span> <span class="n">sky_conf_vary</span><span class="p">[</span><span class="n">comp</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">param</span><span class="p">]</span>
-    <span class="n">spectral_param</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">hp</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">spectral_param</span><span class="p">,</span> <span class="n">NSIDE_PATCH</span><span class="p">),</span>
-                                    <span class="n">NSIDE</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<p>Here is how they look like in constant and varying case. The rightmost
-plot shows the full resolution <code class="docutils literal"><span class="pre">pysm</span></code> template.</p>
+<p>Let’s prepare also maps with spatially varying spectral indices. Similarly to the simple case above, we run the following (notice <code class="docutils literal notranslate"><span class="pre">d1s1</span></code>)</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">comp</span> <span class="o">=</span> <span class="s1">&#39;dust&#39;</span>
-<span class="n">param</span> <span class="o">=</span> <span class="s1">&#39;spectral_index&#39;</span>
-<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">sky_conf_simple</span><span class="p">[</span><span class="n">comp</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">param</span><span class="p">],</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Constant index&#39;</span><span class="p">)</span>
-<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">sky_conf_vary</span><span class="p">[</span><span class="n">comp</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">param</span><span class="p">],</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Varying indices&#39;</span><span class="p">)</span>
-<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">get_sky</span><span class="p">(</span><span class="n">NSIDE</span><span class="p">,</span> <span class="s1">&#39;c1d1s1&#39;</span><span class="p">)[</span><span class="n">comp</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">param</span><span class="p">],</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Full resolution indices&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">NSIDE_PATCH</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">sky_vary</span> <span class="o">=</span> <span class="n">get_sky</span><span class="p">(</span><span class="n">NSIDE</span><span class="p">,</span> <span class="s1">&#39;c1d1s1&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/camb_lenspotentialCls.dat (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/delens_ells.txt (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_t_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_q_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_u_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_beta.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_temp.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_t_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_q_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_u_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_beta.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+</pre></div></div>
+</div>
+<p>We can still modify the sky configuration. In this case, we change the nside over which the spectral indices are allowed to vary</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="k">for</span> <span class="n">spectral_param</span> <span class="ow">in</span> <span class="p">[</span><span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mbb_index</span><span class="p">,</span>
+                       <span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mbb_temperature</span><span class="p">,</span>
+                       <span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">pl_index</span><span class="p">]:</span>
+    <span class="n">spectral_param</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">hp</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">spectral_param</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">NSIDE_PATCH</span><span class="p">),</span>
+                                    <span class="n">NSIDE</span><span class="p">)</span> <span class="o">*</span> <span class="n">spectral_param</span><span class="o">.</span><span class="n">unit</span>
+</pre></div>
+</div>
+</div>
+<p>Here is how they look like in constant and varying case. The rightmost plot shows the full resolution <code class="docutils literal notranslate"><span class="pre">pysm</span></code> template.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">sky_simple</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mbb_index</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">freq_maps_simple</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Constant index&#39;</span><span class="p">)</span>
+<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mbb_index</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Varying indices&#39;</span><span class="p">)</span>
+<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">get_sky</span><span class="p">(</span><span class="n">NSIDE</span><span class="p">,</span> <span class="s1">&#39;c1d1s1&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mbb_index</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Full resolution indices&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -497,59 +595,35 @@ plot shows the full resolution <code class="docutils literal"><span class="pre">
 </div>
 </div>
 <p>And now we generate the maps and select polarization</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">freq_maps_vary</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">observe</span><span class="p">(</span><span class="n">pysm</span><span class="o">.</span><span class="n">Sky</span><span class="p">(</span><span class="n">sky_conf_vary</span><span class="p">),</span> <span class="n">write_outputs</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">freq_maps_vary</span> <span class="o">=</span> <span class="n">get_observation</span><span class="p">(</span><span class="n">instrument</span><span class="p">,</span> <span class="n">sky_vary</span><span class="p">)</span>
 <span class="n">freq_maps_vary</span> <span class="o">=</span> <span class="n">freq_maps_vary</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="c1"># Select polarization</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-nu (GHz) | sigma_I (uK_CMB amin) | sigma_P (uK_CMB amin) | FWHM (arcmin)
-
-0020.00 | 16.66 | 13.60 | 00.00
-0030.00 | 10.62 | 08.67 | 00.00
-0040.00 | 10.07 | 08.22 | 00.00
-0085.00 | 02.01 | 01.64 | 00.00
-0095.00 | 01.59 | 01.30 | 00.00
-0145.00 | 04.53 | 02.03 | 00.00
-0155.00 | 04.53 | 02.03 | 00.00
-0220.00 | 11.61 | 05.19 | 00.00
-0270.00 | 15.84 | 07.08 | 00.00
-Instrument attribute &#39;pixel_indices&#39; not set.
-</pre></div></div>
 </div>
 </div>
 </div>
 <div class="section" id="Component-separation">
 <h2>Component separation<a class="headerlink" href="#Component-separation" title="Permalink to this headline">¶</a></h2>
-<p>The sky model we fit for is defined as a list of <code class="docutils literal"><span class="pre">Component</span></code> objects.
-They can be easily build from analytic SEDs, but for popular component
-types these are already implemented.</p>
+<p>The sky model we fit for is defined as a list of <code class="docutils literal notranslate"><span class="pre">Component</span></code> objects. They can be easily build from analytic SEDs, but for popular component types these are already implemented.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">CMB</span><span class="p">(),</span> <span class="n">Dust</span><span class="p">(</span><span class="mf">353.</span><span class="p">),</span> <span class="n">Synchrotron</span><span class="p">(</span><span class="mf">23.</span><span class="p">)]</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># The starting point of the fit is the pysm default value, so let&#39;s shift it</span>
 <span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">defaults</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.6</span><span class="p">,</span> <span class="mf">22.</span><span class="p">]</span>
 <span class="n">components</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">defaults</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mf">2.7</span><span class="p">]</span>
@@ -558,11 +632,10 @@ types these are already implemented.</p>
 </div>
 <p>We are now ready to perform the component separation</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">result</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">freq_maps_simple</span><span class="p">,</span>
                         <span class="n">options</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">disp</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>  <span class="c1"># verbose output</span>
                         <span class="p">)</span>
@@ -575,42 +648,39 @@ types these are already implemented.</p>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Minimization started
-Iter 1  x = [  1.4398246   21.99769057  -2.89355266]    First -logL = -16985940133.598915       N Eval = 3      Iter sec = 0.10 Cum sec = 0.10
-Iter 2  x = [  1.50989349  21.99884214  -2.98531374]    Delta(-logL) = -1057701.731276  N Eval = 5      Iter sec = 0.06 Cum sec = 0.16
-Iter 3  x = [  1.55090498  19.34011115  -2.98761519]    Delta(-logL) = -7896.035347     N Eval = 28     Iter sec = 0.71 Cum sec = 0.88
-Iter 4  x = [  1.55429671  19.12649969  -2.98794622]    Delta(-logL) = -225.203945      N Eval = 31     Iter sec = 0.09 Cum sec = 0.97
-Iter 5  x = [  1.55488811  19.1665438   -2.99317353]    Delta(-logL) = -7575.652369     N Eval = 34     Iter sec = 0.09 Cum sec = 1.06
-Iter 6  x = [  1.55604803  19.19925027  -3.00062835]    Delta(-logL) = -3999.849150     N Eval = 35     Iter sec = 0.03 Cum sec = 1.09
-Iter 7  x = [  1.55446186  19.28303095  -3.00078797]    Delta(-logL) = -40.972950       N Eval = 37     Iter sec = 0.06 Cum sec = 1.16
-Iter 8  x = [  1.5514909   19.43188585  -3.00082058]    Delta(-logL) = -74.497906       N Eval = 38     Iter sec = 0.03 Cum sec = 1.19
-Iter 9  x = [  1.5454242   19.7314151   -3.00063124]    Delta(-logL) = -118.354931      N Eval = 39     Iter sec = 0.03 Cum sec = 1.22
-Iter 10 x = [  1.53762921  20.11698793  -3.00006902]    Delta(-logL) = -32.499922       N Eval = 40     Iter sec = 0.03 Cum sec = 1.25
-Iter 11 x = [  1.54051523  19.97496805  -3.00009466]    Delta(-logL) = -14.259121       N Eval = 41     Iter sec = 0.03 Cum sec = 1.28
-Iter 12 x = [  1.5400465   19.99815897  -3.00002228]    Delta(-logL) = -0.717396        N Eval = 42     Iter sec = 0.03 Cum sec = 1.32
-Iter 13 x = [  1.5399583   20.00239065  -3.00000052]    Delta(-logL) = -0.037298        N Eval = 43     Iter sec = 0.03 Cum sec = 1.35
-Iter 14 x = [  1.53997189  20.00160449  -2.99999947]    Delta(-logL) = -0.002018        N Eval = 44     Iter sec = 0.03 Cum sec = 1.38
-Iter 15 x = [  1.53999905  20.0000565   -2.99999964]    Delta(-logL) = -0.001400        N Eval = 45     Iter sec = 0.03 Cum sec = 1.41
-Iter 16 x = [  1.54000003  19.99999871  -2.99999994]    Delta(-logL) = -0.000021        N Eval = 46     Iter sec = 0.03 Cum sec = 1.44
+Iter 1  x = [ 1.49898148 21.99773486 -2.70071941]       First -logL = -23624280153.470936       N Eval = 3      Iter sec = 0.18 Cum sec = 0.18
+Iter 2  x = [ 1.50038191 21.99280114 -3.06155996]       Delta(-logL) = -34920.894505    N Eval = 6      Iter sec = 0.16 Cum sec = 0.34
+Iter 3  x = [ 1.55864261 19.39583559 -3.10613116]       Delta(-logL) = -32435.320213    N Eval = 8      Iter sec = 0.11 Cum sec = 0.45
+Iter 4  x = [ 1.55361167 19.60436592 -3.08880451]       Delta(-logL) = -451.340393      N Eval = 10     Iter sec = 0.11 Cum sec = 0.56
+Iter 5  x = [ 1.55400653 19.58009044 -3.07347395]       Delta(-logL) = -821.062992      N Eval = 11     Iter sec = 0.06 Cum sec = 0.61
+Iter 6  x = [ 1.55482779 19.52493394 -3.0404649 ]       Delta(-logL) = -1207.862453     N Eval = 12     Iter sec = 0.06 Cum sec = 0.67
+Iter 7  x = [ 1.55461734 19.50932192 -3.01189623]       Delta(-logL) = -373.809505      N Eval = 13     Iter sec = 0.06 Cum sec = 0.73
+Iter 8  x = [ 1.55367034 19.53927742 -3.00856239]       Delta(-logL) = -65.715275       N Eval = 14     Iter sec = 0.07 Cum sec = 0.80
+Iter 9  x = [ 1.55176747 19.60109189 -3.00526796]       Delta(-logL) = -123.544693      N Eval = 15     Iter sec = 0.06 Cum sec = 0.85
+Iter 10 x = [ 1.5477383  19.73388696 -3.00117635]       Delta(-logL) = -209.568089      N Eval = 16     Iter sec = 0.05 Cum sec = 0.91
+Iter 11 x = [ 1.53909112 20.02377427 -2.9962294 ]       Delta(-logL) = -150.647598      N Eval = 17     Iter sec = 0.07 Cum sec = 0.98
+Iter 12 x = [ 1.54049588 19.98090185 -2.99889763]       Delta(-logL) = -15.602619       N Eval = 18     Iter sec = 0.11 Cum sec = 1.08
+Iter 13 x = [ 1.54016946 19.9936212  -2.99966614]       Delta(-logL) = -1.515587        N Eval = 19     Iter sec = 0.08 Cum sec = 1.17
+Iter 14 x = [ 1.54000003 20.00000132 -2.99998996]       Delta(-logL) = -0.164299        N Eval = 20     Iter sec = 0.06 Cum sec = 1.23
+Iter 15 x = [ 1.53999933 20.00002491 -2.99999723]       Delta(-logL) = -0.000057        N Eval = 21     Iter sec = 0.06 Cum sec = 1.28
+Iter 16 x = [ 1.53999983 20.00000621 -2.9999998 ]       Delta(-logL) = 0.000000 N Eval = 22     Iter sec = 0.05 Cum sec = 1.34
 Warning: Desired error not necessarily achieved due to precision loss.
-         Current function value: -16987017813.413963
+         Current function value: -23624350930.519215
          Iterations: 16
-         Function evaluations: 87
-         Gradient evaluations: 76
+         Function evaluations: 23
+         Gradient evaluations: 22
 </pre></div></div>
 </div>
 <p>The input spectral parameters are recovered to numerical accuracy</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="n">inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">sky_conf_simple</span><span class="p">[</span><span class="n">comp</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">param</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-          <span class="k">for</span> <span class="n">comp</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="p">[(</span><span class="s1">&#39;dust&#39;</span><span class="p">,</span> <span class="s1">&#39;spectral_index&#39;</span><span class="p">),</span>
-                              <span class="p">(</span><span class="s1">&#39;dust&#39;</span><span class="p">,</span> <span class="s1">&#39;temp&#39;</span><span class="p">),</span>
-                              <span class="p">(</span><span class="s1">&#39;synchrotron&#39;</span><span class="p">,</span> <span class="s1">&#39;spectral_index&#39;</span><span class="p">)]</span>
-         <span class="p">]</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">sky_simple</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mbb_index</span><span class="p">,</span>
+          <span class="n">sky_simple</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mbb_temperature</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+          <span class="n">sky_simple</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">pl_index</span><span class="p">]</span>
+
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%-20s</span><span class="se">\t</span><span class="si">%s</span><span class="se">\t</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;Estimated&#39;</span><span class="p">,</span> <span class="s1">&#39;Input&#39;</span><span class="p">))</span>
 <span class="k">for</span> <span class="n">param</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">ref</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%-20s</span><span class="se">\t</span><span class="si">%f</span><span class="se">\t</span><span class="si">%f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">ref</span><span class="p">))</span>
@@ -624,18 +694,16 @@ Warning: Desired error not necessarily achieved due to precision loss.
 <div class="highlight"><pre>
                         Estimated       Input
 Dust.beta_d             1.540000        1.540000
-Dust.temp               19.999999       20.000000
+Dust.temp               20.000006       20.000000
 Synchrotron.beta_pl     -3.000000       -3.000000
 </pre></div></div>
 </div>
-<p>Their semi-analytic covariance is also provided, but remember that it is
-accurate only in the high signal-to-noise regime</p>
+<p>Their semi-analytic covariance is also provided, but remember that it is accurate only in the high signal-to-noise regime</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">corner_norm</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">Sigma</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">truths</span><span class="o">=</span><span class="n">inputs</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -647,52 +715,36 @@ accurate only in the high signal-to-noise regime</p>
 <img alt="../_images/examples_intermediate_separation_24_0.png" src="../_images/examples_intermediate_separation_24_0.png" />
 </div>
 </div>
-<p>The amplitudes of the components are stacked in the <code class="docutils literal"><span class="pre">s</span></code> attribute and
-they are in the same format of the input frequency maps: Q and U healpix
-maps, in this case. Here is the U Stokes parameter for each of the
-components.</p>
+<p>The amplitudes of the components are stacked in the <code class="docutils literal notranslate"><span class="pre">s</span></code> attribute and they are in the same format of the input frequency maps: Q and U healpix maps, in this case. Here is the U Stokes parameter for each of the components.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;CMB&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
 <span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Dust&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
 <span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Synchrotron&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="stderr output_area docutils container">
-<div class="highlight"><pre>
-/Users/dpoletti/Library/Python/2.7/lib/python/site-packages/healpy/projaxes.py:859: MaskedArrayFutureWarning: setting an item on a masked array which has a shared mask will not copy the mask and also change the original mask array in the future.
-Check the NumPy 1.11 release notes for more information.
-  result[np.isinf(val.data)] = -np.inf
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_intermediate_separation_26_1.png" src="../_images/examples_intermediate_separation_26_1.png" />
+<img alt="../_images/examples_intermediate_separation_26_0.png" src="../_images/examples_intermediate_separation_26_0.png" />
 </div>
 </div>
-<p>By taking the difference with the input template, we see that the error
-in the reconstruction is negligible.</p>
+<p>By taking the difference with the input template, we see that the error in the reconstruction is negligible.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
-            <span class="o">-</span> <span class="n">sky_conf_simple</span><span class="p">[</span><span class="s1">&#39;dust&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;A_U&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pysm</span><span class="o">.</span><span class="n">convert_units</span><span class="p">(</span><span class="s1">&#39;K_RJ&#39;</span><span class="p">,</span> <span class="s1">&#39;K_CMB&#39;</span><span class="p">,</span> <span class="mf">353.</span><span class="p">),</span>
+            <span class="o">-</span> <span class="n">sky_simple</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">U_ref</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">uK_CMB</span><span class="p">,</span> <span class="n">equivalencies</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">cmb_equivalencies</span><span class="p">(</span><span class="n">sky_simple</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">freq_ref_P</span><span class="p">))</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
             <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Dust&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
 <span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
-            <span class="o">-</span> <span class="n">sky_conf_simple</span><span class="p">[</span><span class="s1">&#39;synchrotron&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;A_U&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pysm</span><span class="o">.</span><span class="n">convert_units</span><span class="p">(</span><span class="s1">&#39;K_RJ&#39;</span><span class="p">,</span> <span class="s1">&#39;K_CMB&#39;</span><span class="p">,</span> <span class="mf">23.</span><span class="p">),</span>
+            <span class="o">-</span> <span class="n">sky_simple</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">U_ref</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">uK_CMB</span><span class="p">,</span> <span class="n">equivalencies</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">cmb_equivalencies</span><span class="p">(</span><span class="n">sky_simple</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">freq_ref_P</span><span class="p">))</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
             <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Synchrotron&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -707,27 +759,23 @@ in the reconstruction is negligible.</p>
 </div>
 <div class="section" id="Component-separation-with-varying-indices">
 <h2>Component separation with varying indices<a class="headerlink" href="#Component-separation-with-varying-indices" title="Permalink to this headline">¶</a></h2>
-<p>We now fit the spectral parameters independently over patches
-corresponding to healpix pixels with a given nside</p>
+<p>We now fit the spectral parameters independently over patches corresponding to healpix pixels with a given nside</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">nside_fit</span> <span class="o">=</span> <span class="n">NSIDE_PATCH</span>
 <span class="n">result_vary</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">freq_maps_vary</span><span class="p">,</span> <span class="n">nside_fit</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<p>As in the previous case, the amplitudes of the components are stacked in
-the <code class="docutils literal"><span class="pre">s</span></code>.</p>
+<p>As in the previous case, the amplitudes of the components are stacked in the <code class="docutils literal notranslate"><span class="pre">s</span></code>.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;CMB&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
 <span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Dust&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
 <span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Synchrotron&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
@@ -741,22 +789,17 @@ the <code class="docutils literal"><span class="pre">s</span></code>.</p>
 <img alt="../_images/examples_intermediate_separation_32_0.png" src="../_images/examples_intermediate_separation_32_0.png" />
 </div>
 </div>
-<p>When we take the difference with the input templates, the residuals are
-patchy. This is because the independent fit of the non-liner parameters
-has a different level of numerical accuracy for different patches.
-However, note that in all cases residuals are negligible: also this
-multi-patch cleaning has very high accuracy.</p>
+<p>When we take the difference with the input templates, the residuals may be patchy. This is because the independent fit of the non-liner parameters has a different level of numerical accuracy for different patches. However, note that in all cases residuals are negligible: also this multi-patch cleaning has high accuracy.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span>
-            <span class="n">sky_conf_vary</span><span class="p">[</span><span class="s1">&#39;dust&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;A_U&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pysm</span><span class="o">.</span><span class="n">convert_units</span><span class="p">(</span><span class="s1">&#39;K_RJ&#39;</span><span class="p">,</span> <span class="s1">&#39;K_CMB&#39;</span><span class="p">,</span> <span class="mf">353.</span><span class="p">),</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+            <span class="o">-</span> <span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">U_ref</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">uK_CMB</span><span class="p">,</span> <span class="n">equivalencies</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">cmb_equivalencies</span><span class="p">(</span><span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">freq_ref_P</span><span class="p">))</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
             <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Dust&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
-<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span>
-            <span class="n">sky_conf_vary</span><span class="p">[</span><span class="s1">&#39;synchrotron&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;A_U&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">pysm</span><span class="o">.</span><span class="n">convert_units</span><span class="p">(</span><span class="s1">&#39;K_RJ&#39;</span><span class="p">,</span> <span class="s1">&#39;K_CMB&#39;</span><span class="p">,</span> <span class="mf">23.</span><span class="p">),</span>
+<span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+            <span class="o">-</span> <span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">U_ref</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">uK_CMB</span><span class="p">,</span> <span class="n">equivalencies</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">cmb_equivalencies</span><span class="p">(</span><span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">freq_ref_P</span><span class="p">))</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
             <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Synchrotron&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -768,14 +811,12 @@ multi-patch cleaning has very high accuracy.</p>
 <img alt="../_images/examples_intermediate_separation_34_0.png" src="../_images/examples_intermediate_separation_34_0.png" />
 </div>
 </div>
-<p>The same is true for the non-linear parameters. Here are their
-reconstructed maps.</p>
+<p>The same is true for the non-linear parameters. Here are their reconstructed maps.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">par</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">):</span>
     <span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="n">par</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
 </pre></div>
@@ -790,19 +831,18 @@ reconstructed maps.</p>
 </div>
 <p>And here is the difference with the input templates.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">hp</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">NSIDE</span><span class="p">)</span> <span class="o">-</span>
-            <span class="n">sky_conf_vary</span><span class="p">[</span><span class="s1">&#39;dust&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;spectral_index&#39;</span><span class="p">],</span>
+            <span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mbb_index</span><span class="p">,</span>
             <span class="n">title</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
 <span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">hp</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">NSIDE</span><span class="p">)</span> <span class="o">-</span>
-            <span class="n">sky_conf_vary</span><span class="p">[</span><span class="s1">&#39;dust&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;temp&#39;</span><span class="p">],</span>
+            <span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mbb_temperature</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
             <span class="n">title</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
 <span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">hp</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">result_vary</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">NSIDE</span><span class="p">)</span> <span class="o">-</span>
-            <span class="n">sky_conf_vary</span><span class="p">[</span><span class="s1">&#39;synchrotron&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;spectral_index&#39;</span><span class="p">],</span>
+            <span class="n">sky_vary</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">pl_index</span><span class="p">,</span>
             <span class="n">title</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -825,10 +865,10 @@ reconstructed maps.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="simple_ilc.html" class="btn btn-neutral float-right" title="Simple ILC example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="multi_res_separation.html" class="btn btn-neutral float-right" title="Multi-resolution separation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="component_and_mixingmatrix.html" class="btn btn-neutral" title="SED evaluation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="component_and_mixingmatrix.html" class="btn btn-neutral float-left" title="SED evaluation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -837,11 +877,19 @@ reconstructed maps.</p>
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -853,37 +901,16 @@ reconstructed maps.</p>
   </div>
   
 
-
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'1.0.0',
-              LANGUAGE:'en',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

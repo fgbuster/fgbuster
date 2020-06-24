@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,42 +11,47 @@
   
 
   
-  
-  
-  
-
-  
-
-  
-  
-    
-
-  
-
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="API" href="api.html" /> 
-
-  
-  <script src="_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
-            <a href="#" class="icon icon-home"> FGBuster
+            <a href="#" class="icon icon-home" alt="Documentation Home"> FGBuster
           
 
           
@@ -74,6 +78,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -91,6 +96,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -129,7 +135,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="#">Docs</a> &raquo;</li>
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
         
       <li>ForeGroundBuster</li>
     
@@ -155,18 +161,23 @@
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
+.nbinput.nblast.container,
+.nboutput.nblast.container {
     margin-bottom: 19px;  /* padding has already 5px */
 }
 
 /* ... except between code cells! */
-.nblast + .nbinput {
+.nblast.container + .nbinput.container {
     margin-top: -19px;
 }
 
 .admonition > p:before {
     margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
 }
 </style>
 <div class="section" id="foregroundbuster">
@@ -175,26 +186,27 @@
 <h2>Parametric component separation for Cosmic Microwave Background observations<a class="headerlink" href="#parametric-component-separation-for-cosmic-microwave-background-observations" title="Permalink to this headline">¶</a></h2>
 <p>This library provides easy-to-use functions to perform</p>
 <ul class="simple">
-<li>separation of frequency maps into component maps
-<a class="reference external" href="https://academic.oup.com/mnras/article/392/1/216/1071929">(Stompor et al. 2009)</a></li>
-<li>forecasts of component separation<ul>
-<li>when the model is correct
-<a class="reference external" href="https://journals.aps.org/prd/abstract/10.1103/PhysRevD.84.069907">(Errard et al. 2011)</a></li>
-<li>when the model is incorrect
-<a class="reference external" href="https://journals.aps.org/prd/abstract/10.1103/PhysRevD.94.083526">(Stompor et al. 2016)</a></li>
+<li><p>separation of frequency maps into component maps
+<a class="reference external" href="https://academic.oup.com/mnras/article/392/1/216/1071929">(Stompor et al. 2009)</a></p></li>
+<li><p>forecasts of component separation</p>
+<ul>
+<li><p>when the model is correct
+<a class="reference external" href="https://journals.aps.org/prd/abstract/10.1103/PhysRevD.84.069907">(Errard et al. 2011)</a></p></li>
+<li><p>when the model is incorrect
+<a class="reference external" href="https://journals.aps.org/prd/abstract/10.1103/PhysRevD.94.083526">(Stompor et al. 2016)</a></p></li>
 </ul>
 </li>
 </ul>
 </div>
 <div class="section" id="install">
 <h2>Install<a class="headerlink" href="#install" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>git clone git@github.com:fgbuster/fgbuster.git
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone git@github.com:fgbuster/fgbuster.git
 <span class="nb">cd</span> fgbuster
 pip install -e .
 </pre></div>
 </div>
-<p>In the last line you might need <code class="docutils literal"><span class="pre">--user</span></code>.  Using <code class="docutils literal"><span class="pre">-e</span></code> is not necessary, but
-it makes latest changes available to you every time you <code class="docutils literal"><span class="pre">git</span> <span class="pre">pull</span></code>.</p>
+<p>In the last line you might need <code class="docutils literal notranslate"><span class="pre">--user</span></code>.  Using <code class="docutils literal notranslate"><span class="pre">-e</span></code> is not necessary, but
+it makes latest changes available to you every time you <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">pull</span></code>.</p>
 </div>
 <div class="section" id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
@@ -245,11 +257,19 @@ European Commissions H2020 Research Infrastructures under the Grant Agreement
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -261,37 +281,16 @@ European Commissions H2020 Research Infrastructures under the Grant Agreement
   </div>
   
 
-
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'./',
-              VERSION:'1.0.0',
-              LANGUAGE:'en',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

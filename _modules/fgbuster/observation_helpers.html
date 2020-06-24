@@ -1,0 +1,460 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fgbuster.observation_helpers &mdash; FGBuster 1.0.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> FGBuster
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">FGBuster</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>fgbuster.observation_helpers</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fgbuster.observation_helpers</h1><div class="highlight"><pre>
+<span></span><span class="c1"># FGBuster</span>
+<span class="c1"># Copyright (C) 2019 Davide Poletti, Josquin Errard and the FGBuster developers</span>
+<span class="c1">#</span>
+<span class="c1"># This program is free software: you can redistribute it and/or modify</span>
+<span class="c1"># it under the terms of the GNU General Public License as published by</span>
+<span class="c1"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1"># (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># This program is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c1"># GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># You should have received a copy of the GNU General Public License</span>
+<span class="c1"># along with this program. If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">Handy access to instrument configuration, map generation</span>
+<span class="sd">and other pysm3 functionalities</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">types</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
+<span class="kn">import</span> <span class="nn">pysm3</span>
+<span class="kn">import</span> <span class="nn">pysm3.units</span> <span class="k">as</span> <span class="nn">u</span>
+<span class="kn">from</span> <span class="nn">cmbdb</span> <span class="kn">import</span> <span class="n">cmbdb</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;get_sky&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;get_instrument&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;get_observation&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;get_noise_realization&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">INSTRUMENT_STD_ATTR</span> <span class="o">=</span> <span class="s1">&#39;frequency depth_i depth_p fwhm&#39;</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+<span class="n">_NL</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+<div class="viewcode-block" id="get_sky"><a class="viewcode-back" href="../../api/fgbuster.observation_helpers.html#fgbuster.observation_helpers.get_sky">[docs]</a><span class="k">def</span> <span class="nf">get_sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="s1">&#39;c1d0s0&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Get a pre-defined PySM sky</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    nside: int</span>
+<span class="sd">        healpix nside of the sky templates</span>
+<span class="sd">    tag: string</span>
+<span class="sd">        See the `pysm documentation</span>
+<span class="sd">        &lt;https://pysm3.readthedocs.io/en/latest/models.html#models&gt;`_</span>
+<span class="sd">        for a complete list of available options.</span>
+<span class="sd">        Default is &#39;c1d0s0&#39;, i.e. cmb (c1), dust with constant temperature and</span>
+<span class="sd">        spectral index (d0), and synchrotron with constant spectral index (s0).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sky: pysm3.Sky</span>
+<span class="sd">        See the `pysm documentation</span>
+<span class="sd">        &lt;https://pysm3.readthedocs.io/en/latest/api/pysm.Sky.html#pysm.Sky&gt;`_</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">preset_strings</span> <span class="o">=</span> <span class="p">[</span><span class="n">tag</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">tag</span><span class="p">),</span> <span class="mi">2</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">pysm3</span><span class="o">.</span><span class="n">Sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">preset_strings</span><span class="o">=</span><span class="n">preset_strings</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_instrument"><a class="viewcode-back" href="../../api/fgbuster.observation_helpers.html#fgbuster.observation_helpers.get_instrument">[docs]</a><span class="k">def</span> <span class="nf">get_instrument</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Get a pre-defined instrumental configuration</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tag: string</span>
+<span class="sd">        name of the pre-defined experimental configurations.</span>
+<span class="sd">        It can contain the name of multiple experiments separated by a space.</span>
+<span class="sd">        Call the function with a random input to get the available instruments.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    instr: pandas.DataFrame</span>
+<span class="sd">        It contains the experimetnal configuration of the desired instrument(s).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">cmbdb</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">cmbdb</span><span class="p">[</span><span class="s1">&#39;experiment&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">tag</span><span class="o">.</span><span class="n">split</span><span class="p">())]</span>
+    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">tag</span> <span class="o">==</span> <span class="s1">&#39;test&#39;</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+            <span class="n">df</span><span class="p">[</span><span class="s1">&#39;frequency&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mf">30.</span><span class="p">)</span>
+            <span class="n">df</span><span class="p">[</span><span class="s1">&#39;depth_p&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-</span> <span class="mi">30</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">df</span><span class="p">[</span><span class="s1">&#39;depth_i&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-</span> <span class="mi">30</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">importlib.util</span> <span class="kn">import</span> <span class="n">find_spec</span>
+            <span class="n">exp_file</span> <span class="o">=</span> <span class="n">find_spec</span><span class="p">(</span><span class="s1">&#39;cmbdb&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">submodule_search_locations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">exp_file</span> <span class="o">+=</span> <span class="s1">&#39;/experiments.yaml&#39;</span>
+            <span class="n">github</span> <span class="o">=</span> <span class="s1">&#39;https://github.com/dpole/cmbdb&#39;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Instrument(s) </span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2"> not available.&quot;</span> <span class="k">if</span> <span class="n">tag</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">+</span>
+                <span class="sa">f</span><span class="s2">&quot;Choose between: </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cmbdb</span><span class="o">.</span><span class="n">experiment</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span><span class="si">}{</span><span class="n">_NL</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Add your instrument to your local copy of cmbdb: </span><span class="si">{</span><span class="n">exp_file</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Beware, you might lose changes when you update: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;push your new configuration to </span><span class="si">{</span><span class="n">github</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;all&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_observation"><a class="viewcode-back" href="../../api/fgbuster.observation_helpers.html#fgbuster.observation_helpers.get_observation">[docs]</a><span class="k">def</span> <span class="nf">get_observation</span><span class="p">(</span><span class="n">instrument</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">sky</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                    <span class="n">noise</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nside</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;uK_CMB&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Get a pre-defined instrumental configuration</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    instrument:</span>
+<span class="sd">        It can be either a `str` (see :func:`get_instrument`) or an</span>
+<span class="sd">        object that provides the following as a key or an attribute.</span>
+
+<span class="sd">        - **frequency** (required)</span>
+<span class="sd">        - **depth_p** (required if ``noise=True``)</span>
+<span class="sd">        - **depth_i** (required if ``noise=True``)</span>
+
+<span class="sd">        They can be anything that is convertible to a float numpy array.</span>
+<span class="sd">        If only one of ``depth_p`` or ``depth_i`` is provided, the other is</span>
+<span class="sd">        inferred assuming that the former is sqrt(2) higher than the latter.</span>
+<span class="sd">    sky: str of pysm3.Sky</span>
+<span class="sd">        Sky to observe. It can be a `pysm3.Sky` or a tag to create one.</span>
+<span class="sd">    noise: bool</span>
+<span class="sd">        If true, add Gaussian, uncorrelated, isotropic noise.</span>
+<span class="sd">    nside: int</span>
+<span class="sd">        Desired output healpix nside. It is optional if `sky` is a `pysm3.Sky`,</span>
+<span class="sd">        and required if it is a `str` or ``None``.</span>
+<span class="sd">    unit: str</span>
+<span class="sd">        Unit of the output. Only K_CMB and K_RJ (and multiples) are supported.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    observation: array</span>
+<span class="sd">        Shape is ``(n_freq, 3, n_pix)``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">instrument</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">instrument</span> <span class="o">=</span> <span class="n">get_instrument</span><span class="p">(</span><span class="n">instrument</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">instrument</span> <span class="o">=</span> <span class="n">standardize_instrument</span><span class="p">(</span><span class="n">instrument</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">nside</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">nside</span> <span class="o">=</span> <span class="n">sky</span><span class="o">.</span><span class="n">nside</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sky</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">nside</span> <span class="o">==</span> <span class="n">sky</span><span class="o">.</span><span class="n">nside</span><span class="p">,</span> <span class="p">(</span>
+                <span class="s2">&quot;Mismatch between the value of the nside of the pysm3.Sky &quot;</span>
+                <span class="s2">&quot;argument and the one passed in the nside argument.&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either provide a pysm3.Sky as sky argument &quot;</span>
+                             <span class="s2">&quot; or specify the nside argument.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">noise</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">get_noise_realization</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">unit</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">instrument</span><span class="o">.</span><span class="n">frequency</span><span class="p">),</span> <span class="mi">3</span><span class="p">,</span> <span class="n">hp</span><span class="o">.</span><span class="n">nside2npix</span><span class="p">(</span><span class="n">nside</span><span class="p">)))</span>
+
+    <span class="k">if</span> <span class="n">sky</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">sky</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sky</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">sky</span> <span class="o">=</span> <span class="n">get_sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">sky</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">res_freq</span><span class="p">,</span> <span class="n">freq</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">instrument</span><span class="o">.</span><span class="n">frequency</span><span class="p">):</span>
+        <span class="n">emission</span> <span class="o">=</span> <span class="n">sky</span><span class="o">.</span><span class="n">get_emission</span><span class="p">(</span><span class="n">freq</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">GHz</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">unit</span><span class="p">),</span>
+            <span class="n">equivalencies</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">cmb_equivalencies</span><span class="p">(</span><span class="n">freq</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">GHz</span><span class="p">))</span>
+        <span class="n">res_freq</span> <span class="o">+=</span> <span class="n">emission</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+<div class="viewcode-block" id="get_noise_realization"><a class="viewcode-back" href="../../api/fgbuster.observation_helpers.html#fgbuster.observation_helpers.get_noise_realization">[docs]</a><span class="k">def</span> <span class="nf">get_noise_realization</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;uK_CMB&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generate noise maps for the instrument</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    nside: int</span>
+<span class="sd">        Desired output healpix nside.</span>
+<span class="sd">    instrument:</span>
+<span class="sd">        Object that provides the following as a key or an attribute.</span>
+
+<span class="sd">        - **frequency** (required)</span>
+<span class="sd">        - **depth_p** (required if ``noise=True``)</span>
+<span class="sd">        - **depth_i** (required if ``noise=True``)</span>
+
+<span class="sd">        They can be anything that is convertible to a float numpy array.</span>
+<span class="sd">        If only one of ``depth_p`` or ``depth_i`` is provided, the other is</span>
+<span class="sd">        inferred assuming that the former is sqrt(2) higher than the latter.</span>
+<span class="sd">    unit: str</span>
+<span class="sd">        Unit of the output. Only K_CMB and K_RJ (and multiples) are supported.</span>
+<span class="sd">    sky: str of pysm3.Sky</span>
+<span class="sd">        Sky to observe. It can be a `pysm3.Sky` or a tag to create one.</span>
+<span class="sd">    noise: bool</span>
+<span class="sd">        If true, add Gaussian, uncorrelated, isotropic noise.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    observation: array</span>
+<span class="sd">        Shape is ``(n_freq, 3, n_pix)``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">instrument</span> <span class="o">=</span> <span class="n">standardize_instrument</span><span class="p">(</span><span class="n">instrument</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">instrument</span><span class="p">,</span> <span class="s1">&#39;depth_i&#39;</span><span class="p">):</span>
+        <span class="n">instrument</span><span class="o">.</span><span class="n">depth_i</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">depth_p</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">instrument</span><span class="p">,</span> <span class="s1">&#39;depth_p&#39;</span><span class="p">):</span>
+        <span class="n">instrument</span><span class="o">.</span><span class="n">depth_p</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">depth_i</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+
+    <span class="n">n_freq</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">instrument</span><span class="o">.</span><span class="n">frequency</span><span class="p">)</span>
+    <span class="n">n_pix</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">nside2npix</span><span class="p">(</span><span class="n">nside</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n_pix</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">n_freq</span><span class="p">))</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">instrument</span><span class="o">.</span><span class="n">depth_i</span><span class="p">,</span> <span class="n">instrument</span><span class="o">.</span><span class="n">depth_p</span><span class="p">,</span> <span class="n">instrument</span><span class="o">.</span><span class="n">depth_p</span><span class="p">))</span>
+    <span class="n">depth</span> <span class="o">*=</span> <span class="n">u</span><span class="o">.</span><span class="n">arcmin</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">uK_CMB</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">depth</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+        <span class="nb">getattr</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">unit</span><span class="p">)</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">arcmin</span><span class="p">,</span>
+        <span class="n">equivalencies</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">cmb_equivalencies</span><span class="p">(</span><span class="n">instrument</span><span class="o">.</span><span class="n">frequency</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">GHz</span><span class="p">))</span>
+    <span class="n">res</span> <span class="o">*=</span> <span class="n">depth</span><span class="o">.</span><span class="n">value</span> <span class="o">/</span> <span class="n">hp</span><span class="o">.</span><span class="n">nside2resol</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">T</span></div>
+
+
+<span class="k">def</span> <span class="nf">standardize_instrument</span><span class="p">(</span><span class="n">instrument</span><span class="p">):</span>
+    <span class="sa">f</span><span class="s2">&quot;&quot;&quot;Handle different input instruments</span>
+
+<span class="s2">    Parameters</span>
+<span class="s2">    ----------</span>
+<span class="s2">    instrument:</span>
+<span class="s2">        Anything that has</span>
+
+<span class="s2">    </span><span class="si">{</span><span class="n">_NL</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;    * &#39;</span><span class="o">+</span><span class="n">attr</span> <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">INSTRUMENT_STD_ATTR</span><span class="p">])</span> <span class="si">}</span><span class="s2"></span>
+
+<span class="s2">        as keys or attributes, including `pandas.DataFrame`.</span>
+
+<span class="s2">    Returns</span>
+<span class="s2">    -------</span>
+<span class="s2">    std_instr: SimpleNamespace</span>
+<span class="s2">        It contains the properties above as attributes. They are converted to a</span>
+<span class="s2">        float array.</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+    <span class="n">std_instr</span> <span class="o">=</span> <span class="n">types</span><span class="o">.</span><span class="n">SimpleNamespace</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">INSTRUMENT_STD_ATTR</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">instrument</span><span class="p">,</span> <span class="n">attr</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">instrument</span><span class="p">[</span><span class="n">attr</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">std_instr</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">):</span>  <span class="c1"># Not subscriptable or missing key</span>
+            <span class="k">pass</span>
+
+    <span class="k">return</span> <span class="n">std_instr</span>
+
+
+<span class="k">def</span> <span class="nf">_rj2cmb</span><span class="p">(</span><span class="n">freqs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">K_RJ</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+        <span class="n">u</span><span class="o">.</span><span class="n">K_CMB</span><span class="p">,</span> <span class="n">equivalencies</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">cmb_equivalencies</span><span class="p">(</span><span class="n">freqs</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">GHz</span><span class="p">))</span><span class="o">.</span><span class="n">value</span>
+
+
+<span class="k">def</span> <span class="nf">_cmb2rj</span><span class="p">(</span><span class="n">freqs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">K_CMB</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+        <span class="n">u</span><span class="o">.</span><span class="n">K_RJ</span><span class="p">,</span> <span class="n">equivalencies</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">cmb_equivalencies</span><span class="p">(</span><span class="n">freqs</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">GHz</span><span class="p">))</span><span class="o">.</span><span class="n">value</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

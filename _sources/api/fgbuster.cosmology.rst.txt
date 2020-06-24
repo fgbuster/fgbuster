@@ -1,7 +1,11 @@
-fgbuster\.cosmology
-===================
+fgbuster.cosmology
+==================
 
 .. automodule:: fgbuster.cosmology
+
+   
+   
+   
 
    
    
@@ -20,3 +24,6 @@ fgbuster\.cosmology
    
    
    
+
+
+

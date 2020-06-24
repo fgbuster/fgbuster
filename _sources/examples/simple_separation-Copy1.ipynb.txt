@@ -1,0 +1,568 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Simple component separation"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%load_ext autoreload\n",
+    "%autoreload 2\n",
+    "%matplotlib widget\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pandas\n",
+    "\n",
+    "import healpy as hp\n",
+    "import pysm\n",
+    "\n",
+    "from fgbuster import (CMB, Dust, Synchrotron, \n",
+    "                      basic_comp_sep, \n",
+    "                      get_observation, get_noise_realization, get_instrument, get_sky)\n",
+    "from fgbuster.segmentation import define_ids"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import matplotlib.pyplot as plt"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Simulate your frequency maps\n",
+    "You have some frequecy maps to clean, they can be either data or simulations. For example, you can use `pysm` to simulate microwave skys with different complexities. ForeGroundBuster adds a couple of functions that make the process even easier."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0     37.5\n",
+       "1     24.0\n",
+       "2     19.9\n",
+       "3     16.2\n",
+       "4     13.5\n",
+       "5     11.7\n",
+       "6      9.2\n",
+       "7      7.6\n",
+       "8      5.9\n",
+       "9      6.5\n",
+       "10     5.8\n",
+       "11     7.7\n",
+       "12    13.2\n",
+       "13    19.5\n",
+       "14    37.5\n",
+       "Name: depth_p, dtype: float64"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "instrument = get_instrument('LiteBIRD')\n",
+    "instrument.depth_p"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "nside = 16\n",
+    "sky = get_sky(nside, 'd1')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sky.components[0].mbb_temperature.value[:] = 20"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "noiseless_maps = get_observation(instrument, sky)[:, 1:]\n",
+    "noisy_maps = get_observation(instrument, sky, noise=True)[:, 1:]\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Define what you fit for\n",
+    "Create your instrument model as a list of components"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "components = [CMB(), Synchrotron(40., running=None, nu_pivot=70.)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "components = [CMB(), Dust(150.)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "components = [CMB(), Dust(150.), Synchrotron(40., running=None, nu_pivot=70.)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {
+    "scrolled": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "1\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "2\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "4\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "8\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "16\n",
+      "New round\n",
+      "New round\n",
+      "New round\n"
+     ]
+    }
+   ],
+   "source": [
+    "ids, nsides, df = define_ids(components, instrument, noisy_maps, 25,\n",
+    "                             #bounds = [(None, None)]*2,\n",
+    "                             method='TNC',\n",
+    "                             bounds=[(1.0, 1.9), (13, 30)],\n",
+    "                             options={ 'disp':False, 'gtol': 1e-12, 'eps': 1e-12,\n",
+    "                                        'maxiter': 10000, 'ftol': 1e-12 },\n",
+    "                             tol=1e-18                         \n",
+    "                             #, (-3.5, -2.5), (-0.01, 0.01)])\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "idf = df.set_index(['nside', 'round'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {
+    "scrolled": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "ffdf6a720fdb482e98a93e4ccf62109d",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "Canvas(toolbar=Toolbar(toolitems=[('Home', 'Reset original view', 'home', 'home'), ('Back', 'Back to previous …"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0\n",
+      "1\n",
+      "2\n",
+      "3\n",
+      "4\n",
+      "5\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.lines.Line2D at 0x11dab2d50>"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "fig, axs = plt.subplots(4, 1, sharex=True)\n",
+    "nside = 32\n",
+    "i = 0\n",
+    "par = 2\n",
+    "while True:\n",
+    "    print(i)\n",
+    "    try:\n",
+    "        res = idf.loc[(nside, i)]\n",
+    "        axs[0].plot(res.ids[par])\n",
+    "        axs[1].plot(res.nsides[par])\n",
+    "        axs[2].plot(res.significance[par])\n",
+    "        axs[3].plot(res.significance[par] > 1)\n",
+    "    except TypeError:\n",
+    "        break\n",
+    "    i += 1\n",
+    "axs[2].set_ylim(0.1, None)\n",
+    "axs[2].set_yscale('log')\n",
+    "axs[2].axhline(1, color='k')\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from fgbuster import MixingMatrix"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['Dust.beta_d', 'Dust.temp']"
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "MixingMatrix(*components).params"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "res = idf.iloc[-1]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "dc3798015cb4426a881a33a273348d25",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "Canvas(toolbar=Toolbar(toolitems=[('Home', 'Reset original view', 'home', 'home'), ('Back', 'Back to previous …"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "fig = plt.figure()\n",
+    "n_row = (len(nsides)  - 1) / 2 + 1\n",
+    "n_col = 2 if (len(nsides) > 1) else 1\n",
+    "for i, (nsides_i, par) in enumerate(zip(nsides, MixingMatrix(*components).params), 1):\n",
+    "    hp.mollview(np.log10(res.chi2), sub=(n_row, n_col, i), title=par)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "idf.to_pickle('nside16_d1n_constTd_bd_td_tr25')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "scrolled": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "1\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "2\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "4\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "8\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "16\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n",
+      "New round\n"
+     ]
+    }
+   ],
+   "source": [
+    "ids_nl, nsides_nl, df_nl = define_ids(components, instrument, noiseless_maps, 5,\n",
+    "                             #bounds = [(None, None)]*2,\n",
+    "                             method='pso',\n",
+    "                             bounds=[(1.0, 1.9), (13, 30)]#, (-3.5, -2.5), (-0.01, 0.01)])\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ids_ny, nsides_ny, df_ny = define_ids(components, instrument, noisy_maps, 5,\n",
+    "                             #bounds = [(None, None)]*2,\n",
+    "                             method='pso',\n",
+    "                             bounds=[(1.0, 1.9), (13, 30)]#, (-3.5, -2.5), (-0.01, 0.01)])\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "dtype('int64')"
+      ]
+     },
+     "execution_count": 14,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "res.significance.dtype"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Component separation\n",
+    "The tools inside ForeGroundBuster allow for very flexible and diverse component separation approaches. However, we also provide a set of predefined function that perform component separation out of the box. They suit most common use cases."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [],
+   "source": [
+    "result = basic_comp_sep(components, instrument, freq_maps)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Explore the results\n",
+    "You have just solved for both the spectral parameters of your components and their amplitudes.\n",
+    "\n",
+    "Get the spectral parameters name and values with"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print(result.params)\n",
+    "print(result.x)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "You can also have a look at their semi-analytic covariance, but remember that it is accurate only the high signal-to-noise regime"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "corner_norm(result.x, result.Sigma, labels=result.params)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The amplitudes of the components are stacked in the ``s`` attribute and they are in the same format of the input frequency maps: Q and U healpix maps, in this case."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "hp.mollview(result.s[0,1], title='CMB')\n",
+    "hp.mollview(result.s[1,1], title='Dust', norm='hist')\n",
+    "hp.mollview(result.s[2,1], title='Synchrotron', norm='hist')"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.6"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}

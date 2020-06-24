@@ -1,0 +1,614 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fgbuster.separation_recipes &mdash; FGBuster 1.0.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="fgbuster.component_model" href="fgbuster.component_model.html" />
+    <link rel="prev" title="API" href="../api.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FGBuster
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">fgbuster.separation_recipes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.component_model.html">fgbuster.component_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.observation_helpers.html">fgbuster.observation_helpers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.cosmology.html">fgbuster.cosmology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.mixingmatrix.html">fgbuster.mixingmatrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.algebra.html">fgbuster.algebra</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">FGBuster</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">API</a> &raquo;</li>
+        
+      <li>fgbuster.separation_recipes</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/fgbuster.separation_recipes.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="module-fgbuster.separation_recipes">
+<span id="fgbuster-separation-recipes"></span><h1>fgbuster.separation_recipes<a class="headerlink" href="#module-fgbuster.separation_recipes" title="Permalink to this headline">¶</a></h1>
+<p>High-level component separation routines</p>
+<p class="rubric">Functions</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.separation_recipes.basic_comp_sep" title="fgbuster.separation_recipes.basic_comp_sep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">basic_comp_sep</span></code></a>(components, instrument, data)</p></td>
+<td><p>Basic component separation</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.separation_recipes.harmonic_ilc" title="fgbuster.separation_recipes.harmonic_ilc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">harmonic_ilc</span></code></a>(components, instrument, data[, …])</p></td>
+<td><p>Harmonic Internal Linear Combination</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.separation_recipes.harmonic_ilc_alm" title="fgbuster.separation_recipes.harmonic_ilc_alm"><code class="xref py py-obj docutils literal notranslate"><span class="pre">harmonic_ilc_alm</span></code></a>(components, instrument, alms)</p></td>
+<td><p>Internal Linear Combination of alms</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.separation_recipes.ilc" title="fgbuster.separation_recipes.ilc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ilc</span></code></a>(components, instrument, data[, patch_ids])</p></td>
+<td><p>Internal Linear Combination</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.separation_recipes.multi_res_comp_sep" title="fgbuster.separation_recipes.multi_res_comp_sep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">multi_res_comp_sep</span></code></a>(components, instrument, …)</p></td>
+<td><p>Basic component separation</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.separation_recipes.weighted_comp_sep" title="fgbuster.separation_recipes.weighted_comp_sep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weighted_comp_sep</span></code></a>(components, instrument, …)</p></td>
+<td><p>Weighted component separation</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="fgbuster.separation_recipes.basic_comp_sep">
+<code class="sig-prename descclassname">fgbuster.separation_recipes.</code><code class="sig-name descname">basic_comp_sep</code><span class="sig-paren">(</span><em class="sig-param">components</em>, <em class="sig-param">instrument</em>, <em class="sig-param">data</em>, <em class="sig-param">nside=0</em>, <em class="sig-param">**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipes.html#basic_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipes.basic_comp_sep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Basic component separation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>components</strong> (<em>list</em>) – List storing the <code class="xref py py-class docutils literal notranslate"><span class="pre">Component</span></code> s of the mixing matrix</p></li>
+<li><p><strong>instrument</strong> – <p>Object that provides the following as a key or an attribute.</p>
+<ul>
+<li><p><strong>frequency</strong></p></li>
+<li><p><strong>depth_i</strong> or <strong>depth_p</strong> (optional, frequencies are inverse-noise
+weighted according to these noise levels)</p></li>
+</ul>
+<p>They can be anything that is convertible to a float numpy array.</p>
+</p></li>
+<li><p><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – <p>Data vector to be separated. Shape <em>(n_freq, …, n_pix).</em>
+<em>…</em> can be</p>
+<ul>
+<li><p>absent or 1: temperature maps</p></li>
+<li><p>2: polarization maps</p></li>
+<li><p>3: temperature and polarization maps (see note)</p></li>
+</ul>
+<p>Values equal to <cite>hp.UNSEEN</cite> or, if <cite>MaskedArray</cite>, masked values are
+neglected during the component separation process.</p>
+</p></li>
+<li><p><strong>nside</strong> – For each pixel of a HEALPix map with this nside, the non-linear
+parameters are estimated independently</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>result</strong> – It includes</p>
+<ul class="simple">
+<li><p><strong>param</strong>: <em>(list)</em> - Names of the parameters fitted</p></li>
+<li><p><strong>x</strong>: <em>(ndarray)</em> - <code class="docutils literal notranslate"><span class="pre">x[i]</span></code> is the best-fit (map of) the <em>i</em>-th
+parameter</p></li>
+<li><p><strong>Sigma</strong>: <em>(ndarray)</em> - <code class="docutils literal notranslate"><span class="pre">Sigma[i,</span> <span class="pre">j]</span></code> is the (map of) the
+semi-analytic covariance between the <em>i</em>-th and the <em>j</em>-th parameter.
+It is meaningful only in the high signal-to-noise regime and when the
+<em>cov</em> is the true covariance of the data</p></li>
+<li><p><strong>s</strong>: <em>(ndarray)</em> - Component amplitude maps</p></li>
+<li><p><strong>mask_good</strong>: <em>(ndarray)</em> - mask of the entries actually used in the
+component separation</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li><p>During the component separation, a pixel is masked if at least one of
+its frequencies is masked.</p></li>
+<li><p>If you provide temperature and polarization maps, they will constrain the
+<strong>same</strong> set of parameters. In particular, separation is <strong>not</strong> done
+independently for temperature and polarization. If you want an
+independent fitting for temperature and polarization, please launch</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">res_T</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">component_T</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">res_P</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">component_P</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.separation_recipes.weighted_comp_sep">
+<code class="sig-prename descclassname">fgbuster.separation_recipes.</code><code class="sig-name descname">weighted_comp_sep</code><span class="sig-paren">(</span><em class="sig-param">components</em>, <em class="sig-param">instrument</em>, <em class="sig-param">data</em>, <em class="sig-param">cov</em>, <em class="sig-param">nside=0</em>, <em class="sig-param">**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipes.html#weighted_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipes.weighted_comp_sep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Weighted component separation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>components</strong> (<em>list</em><em> or </em><em>tuple of lists</em>) – List storing the <code class="xref py py-class docutils literal notranslate"><span class="pre">Component</span></code> s of the mixing matrix</p></li>
+<li><p><strong>instrument</strong> – <p>Object that provides the following as a key or an attribute.</p>
+<ul>
+<li><p><strong>frequency</strong></p></li>
+</ul>
+<p>It can be anything that is convertible to a float numpy array.</p>
+</p></li>
+<li><p><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Data vector to be separated. Shape <em>(n_freq, …, n_pix)</em>. <em>…</em> can be
+also absent.
+Values equal to <cite>hp.UNSEEN</cite> or, if <cite>MaskedArray</cite>, masked values are
+neglected during the component separation process.</p></li>
+<li><p><strong>cov</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Covariance maps. It has to be broadcastable to <em>data</em>.
+Notice that you can not pass a pixel independent covariance as an array
+with shape <em>(n_freq,)</em>: it has to be <em>(n_freq, …, 1)</em> in order to be
+broadcastable (consider using <a class="reference internal" href="#fgbuster.separation_recipes.basic_comp_sep" title="fgbuster.separation_recipes.basic_comp_sep"><code class="xref py py-func docutils literal notranslate"><span class="pre">basic_comp_sep()</span></code></a>, in this case).
+Values equal to <cite>hp.UNSEEN</cite> or, if <cite>MaskedArray</cite>, masked values are
+neglected during the component separation process.</p></li>
+<li><p><strong>nside</strong> – For each pixel of a HEALPix map with this nside, the non-linear
+parameters are estimated independently</p></li>
+<li><p><strong>patch_ids</strong> (<em>array</em>) – For each pixel, the array stores the id of the region over which to
+perform component separation independently.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>result</strong> – It includes</p>
+<ul class="simple">
+<li><p><strong>param</strong>: <em>(list)</em> - Names of the parameters fitted</p></li>
+<li><p><strong>x</strong>: <em>(ndarray)</em> - <code class="docutils literal notranslate"><span class="pre">x[i]</span></code> is the best-fit (map of) the <em>i</em>-th
+parameter</p></li>
+<li><p><strong>Sigma</strong>: <em>(ndarray)</em> - <code class="docutils literal notranslate"><span class="pre">Sigma[i,</span> <span class="pre">j]</span></code> is the (map of) the
+semi-analytic covariance between the <em>i</em>-th and the <em>j</em>-th parameter
+It is meaningful only in the high signal-to-noise regime and when the
+<em>cov</em> is the true covariance of the data</p></li>
+<li><p><strong>s</strong>: <em>(ndarray)</em> - Component amplitude maps</p></li>
+<li><p><strong>mask_good</strong>: <em>(ndarray)</em> - mask of the entries actually used in the
+component separation</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>During the component separation, a pixel is masked if at least one of
+its frequencies is masked, either in <em>data</em> or in <em>cov</em>.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.separation_recipes.ilc">
+<code class="sig-prename descclassname">fgbuster.separation_recipes.</code><code class="sig-name descname">ilc</code><span class="sig-paren">(</span><em class="sig-param">components</em>, <em class="sig-param">instrument</em>, <em class="sig-param">data</em>, <em class="sig-param">patch_ids=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipes.html#ilc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipes.ilc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Internal Linear Combination</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>components</strong> (<em>list</em><em> or </em><em>tuple of lists</em>) – <cite>Components</cite> of the mixing matrix. They must have no free parameter.</p></li>
+<li><p><strong>instrument</strong> – <p>Object that provides the following as a key or an attribute.</p>
+<ul>
+<li><p><strong>frequency</strong></p></li>
+</ul>
+<p>They can be anything that is convertible to a float numpy array.</p>
+</p></li>
+<li><p><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Data vector to be separated. Shape <code class="docutils literal notranslate"><span class="pre">(n_freq,</span> <span class="pre">...,</span> <span class="pre">n_pix)</span></code>.
+<code class="docutils literal notranslate"><span class="pre">...</span></code> can be also absent.
+Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+neglected during the component separation process.</p></li>
+<li><p><strong>patch_ids</strong> (<em>array</em>) – It stores the id of the region over which the ILC weights are computed
+independently. It must be broadcast-compatible with data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>result</strong> – It includes</p>
+<ul class="simple">
+<li><p><strong>W</strong>: <em>(ndarray)</em> - ILC weights for each component and possibly each
+patch.</p></li>
+<li><p><strong>freq_cov</strong>: <em>(ndarray)</em> - Empirical covariance for each patch</p></li>
+<li><p><strong>s</strong>: <em>(ndarray)</em> - Component maps</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>During the component separation, a pixel is masked if at least one of its
+frequencies is masked.</p></li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.separation_recipes.harmonic_ilc">
+<code class="sig-prename descclassname">fgbuster.separation_recipes.</code><code class="sig-name descname">harmonic_ilc</code><span class="sig-paren">(</span><em class="sig-param">components</em>, <em class="sig-param">instrument</em>, <em class="sig-param">data</em>, <em class="sig-param">lbins=None</em>, <em class="sig-param">weights=None</em>, <em class="sig-param">iter=3</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipes.html#harmonic_ilc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipes.harmonic_ilc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Harmonic Internal Linear Combination</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>components</strong> (<em>list</em><em> or </em><em>tuple of lists</em>) – <cite>Components</cite> of the mixing matrix. They must have no free parameter.</p></li>
+<li><p><strong>instrument</strong> – <p>Object that provides the following as a key or an attribute.</p>
+<ul>
+<li><p><strong>frequency</strong></p></li>
+<li><p><strong>fwhm</strong> (arcmin) they are deconvolved before ILC</p></li>
+</ul>
+<p>They can be anything that is convertible to a float numpy array.</p>
+</p></li>
+<li><p><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – Data vector to be separated. Shape <code class="docutils literal notranslate"><span class="pre">(n_freq,</span> <span class="pre">...,</span> <span class="pre">n_pix)</span></code>.
+<code class="docutils literal notranslate"><span class="pre">...</span></code> can be 1, 3 or absent. If 3, the separation is done independently
+fot T, E and B.
+Values equal to hp.UNSEEN or, if MaskedArray, masked values are
+neglected during the component separation process.</p></li>
+<li><p><strong>lbins</strong> (<em>array</em>) – It stores the edges of the bins that will have the same ILC weights.
+If a multipole is not in a bin but is the alms, an independent bin
+will be assigned to it</p></li>
+<li><p><strong>weights</strong> (<em>array</em>) – If provided data are multiplied by the weights map before computing alms</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>result</strong> – It includes</p>
+<ul class="simple">
+<li><p><strong>W</strong>: <em>(ndarray)</em> - ILC weights for each component and possibly
+each index of the <cite>…</cite> dimension in the alms.</p></li>
+<li><p><strong>s</strong>: <em>(ndarray)</em> - Component maps</p></li>
+<li><p><strong>cl_in</strong>: <em>(ndarray)</em> - Spectra of the input alm</p></li>
+<li><p><strong>cl_out</strong>: <em>(ndarray)</em> - Spectra of the output alm</p></li>
+<li><p><strong>fsky</strong>: <em>(ndarray)</em> - The input fsky used to correct the cls</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>During the component separation, a pixel is masked if at least one of its
+frequencies is masked.</p></li>
+<li><p>Output spectra are divided by the fsky. fsky is computed with the MASTER
+formula if <cite>weights</cite> is provided, otherwise it is the fraction of unmasked
+pixels</p></li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.separation_recipes.harmonic_ilc_alm">
+<code class="sig-prename descclassname">fgbuster.separation_recipes.</code><code class="sig-name descname">harmonic_ilc_alm</code><span class="sig-paren">(</span><em class="sig-param">components</em>, <em class="sig-param">instrument</em>, <em class="sig-param">alms</em>, <em class="sig-param">lbins=None</em>, <em class="sig-param">fsky=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipes.html#harmonic_ilc_alm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipes.harmonic_ilc_alm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Internal Linear Combination of alms</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>components</strong> (<em>list</em><em> or </em><em>tuple of lists</em>) – <cite>Components</cite> of the mixing matrix. They must have no free parameter.</p></li>
+<li><p><strong>instrument</strong> – <p>Object that provides the following as a key or an attribute.</p>
+<ul>
+<li><p><strong>frequency</strong></p></li>
+</ul>
+<p>It can be anything that is convertible to a float numpy array.</p>
+</p></li>
+<li><p><strong>alms</strong> (<em>ndarray</em>) – Data vector to be separated. Shape <code class="docutils literal notranslate"><span class="pre">(n_freq,</span> <span class="pre">...,</span> <span class="pre">lm)</span></code>.
+<code class="docutils literal notranslate"><span class="pre">...</span></code> can be 1, 3 or absent. The ILC weights are computed
+independently for each of its indices.</p></li>
+<li><p><strong>lbins</strong> (<em>array</em>) – It stores the edges of the bins that will have the same ILC weights.
+If a multipole is not in a bin but is the alms, an independent bin
+will be assigned to it</p></li>
+<li><p><strong>fsky</strong> (<em>array</em>) – If provided the output power spectra are corrected for this factor</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>result</strong> – It includes</p>
+<ul class="simple">
+<li><p><strong>W</strong>: <em>(ndarray)</em> - ILC weights for each component and possibly
+each index of the <cite>…</cite> dimension in the alms.</p></li>
+<li><p><strong>s</strong>: <em>(ndarray)</em> - Alms of the cleaned components</p></li>
+<li><p><strong>cl_in</strong>: <em>(ndarray)</em> - Spectra of the input alm</p></li>
+<li><p><strong>cl_out</strong>: <em>(ndarray)</em> - Spectra of the output alm</p></li>
+<li><p><strong>fsky</strong>: <em>(ndarray)</em> - The input fsky used to correct the cls</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.separation_recipes.multi_res_comp_sep">
+<code class="sig-prename descclassname">fgbuster.separation_recipes.</code><code class="sig-name descname">multi_res_comp_sep</code><span class="sig-paren">(</span><em class="sig-param">components</em>, <em class="sig-param">instrument</em>, <em class="sig-param">data</em>, <em class="sig-param">nsides</em>, <em class="sig-param">**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/separation_recipes.html#multi_res_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.separation_recipes.multi_res_comp_sep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Basic component separation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>components</strong> (<em>list</em>) – List storing the <code class="xref py py-class docutils literal notranslate"><span class="pre">Component</span></code> s of the mixing matrix</p></li>
+<li><p><strong>instrument</strong> – <p>Object that provides the following as a key or an attribute.</p>
+<ul>
+<li><p><strong>frequency</strong></p></li>
+<li><p><strong>depth_i</strong> or <strong>depth_p</strong> (optional, frequencies are inverse-noise
+weighted according to these noise levels)</p></li>
+</ul>
+<p>They can be anything that is convertible to a float numpy array.</p>
+</p></li>
+<li><p><strong>data</strong> (<em>ndarray</em><em> or </em><em>MaskedArray</em>) – <p>Data vector to be separated. Shape <em>(n_freq, …, n_pix).</em>
+<em>…</em> can be</p>
+<ul>
+<li><p>absent or 1: temperature maps</p></li>
+<li><p>2: polarization maps</p></li>
+<li><p>3: temperature and polarization maps (see note)</p></li>
+</ul>
+<p>Values equal to <cite>hp.UNSEEN</cite> or, if <cite>MaskedArray</cite>, masked values are
+neglected during the component separation process.</p>
+</p></li>
+<li><p><strong>nsides</strong> (<em>seq</em>) – Specify the <code class="docutils literal notranslate"><span class="pre">nside</span></code> for each free parameter of the components</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>result</strong> – It includes</p>
+<ul class="simple">
+<li><p><strong>param</strong>: <em>(list)</em> - Names of the parameters fitted</p></li>
+<li><p><strong>x</strong>: <em>(seq)</em> - <code class="docutils literal notranslate"><span class="pre">x[i]</span></code> is the best-fit (map of) the <em>i</em>-th
+parameter. The map has <code class="docutils literal notranslate"><span class="pre">nside</span> <span class="pre">=</span> <span class="pre">nsides[i]</span></code></p></li>
+<li><p><strong>Sigma</strong>: <em>(ndarray)</em> - <code class="docutils literal notranslate"><span class="pre">Sigma[i,</span> <span class="pre">j]</span></code> is the (map of) the
+semi-analytic covariance between the <em>i</em>-th and the <em>j</em>-th parameter.
+It is meaningful only in the high signal-to-noise regime and when the
+<em>cov</em> is the true covariance of the data</p></li>
+<li><p><strong>s</strong>: <em>(ndarray)</em> - Component amplitude maps</p></li>
+<li><p><strong>mask_good</strong>: <em>(ndarray)</em> - mask of the entries actually used in the
+component separation</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li><p>During the component separation, a pixel is masked if at least one of
+its frequencies is masked.</p></li>
+<li><p>If you provide temperature and polarization maps, they will constrain the
+<strong>same</strong> set of parameters. In particular, separation is <strong>not</strong> done
+independently for temperature and polarization. If you want an
+independent fitting for temperature and polarization, please launch</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">res_T</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">component_T</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">res_P</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">component_P</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="fgbuster.component_model.html" class="btn btn-neutral float-right" title="fgbuster.component_model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../api.html" class="btn btn-neutral float-left" title="API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

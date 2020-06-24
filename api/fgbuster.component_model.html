@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,43 +11,48 @@
   
 
   
-  
-  
-  
-
-  
-
-  
-  
-    
-
-  
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="fgbuster.mixingmatrix" href="fgbuster.mixingmatrix.html" />
-    <link rel="prev" title="fgbuster.cosmology" href="fgbuster.cosmology.html" /> 
 
   
-  <script src="../_static/js/modernizr.min.js"></script>
+  
+  
+  
 
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="fgbuster.observation_helpers" href="fgbuster.observation_helpers.html" />
+    <link rel="prev" title="fgbuster.separation_recipes" href="fgbuster.separation_recipes.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
-            <a href="../index.html" class="icon icon-home"> FGBuster
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FGBuster
           
 
           
@@ -75,6 +79,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -85,9 +90,10 @@
               <p class="caption"><span class="caption-text">Documentation</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="fgbuster.separation_recipies.html">fgbuster.separation_recipies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="fgbuster.cosmology.html">fgbuster.cosmology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.separation_recipes.html">fgbuster.separation_recipes</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">fgbuster.component_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.observation_helpers.html">fgbuster.observation_helpers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.cosmology.html">fgbuster.cosmology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fgbuster.mixingmatrix.html">fgbuster.mixingmatrix</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fgbuster.algebra.html">fgbuster.algebra</a></li>
 </ul>
@@ -99,6 +105,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -137,7 +144,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../api.html">API</a> &raquo;</li>
         
@@ -165,150 +172,147 @@
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
+.nbinput.nblast.container,
+.nboutput.nblast.container {
     margin-bottom: 19px;  /* padding has already 5px */
 }
 
 /* ... except between code cells! */
-.nblast + .nbinput {
+.nblast.container + .nbinput.container {
     margin-top: -19px;
 }
 
 .admonition > p:before {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
 </style>
 <div class="section" id="module-fgbuster.component_model">
 <span id="fgbuster-component-model"></span><h1>fgbuster.component_model<a class="headerlink" href="#module-fgbuster.component_model" title="Permalink to this headline">¶</a></h1>
 <p>Parametric spectral energy distribution (SED)</p>
-<p>Unified API for evaluating SEDs, see <a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-class docutils literal"><span class="pre">Component</span></code></a>.</p>
-<p>This module also provides a handy way of generating a <a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-class docutils literal"><span class="pre">Component</span></code></a> from
-analytic expressions, see the <a class="reference internal" href="#fgbuster.component_model.AnalyticComponent" title="fgbuster.component_model.AnalyticComponent"><code class="xref py py-class docutils literal"><span class="pre">AnalyticComponent</span></code></a>. For components
+<p>Unified API for evaluating SEDs, see <a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-class docutils literal notranslate"><span class="pre">Component</span></code></a>.</p>
+<p>This module also provides a handy way of generating a <a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-class docutils literal notranslate"><span class="pre">Component</span></code></a> from
+analytic expressions, see the <a class="reference internal" href="#fgbuster.component_model.AnalyticComponent" title="fgbuster.component_model.AnalyticComponent"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnalyticComponent</span></code></a>. For components
 frequently used (e.g. power law, gray body, CMB) these are already
 prepared.</p>
 <p class="rubric">Functions</p>
-<table border="1" class="longtable docutils">
+<table class="longtable docutils align-default">
 <colgroup>
-<col width="10%" />
-<col width="90%" />
+<col style="width: 10%" />
+<col style="width: 90%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">lambdify</span></code>(x,&nbsp;y)</td>
-<td></td>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">lambdify</span></code>(x, y)</p></td>
+<td><p></p></td>
 </tr>
 </tbody>
 </table>
 <p class="rubric">Classes</p>
-<table border="1" class="longtable docutils">
+<table class="longtable docutils align-default">
 <colgroup>
-<col width="10%" />
-<col width="90%" />
+<col style="width: 10%" />
+<col style="width: 90%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">AME</span></code></td>
-<td></td>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.component_model.AnalyticComponent" title="fgbuster.component_model.AnalyticComponent"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AnalyticComponent</span></code></a>(analytic_expr, **fixed_params)</p></td>
+<td><p>Component defined analytically</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#fgbuster.component_model.AnalyticComponent" title="fgbuster.component_model.AnalyticComponent"><code class="xref py py-obj docutils literal"><span class="pre">AnalyticComponent</span></code></a>(analytic_expr,&nbsp;**fixed_params)</td>
-<td>Component defined analytically</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.component_model.CMB" title="fgbuster.component_model.CMB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CMB</span></code></a>([units])</p></td>
+<td><p>Cosmic microwave background</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.component_model.CMB" title="fgbuster.component_model.CMB"><code class="xref py py-obj docutils literal"><span class="pre">CMB</span></code></a>([units])</td>
-<td>Cosmic microwave background</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Component</span></code></a></p></td>
+<td><p>Abstract class for SED evaluation</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-obj docutils literal"><span class="pre">Component</span></code></a></td>
-<td>Abstract class for SED evaluation</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.component_model.Dust" title="fgbuster.component_model.Dust"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Dust</span></code></a>(nu0[, temp, beta_d, units])</p></td>
+<td><p>Alias of <a class="reference internal" href="#fgbuster.component_model.ModifiedBlackBody" title="fgbuster.component_model.ModifiedBlackBody"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModifiedBlackBody</span></code></a></p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.component_model.Dust" title="fgbuster.component_model.Dust"><code class="xref py py-obj docutils literal"><span class="pre">Dust</span></code></a>(nu0[,&nbsp;temp,&nbsp;beta_d,&nbsp;units])</td>
-<td>Alias of <a class="reference internal" href="#fgbuster.component_model.ModifiedBlackBody" title="fgbuster.component_model.ModifiedBlackBody"><code class="xref py py-class docutils literal"><span class="pre">ModifiedBlackBody</span></code></a></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.component_model.FreeFree" title="fgbuster.component_model.FreeFree"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FreeFree</span></code></a>([logEM, Te, units])</p></td>
+<td><p>Free-free</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#fgbuster.component_model.FreeFree" title="fgbuster.component_model.FreeFree"><code class="xref py py-obj docutils literal"><span class="pre">FreeFree</span></code></a>([logEM,&nbsp;Te,&nbsp;units])</td>
-<td>Free-free</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.component_model.ModifiedBlackBody" title="fgbuster.component_model.ModifiedBlackBody"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ModifiedBlackBody</span></code></a>(nu0[, temp, beta_d, units])</p></td>
+<td><p>Modified Black body</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.component_model.ModifiedBlackBody" title="fgbuster.component_model.ModifiedBlackBody"><code class="xref py py-obj docutils literal"><span class="pre">ModifiedBlackBody</span></code></a>(nu0[,&nbsp;temp,&nbsp;beta_d,&nbsp;units])</td>
-<td>Modified Black body</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PowerLaw</span></code></a>(nu0[, beta_pl, nu_pivot, running, …])</p></td>
+<td><p>Power law</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-obj docutils literal"><span class="pre">PowerLaw</span></code></a>(nu0[,&nbsp;beta_pl,&nbsp;nu_pivot,&nbsp;running,&nbsp;…])</td>
-<td>Power law</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.component_model.Synchrotron" title="fgbuster.component_model.Synchrotron"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Synchrotron</span></code></a>(nu0[, beta_pl, nu_pivot, …])</p></td>
+<td><p>Alias of <a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-class docutils literal notranslate"><span class="pre">PowerLaw</span></code></a></p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.component_model.Synchrotron" title="fgbuster.component_model.Synchrotron"><code class="xref py py-obj docutils literal"><span class="pre">Synchrotron</span></code></a>(nu0[,&nbsp;beta_pl,&nbsp;nu_pivot,&nbsp;…])</td>
-<td>Alias of <a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-class docutils literal"><span class="pre">PowerLaw</span></code></a></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.component_model.ThermalSZ" title="fgbuster.component_model.ThermalSZ"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ThermalSZ</span></code></a>([units])</p></td>
+<td><p>Thermal Sunyaev-Zeldovich</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="class">
 <dt id="fgbuster.component_model.Component">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">Component</code><a class="reference internal" href="../_modules/fgbuster/component_model.html#Component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Component" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">fgbuster.component_model.</code><code class="sig-name descname">Component</code><a class="reference internal" href="../_modules/fgbuster/component_model.html#Component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Component" title="Permalink to this definition">¶</a></dt>
 <dd><p>Abstract class for SED evaluation</p>
 <p>It defines the API.</p>
-<dl class="attribute">
+<dl class="method">
 <dt id="fgbuster.component_model.Component.defaults">
-<code class="descname">defaults</code><a class="headerlink" href="#fgbuster.component_model.Component.defaults" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">defaults</code><a class="headerlink" href="#fgbuster.component_model.Component.defaults" title="Permalink to this definition">¶</a></dt>
 <dd><p>Default values of the free parameters</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="fgbuster.component_model.Component.diff">
-<code class="descname">diff</code><span class="sig-paren">(</span><em>nu</em>, <em>*params</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#Component.diff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Component.diff" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">diff</code><span class="sig-paren">(</span><em class="sig-param">nu</em>, <em class="sig-param">*params</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#Component.diff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Component.diff" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate the derivative of the SED</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>nu</strong> (<em>array</em>) – Frequencies at which the SED is evaluated</li>
-<li><strong>*params</strong> (<em>float</em><em> or </em><em>ndarray</em>) – Value of the free parameters. They can be arrays and, in this case,
-they should be broadcastable to a common shape.</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nu</strong> (<em>array</em>) – Frequencies at which the SED is evaluated</p></li>
+<li><p><strong>*params</strong> (<em>float</em><em> or </em><em>ndarray</em>) – Value of the free parameters. They can be arrays and, in this case,
+they should be broadcastable to a common shape.</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>result</strong> – It contains the derivative with respect to each parameter. See
-<a class="reference internal" href="#fgbuster.component_model.Component.eval" title="fgbuster.component_model.Component.eval"><code class="xref py py-meth docutils literal"><span class="pre">eval()</span></code></a> for more details about the format of the
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>result</strong> – It contains the derivative with respect to each parameter. See
+<a class="reference internal" href="#fgbuster.component_model.Component.eval" title="fgbuster.component_model.Component.eval"><code class="xref py py-meth docutils literal notranslate"><span class="pre">eval()</span></code></a> for more details about the format of the
 evaluated derivative</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="fgbuster.component_model.Component.eval">
-<code class="descname">eval</code><span class="sig-paren">(</span><em>nu</em>, <em>*params</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#Component.eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Component.eval" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">eval</code><span class="sig-paren">(</span><em class="sig-param">nu</em>, <em class="sig-param">*params</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#Component.eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Component.eval" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate the SED</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>nu</strong> (<em>array</em>) – Frequencies at which the SED is evaluated</li>
-<li><strong>*params</strong> (<em>float</em><em> or </em><em>ndarray</em>) – Value of each of the free parameters. They can be arrays and, in
-this case, they should be broadcastable to a common shape.</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nu</strong> (<em>array</em>) – Frequencies at which the SED is evaluated</p></li>
+<li><p><strong>*params</strong> (<em>float</em><em> or </em><em>ndarray</em>) – Value of each of the free parameters. They can be arrays and, in
+this case, they should be broadcastable to a common shape.</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>result</strong> – SED. The shape is always <code class="docutils literal"><span class="pre">np.broadcast(*params).shape</span> <span class="pre">+</span> <span class="pre">nu.shape</span></code>.
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>result</strong> – SED. The shape is always <code class="docutils literal notranslate"><span class="pre">np.broadcast(*params).shape</span> <span class="pre">+</span> <span class="pre">nu.shape</span></code>.
 In particular, if the parameters are all floats, the shape is the
 same <cite>nu</cite>.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="method">
 <dt id="fgbuster.component_model.Component.n_param">
-<code class="descname">n_param</code><a class="headerlink" href="#fgbuster.component_model.Component.n_param" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">n_param</code><a class="headerlink" href="#fgbuster.component_model.Component.n_param" title="Permalink to this definition">¶</a></dt>
 <dd><p>Number of free parameters</p>
 </dd></dl>
 
-<dl class="attribute">
+<dl class="method">
 <dt id="fgbuster.component_model.Component.params">
-<code class="descname">params</code><a class="headerlink" href="#fgbuster.component_model.Component.params" title="Permalink to this definition">¶</a></dt>
+<em class="property">property </em><code class="sig-name descname">params</code><a class="headerlink" href="#fgbuster.component_model.Component.params" title="Permalink to this definition">¶</a></dt>
 <dd><p>Name of the free parameters</p>
 </dd></dl>
 
@@ -316,153 +320,131 @@ same <cite>nu</cite>.</p>
 
 <dl class="class">
 <dt id="fgbuster.component_model.AnalyticComponent">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">AnalyticComponent</code><span class="sig-paren">(</span><em>analytic_expr</em>, <em>**fixed_params</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#AnalyticComponent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.AnalyticComponent" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">fgbuster.component_model.</code><code class="sig-name descname">AnalyticComponent</code><span class="sig-paren">(</span><em class="sig-param">analytic_expr</em>, <em class="sig-param">**fixed_params</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#AnalyticComponent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.AnalyticComponent" title="Permalink to this definition">¶</a></dt>
 <dd><p>Component defined analytically</p>
 <p>Class that allows analytic definition and automatic (symbolic)
 differentiation of it using <a class="reference external" href="https://docs.sympy.org/latest/modules/functions/index.html">sympy</a>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>analytic_expr</strong> (<em>str</em>) – Analytic expression for the SED. The variable representing the
-frequency is assumed to be <code class="docutils literal"><span class="pre">nu</span></code>. You can not use names that produce
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>analytic_expr</strong> (<em>str</em>) – Analytic expression for the SED. The variable representing the
+frequency is assumed to be <code class="docutils literal notranslate"><span class="pre">nu</span></code>. You can not use names that produce
 clashes with <a class="reference external" href="https://docs.sympy.org/latest/modules/functions/index.html">sympy</a> definitions (e.g, <a class="reference external" href="https://docs.sympy.org/latest/modules/functions/index.html">functions</a>).
-Notable forbidden names are <em>beta</em>, <em>gamma</em>.</li>
-<li><strong>**fixed_params</strong> (<em>float</em>) – Fix the value of the desired variables. If a variable is not specified
-or is set equal to <code class="docutils literal"><span class="pre">None</span></code>, it will be a free parameters.</li>
+Notable forbidden names are <em>beta</em>, <em>gamma</em>.</p></li>
+<li><p><strong>**fixed_params</strong> (<em>float</em>) – Fix the value of the desired variables. If a variable is not specified
+or is set equal to <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will be a free parameters.</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
+<p class="admonition-title">Note</p>
 <p>Difference with respect to a <cite>sympy.Expression</cite></p>
 <ul class="simple">
-<li>Efficient evaluators of the SED and its derivatives are prepared at
-construction time</li>
-<li>Following the API specified in <a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-class docutils literal"><span class="pre">Component</span></code></a>, <code class="docutils literal"><span class="pre">nu</span></code> has a special
+<li><p>Efficient evaluators of the SED and its derivatives are prepared at
+construction time</p></li>
+<li><p>Following the API specified in <a class="reference internal" href="#fgbuster.component_model.Component" title="fgbuster.component_model.Component"><code class="xref py py-class docutils literal notranslate"><span class="pre">Component</span></code></a>, <code class="docutils literal notranslate"><span class="pre">nu</span></code> has a special
 meaning and has a dedicated dimension (the last one) when evaluations are
-performed</li>
-<li><code class="docutils literal"><span class="pre">diff</span></code> (and <code class="docutils literal"><span class="pre">diff_diff</span></code>) return the evaluation of the derivatives with
+performed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">diff</span></code> (and <code class="docutils literal notranslate"><span class="pre">diff_diff</span></code>) return the evaluation of the derivatives with
 respect to all the free parameters, not the expression of the
-derivatives with respect to a specific parameter</li>
+derivatives with respect to a specific parameter</p></li>
 </ul>
 <p>Note also that</p>
-<ul class="last simple">
-<li>You can trade a longer construction time for faster evaluation time by
-setting <code class="docutils literal"><span class="pre">component_model.lambdify</span></code> to
-<code class="docutils literal"><span class="pre">sympy.utilities.autowrap.ufuncify</span></code>.
+<ul class="simple">
+<li><p>You can trade a longer construction time for faster evaluation time by
+setting <code class="docutils literal notranslate"><span class="pre">component_model.lambdify</span></code> to
+<code class="docutils literal notranslate"><span class="pre">sympy.utilities.autowrap.ufuncify</span></code>.
 After constructing the anlytic component you can revert back the change by
-setting <code class="docutils literal"><span class="pre">component_model.lambdify</span></code> back to <code class="docutils literal"><span class="pre">sympy.lambdify</span></code>.
+setting <code class="docutils literal notranslate"><span class="pre">component_model.lambdify</span></code> back to <code class="docutils literal notranslate"><span class="pre">sympy.lambdify</span></code>.
 The gain can negligible or considerable depending on the analytic
-expression.</li>
+expression.</p></li>
 </ul>
 </div>
 </dd></dl>
 
 <dl class="class">
 <dt id="fgbuster.component_model.CMB">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">CMB</code><span class="sig-paren">(</span><em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#CMB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.CMB" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">fgbuster.component_model.</code><code class="sig-name descname">CMB</code><span class="sig-paren">(</span><em class="sig-param">units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#CMB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.CMB" title="Permalink to this definition">¶</a></dt>
 <dd><p>Cosmic microwave background</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>units</strong> – Output units (K_CMB and K_RJ available)</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>units</strong> – Output units (K_CMB and K_RJ available)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="class">
 <dt id="fgbuster.component_model.ThermalSZ">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">ThermalSZ</code><span class="sig-paren">(</span><em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#ThermalSZ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.ThermalSZ" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">fgbuster.component_model.</code><code class="sig-name descname">ThermalSZ</code><span class="sig-paren">(</span><em class="sig-param">units='uK_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#ThermalSZ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.ThermalSZ" title="Permalink to this definition">¶</a></dt>
 <dd><p>Thermal Sunyaev-Zeldovich</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>units</strong> – Output units (K_CMB and K_RJ available)</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>units</strong> – Output units (K_CMB and K_RJ available)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="class">
 <dt id="fgbuster.component_model.Dust">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">Dust</code><span class="sig-paren">(</span><em>nu0</em>, <em>temp=None</em>, <em>beta_d=None</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#Dust"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Dust" title="Permalink to this definition">¶</a></dt>
-<dd><p>Alias of <a class="reference internal" href="#fgbuster.component_model.ModifiedBlackBody" title="fgbuster.component_model.ModifiedBlackBody"><code class="xref py py-class docutils literal"><span class="pre">ModifiedBlackBody</span></code></a></p>
+<em class="property">class </em><code class="sig-prename descclassname">fgbuster.component_model.</code><code class="sig-name descname">Dust</code><span class="sig-paren">(</span><em class="sig-param">nu0</em>, <em class="sig-param">temp=None</em>, <em class="sig-param">beta_d=None</em>, <em class="sig-param">units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#Dust"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Dust" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias of <a class="reference internal" href="#fgbuster.component_model.ModifiedBlackBody" title="fgbuster.component_model.ModifiedBlackBody"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModifiedBlackBody</span></code></a></p>
 </dd></dl>
 
 <dl class="class">
 <dt id="fgbuster.component_model.Synchrotron">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">Synchrotron</code><span class="sig-paren">(</span><em>nu0</em>, <em>beta_pl=None</em>, <em>nu_pivot=None</em>, <em>running=0.0</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#Synchrotron"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Synchrotron" title="Permalink to this definition">¶</a></dt>
-<dd><p>Alias of <a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-class docutils literal"><span class="pre">PowerLaw</span></code></a></p>
+<em class="property">class </em><code class="sig-prename descclassname">fgbuster.component_model.</code><code class="sig-name descname">Synchrotron</code><span class="sig-paren">(</span><em class="sig-param">nu0</em>, <em class="sig-param">beta_pl=None</em>, <em class="sig-param">nu_pivot=None</em>, <em class="sig-param">running=0.0</em>, <em class="sig-param">units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#Synchrotron"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.Synchrotron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias of <a class="reference internal" href="#fgbuster.component_model.PowerLaw" title="fgbuster.component_model.PowerLaw"><code class="xref py py-class docutils literal notranslate"><span class="pre">PowerLaw</span></code></a></p>
 </dd></dl>
 
 <dl class="class">
 <dt id="fgbuster.component_model.ModifiedBlackBody">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">ModifiedBlackBody</code><span class="sig-paren">(</span><em>nu0</em>, <em>temp=None</em>, <em>beta_d=None</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#ModifiedBlackBody"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.ModifiedBlackBody" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">fgbuster.component_model.</code><code class="sig-name descname">ModifiedBlackBody</code><span class="sig-paren">(</span><em class="sig-param">nu0</em>, <em class="sig-param">temp=None</em>, <em class="sig-param">beta_d=None</em>, <em class="sig-param">units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#ModifiedBlackBody"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.ModifiedBlackBody" title="Permalink to this definition">¶</a></dt>
 <dd><p>Modified Black body</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>nu0</strong> (<em>float</em>) – Reference frequency</li>
-<li><strong>temp</strong> (<em>float</em>) – Black body temperature</li>
-<li><strong>beta_d</strong> (<em>float</em>) – Spectral index</li>
-<li><strong>units</strong> – Output units (K_CMB and K_RJ available)</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nu0</strong> (<em>float</em>) – Reference frequency</p></li>
+<li><p><strong>temp</strong> (<em>float</em>) – Black body temperature</p></li>
+<li><p><strong>beta_d</strong> (<em>float</em>) – Spectral index</p></li>
+<li><p><strong>units</strong> – Output units (K_CMB and K_RJ available)</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="class">
 <dt id="fgbuster.component_model.PowerLaw">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">PowerLaw</code><span class="sig-paren">(</span><em>nu0</em>, <em>beta_pl=None</em>, <em>nu_pivot=None</em>, <em>running=0.0</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#PowerLaw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.PowerLaw" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">fgbuster.component_model.</code><code class="sig-name descname">PowerLaw</code><span class="sig-paren">(</span><em class="sig-param">nu0</em>, <em class="sig-param">beta_pl=None</em>, <em class="sig-param">nu_pivot=None</em>, <em class="sig-param">running=0.0</em>, <em class="sig-param">units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#PowerLaw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.PowerLaw" title="Permalink to this definition">¶</a></dt>
 <dd><p>Power law</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>nu0</strong> (<em>float</em>) – Reference frequency</li>
-<li><strong>beta_pl</strong> (<em>float</em>) – Spectral index</li>
-<li><strong>nu_pivot</strong> (<em>float</em>) – Pivot frequency for the running</li>
-<li><strong>running</strong> (<em>float</em>) – Curvature of the power law</li>
-<li><strong>units</strong> – Output units (K_CMB and K_RJ available)</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nu0</strong> (<em>float</em>) – Reference frequency</p></li>
+<li><p><strong>beta_pl</strong> (<em>float</em>) – Spectral index</p></li>
+<li><p><strong>nu_pivot</strong> (<em>float</em>) – Pivot frequency for the running</p></li>
+<li><p><strong>running</strong> (<em>float</em>) – Curvature of the power law</p></li>
+<li><p><strong>units</strong> – Output units (K_CMB and K_RJ available)</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="class">
 <dt id="fgbuster.component_model.FreeFree">
-<em class="property">class </em><code class="descclassname">fgbuster.component_model.</code><code class="descname">FreeFree</code><span class="sig-paren">(</span><em>logEM=None</em>, <em>Te=None</em>, <em>units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#FreeFree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.FreeFree" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">fgbuster.component_model.</code><code class="sig-name descname">FreeFree</code><span class="sig-paren">(</span><em class="sig-param">logEM=None</em>, <em class="sig-param">Te=None</em>, <em class="sig-param">units='K_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/component_model.html#FreeFree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.component_model.FreeFree" title="Permalink to this definition">¶</a></dt>
 <dd><p>Free-free</p>
 <p>Anlytic model for bremsstrahlung emission (Draine, 2011)
 Above 1GHz it is essentially equivalent to a power law.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>logEM</strong> – Logarithm (base ten) of the integrated squared electron density along a
-line of sight in cm^-3 pc</li>
-<li><strong>Te</strong> – Electron temperature</li>
-<li><strong>units</strong> – Output units (K_CMB and K_RJ available)</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>logEM</strong> – Logarithm (base ten) of the integrated squared electron density along a
+line of sight in cm^-3 pc</p></li>
+<li><p><strong>Te</strong> – Electron temperature</p></li>
+<li><p><strong>units</strong> – Output units (K_CMB and K_RJ available)</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 </dd></dl>
 
 </div>
@@ -475,10 +457,10 @@ line of sight in cm^-3 pc</li>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="fgbuster.mixingmatrix.html" class="btn btn-neutral float-right" title="fgbuster.mixingmatrix" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="fgbuster.observation_helpers.html" class="btn btn-neutral float-right" title="fgbuster.observation_helpers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="fgbuster.cosmology.html" class="btn btn-neutral" title="fgbuster.cosmology" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="fgbuster.separation_recipes.html" class="btn btn-neutral float-left" title="fgbuster.separation_recipes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -487,11 +469,19 @@ line of sight in cm^-3 pc</li>
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -503,37 +493,16 @@ line of sight in cm^-3 pc</li>
   </div>
   
 
-
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'1.0.0',
-              LANGUAGE:'en',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

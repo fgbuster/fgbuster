@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,43 +11,48 @@
   
 
   
-  
-  
-  
-
-  
-
-  
-  
-    
-
-  
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Examples" href="../examples.html" />
     <link rel="prev" title="fgbuster.mixingmatrix" href="fgbuster.mixingmatrix.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
-            <a href="../index.html" class="icon icon-home"> FGBuster
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FGBuster
           
 
           
@@ -75,6 +79,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -85,9 +90,10 @@
               <p class="caption"><span class="caption-text">Documentation</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="fgbuster.separation_recipies.html">fgbuster.separation_recipies</a></li>
-<li class="toctree-l2"><a class="reference internal" href="fgbuster.cosmology.html">fgbuster.cosmology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.separation_recipes.html">fgbuster.separation_recipes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fgbuster.component_model.html">fgbuster.component_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.observation_helpers.html">fgbuster.observation_helpers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.cosmology.html">fgbuster.cosmology</a></li>
 <li class="toctree-l2"><a class="reference internal" href="fgbuster.mixingmatrix.html">fgbuster.mixingmatrix</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">fgbuster.algebra</a></li>
 </ul>
@@ -99,6 +105,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -137,7 +144,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../api.html">API</a> &raquo;</li>
         
@@ -165,246 +172,256 @@
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
+.nbinput.nblast.container,
+.nboutput.nblast.container {
     margin-bottom: 19px;  /* padding has already 5px */
 }
 
 /* ... except between code cells! */
-.nblast + .nbinput {
+.nblast.container + .nbinput.container {
     margin-top: -19px;
 }
 
 .admonition > p:before {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
 </style>
 <div class="section" id="module-fgbuster.algebra">
 <span id="fgbuster-algebra"></span><h1>fgbuster.algebra<a class="headerlink" href="#module-fgbuster.algebra" title="Permalink to this headline">¶</a></h1>
 <p>Low-level component separation functions</p>
-<p>All the routines in this module do NOT support <code class="docutils literal"><span class="pre">numpy.ma.MaskedArray</span></code>.
+<p>All the routines in this module do NOT support <code class="docutils literal notranslate"><span class="pre">numpy.ma.MaskedArray</span></code>.
 In that case, you have two options</p>
 <ol class="arabic simple">
-<li>Index <cite>masked_array</cite> with a mask so that you get a standard <cite>np.array</cite>
-containing only unmasked values</li>
-<li>Whenever it is possible, you can pass <cite>masked_array.data</cite> and handle the
-masked values by setting the corresponding entries of <em>invN</em> to zero</li>
+<li><p>Index <cite>masked_array</cite> with a mask so that you get a standard <cite>np.array</cite>
+containing only unmasked values</p></li>
+<li><p>Whenever it is possible, you can pass <cite>masked_array.data</cite> and handle the
+masked values by setting the corresponding entries of <em>invN</em> to zero</p></li>
 </ol>
 <p class="rubric">Functions</p>
-<table border="1" class="longtable docutils">
+<table class="longtable docutils align-default">
 <colgroup>
-<col width="10%" />
-<col width="90%" />
+<col style="width: 10%" />
+<col style="width: 90%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">D</span></code>(A[,&nbsp;invN,&nbsp;return_svd])</td>
-<td></td>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">D</span></code>(A[, invN, return_svd])</p></td>
+<td><p></p></td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">P</span></code>(A[,&nbsp;invN,&nbsp;return_svd])</td>
-<td></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">P</span></code>(A[, invN, return_svd])</p></td>
+<td><p></p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.algebra.P_dBdB" title="fgbuster.algebra.P_dBdB"><code class="xref py py-obj docutils literal"><span class="pre">P_dBdB</span></code></a>(A,&nbsp;A_dB,&nbsp;A_dBdB,&nbsp;comp_of_dB[,&nbsp;invN,&nbsp;…])</td>
-<td>Second Derivative of P</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.algebra.P_dBdB" title="fgbuster.algebra.P_dBdB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">P_dBdB</span></code></a>(A, A_dB, A_dBdB, comp_of_dB[, invN, …])</p></td>
+<td><p>Second Derivative of P</p></td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">W</span></code>(A[,&nbsp;invN,&nbsp;return_svd])</td>
-<td></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">W</span></code>(A[, invN, return_svd])</p></td>
+<td><p></p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.algebra.W_dB" title="fgbuster.algebra.W_dB"><code class="xref py py-obj docutils literal"><span class="pre">W_dB</span></code></a>(A,&nbsp;A_dB,&nbsp;comp_of_dB[,&nbsp;invN,&nbsp;return_svd])</td>
-<td>Derivative of W</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.algebra.W_dB" title="fgbuster.algebra.W_dB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">W_dB</span></code></a>(A, A_dB, comp_of_dB[, invN, return_svd])</p></td>
+<td><p>Derivative of W</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#fgbuster.algebra.W_dBdB" title="fgbuster.algebra.W_dBdB"><code class="xref py py-obj docutils literal"><span class="pre">W_dBdB</span></code></a>(A,&nbsp;A_dB,&nbsp;A_dBdB,&nbsp;comp_of_dB[,&nbsp;invN,&nbsp;…])</td>
-<td>Second Derivative of W</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.algebra.W_dBdB" title="fgbuster.algebra.W_dBdB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">W_dBdB</span></code></a>(A, A_dB, A_dBdB, comp_of_dB[, invN, …])</p></td>
+<td><p>Second Derivative of W</p></td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">Wd</span></code>(A,&nbsp;d[,&nbsp;invN,&nbsp;return_svd])</td>
-<td></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Wd</span></code>(A, d[, invN, return_svd])</p></td>
+<td><p></p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#fgbuster.algebra.comp_sep" title="fgbuster.algebra.comp_sep"><code class="xref py py-obj docutils literal"><span class="pre">comp_sep</span></code></a>(A_ev,&nbsp;d,&nbsp;invN,&nbsp;A_dB_ev,&nbsp;comp_of_dB,&nbsp;…)</td>
-<td>Perform component separation</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.algebra.comp_sep" title="fgbuster.algebra.comp_sep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">comp_sep</span></code></a>(A_ev, d, invN, A_dB_ev, comp_of_dB, …)</p></td>
+<td><p>Perform component separation</p></td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">fisher_logL_dB_dB</span></code>(A,&nbsp;s,&nbsp;A_dB,&nbsp;comp_of_dB[,&nbsp;…])</td>
-<td></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fisher_logL_dB_dB</span></code>(A, s, A_dB, comp_of_dB[, …])</p></td>
+<td><p></p></td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">invAtNA</span></code>(A[,&nbsp;invN,&nbsp;return_svd])</td>
-<td></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">invAtNA</span></code>(A[, invN, return_svd])</p></td>
+<td><p></p></td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">logL</span></code>(A,&nbsp;d[,&nbsp;invN,&nbsp;return_svd])</td>
-<td></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">logL</span></code>(A, d[, invN, return_svd])</p></td>
+<td><p></p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#fgbuster.algebra.logL_dB" title="fgbuster.algebra.logL_dB"><code class="xref py py-obj docutils literal"><span class="pre">logL_dB</span></code></a>(A,&nbsp;d,&nbsp;invN,&nbsp;A_dB[,&nbsp;comp_of_dB,&nbsp;…])</td>
-<td>Derivative of the log likelihood</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.algebra.logL_dB" title="fgbuster.algebra.logL_dB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">logL_dB</span></code></a>(A, d, invN, A_dB[, comp_of_dB, …])</p></td>
+<td><p>Derivative of the log likelihood</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#fgbuster.algebra.multi_comp_sep" title="fgbuster.algebra.multi_comp_sep"><code class="xref py py-obj docutils literal"><span class="pre">multi_comp_sep</span></code></a>(A_ev,&nbsp;d,&nbsp;invN,&nbsp;A_dB_ev,&nbsp;…)</td>
-<td>Perform component separation</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.algebra.multi_comp_sep" title="fgbuster.algebra.multi_comp_sep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">multi_comp_sep</span></code></a>(A_ev, d, invN, A_dB_ev, …)</p></td>
+<td><p>Perform component separation</p></td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">verbose_callback</span></code>()</td>
-<td>Provide a verbose callback function</td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">verbose_callback</span></code>()</p></td>
+<td><p>Provide a verbose callback function</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="function">
 <dt id="fgbuster.algebra.comp_sep">
-<code class="descclassname">fgbuster.algebra.</code><code class="descname">comp_sep</code><span class="sig-paren">(</span><em>A_ev</em>, <em>d</em>, <em>invN</em>, <em>A_dB_ev</em>, <em>comp_of_dB</em>, <em>*minimize_args</em>, <em>**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.comp_sep" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">fgbuster.algebra.</code><code class="sig-name descname">comp_sep</code><span class="sig-paren">(</span><em class="sig-param">A_ev</em>, <em class="sig-param">d</em>, <em class="sig-param">invN</em>, <em class="sig-param">A_dB_ev</em>, <em class="sig-param">comp_of_dB</em>, <em class="sig-param">*minimize_args</em>, <em class="sig-param">**minimize_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.comp_sep" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform component separation</p>
 <p>Build the (inverse) spectral likelihood and minimize it to estimate the
 parameters of the mixing matrix. Separate the components using the best-fit
 mixing matrix.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>A_ev</strong> (<em>function</em>) – The evaluator of the mixing matrix. It takes a float or an array as
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A_ev</strong> (<em>function</em>) – The evaluator of the mixing matrix. It takes a float or an array as
 argument and returns the mixing matrix, a ndarray with shape
-<em>(…, n_freq, n_comp)</em></li>
-<li><strong>d</strong> (<em>ndarray</em>) – The data vector. Shape <em>(…, n_freq)</em>.</li>
-<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.</li>
-<li><strong>A_dB_ev</strong> (<em>function</em>) – The evaluator of the derivative of the mixing matrix.
+<em>(…, n_freq, n_comp)</em></p></li>
+<li><p><strong>d</strong> (<em>ndarray</em>) – The data vector. Shape <em>(…, n_freq)</em>.</p></li>
+<li><p><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.</p></li>
+<li><p><strong>A_dB_ev</strong> (<em>function</em>) – The evaluator of the derivative of the mixing matrix.
 It returns a list, each entry is the derivative with respect to a
-different parameter.</li>
-<li><strong>comp_of_dB</strong> (<em>list of IndexExpression</em>) – It allows to provide as output of <em>A_dB_ev</em> only the non-zero columns
-<em>A</em>. <code class="docutils literal"><span class="pre">A_dB_ev(x)[i]</span></code> is assumed to be the derivative of
-<code class="docutils literal"><span class="pre">A[comp_of_dB[i]]</span></code>.</li>
-<li><strong>minimize_args</strong> (<em>list</em>) – Positional arguments to be passed to <cite>scipy.optimize.minimize</cite>.
+different parameter.</p></li>
+<li><p><strong>comp_of_dB</strong> (<em>tuple</em><em> or </em><em>list of tuples</em>) – It allows to provide as output of <em>A_dB_ev</em> only the non-zero columns
+<em>A</em>. If list, every entry refers to a parameter.
+Tuple(s) can have lenght 1 or 2. The first element is the index
+(or slice) of the component dimension of A (the last one) that is
+affected by the derivative: <code class="docutils literal notranslate"><span class="pre">A_dB_ev(x)[i]</span></code> is assumed to be the
+derivative of <code class="docutils literal notranslate"><span class="pre">A[...,</span> <span class="pre">comp_of_dB[i]]</span></code>. The second element of the
+touple, if present, is an array of integers. It can be used to specify
+that the same parameter is actually fitted for indpendentely on
+different sections of the <em>…</em> dimension(s). The index identifying
+these regions are collected in the array.</p></li>
+<li><p><strong>minimize_args</strong> (<em>list</em>) – Positional arguments to be passed to <cite>scipy.optimize.minimize</cite>.
 At this moment it just contains <em>x0</em>, the initial guess for the spectral
-parameters</li>
-<li><strong>minimize_kwargs</strong> (<em>dict</em>) – Keyword arguments to be passed to <cite>scipy.optimize.minimize</cite>.
+parameters</p></li>
+<li><p><strong>minimize_kwargs</strong> (<em>dict</em>) – Keyword arguments to be passed to <cite>scipy.optimize.minimize</cite>.
 A good choice for most cases is
-<code class="docutils literal"><span class="pre">minimize_kwargs</span> <span class="pre">=</span> <span class="pre">{'tol':</span> <span class="pre">1,</span> <span class="pre">options:</span> <span class="pre">{'disp':</span> <span class="pre">True}}</span></code>. <em>tol</em> depends
+<code class="docutils literal notranslate"><span class="pre">minimize_kwargs</span> <span class="pre">=</span> <span class="pre">{'tol':</span> <span class="pre">1,</span> <span class="pre">options:</span> <span class="pre">{'disp':</span> <span class="pre">True}}</span></code>. <em>tol</em> depends
 on both the solver and your signal to noise: it should ensure that the
 difference between the best fit -logL and and the minimum is well less
 then 1, without exagereting (a difference of 1e-4 is useless).
-<em>disp</em> also triggers a verbose callback that monitors the convergence.</li>
+<em>disp</em> also triggers a verbose callback that monitors the convergence.</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>result</strong> – Result of the spectral likelihood maximisation
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>result</strong> – Result of the spectral likelihood maximisation
 It is the output of <cite>scipy.optimize.minimize</cite>, plus some extra.
 It includes</p>
 <ul class="simple">
-<li><strong>x</strong>: <em>(ndarray)</em> - the best-fit spectra indices</li>
-<li><strong>Sigma</strong>: <em>(ndarray)</em> - the semi-analytic covariance of the best-fit
-spectra indices patch.</li>
-<li><strong>s</strong>: <em>(ndarray)</em> - Separated components, Shape <em>(…, n_comp)</em></li>
-<li><strong>invAtNA</strong> : <em>(ndarray)</em> - Covariance of the separated components.
-Shape <em>(…, n_comp, n_comp)</em></li>
+<li><p><strong>x</strong>: <em>(ndarray)</em> - the best-fit spectra indices</p></li>
+<li><p><strong>Sigma</strong>: <em>(ndarray)</em> - the semi-analytic covariance of the best-fit
+spectra indices patch.</p></li>
+<li><p><strong>s</strong>: <em>(ndarray)</em> - Separated components, Shape <em>(…, n_comp)</em></p></li>
+<li><p><strong>invAtNA</strong> : <em>(ndarray)</em> - Covariance of the separated components.
+Shape <em>(…, n_comp, n_comp)</em></p></li>
 </ul>
 </p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">scipy.optimze.OptimizeResult (dict)</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>scipy.optimze.OptimizeResult (dict)</p>
+</dd>
+</dl>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">The <em>…</em> in the arguments denote any extra set of dimension. They have to
+<p class="admonition-title">Note</p>
+<p>The <em>…</em> in the arguments denote any extra set of dimension. They have to
 be compatible among different arguments in the <cite>numpy</cite> broadcasting sense.</p>
 </div>
 </dd></dl>
 
 <dl class="function">
 <dt id="fgbuster.algebra.multi_comp_sep">
-<code class="descclassname">fgbuster.algebra.</code><code class="descname">multi_comp_sep</code><span class="sig-paren">(</span><em>A_ev</em>, <em>d</em>, <em>invN</em>, <em>A_dB_ev</em>, <em>comp_of_dB</em>, <em>patch_ids</em>, <em>*minimize_args</em>, <em>**minimize_kargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#multi_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.multi_comp_sep" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">fgbuster.algebra.</code><code class="sig-name descname">multi_comp_sep</code><span class="sig-paren">(</span><em class="sig-param">A_ev</em>, <em class="sig-param">d</em>, <em class="sig-param">invN</em>, <em class="sig-param">A_dB_ev</em>, <em class="sig-param">comp_of_dB</em>, <em class="sig-param">patch_ids</em>, <em class="sig-param">*minimize_args</em>, <em class="sig-param">**minimize_kargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#multi_comp_sep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.multi_comp_sep" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform component separation</p>
-<p>Run an independent <a class="reference internal" href="#fgbuster.algebra.comp_sep" title="fgbuster.algebra.comp_sep"><code class="xref py py-func docutils literal"><span class="pre">comp_sep()</span></code></a> for entries identified by <em>patch_ids</em>
+<p>Run an independent <a class="reference internal" href="#fgbuster.algebra.comp_sep" title="fgbuster.algebra.comp_sep"><code class="xref py py-func docutils literal notranslate"><span class="pre">comp_sep()</span></code></a> for entries identified by <em>patch_ids</em>
 and gathers the result.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>A_ev</strong> (<em>function</em><em> or </em><em>ndarray</em>) – The evaluator of the mixing matrix. It takes a float or an array as
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A_ev</strong> (<em>function</em><em> or </em><em>ndarray</em>) – The evaluator of the mixing matrix. It takes a float or an array as
 argument and returns the mixing matrix, a ndarray with shape
 <em>(…, n_freq, n_comp)</em>
-If list, the i-th entry is the evaluator of the i-th patch.</li>
-<li><strong>d</strong> (<em>ndarray</em>) – The data vector. Shape <em>(…, n_freq)</em>.</li>
-<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.
+If list, the i-th entry is the evaluator of the i-th patch.</p></li>
+<li><p><strong>d</strong> (<em>ndarray</em>) – The data vector. Shape <em>(…, n_freq)</em>.</p></li>
+<li><p><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.
 If a block of <em>invN</em> has a diagonal element equal to zero the
-corresponding entries of <em>d</em> are masked.</li>
-<li><strong>A_dB_ev</strong> (<em>function</em>) – The evaluator of the derivative of the mixing matrix.
+corresponding entries of <em>d</em> are masked.</p></li>
+<li><p><strong>A_dB_ev</strong> (<em>function</em>) – The evaluator of the derivative of the mixing matrix.
 It returns a list, each entry is the derivative with respect to a
-different parameter.</li>
-<li><strong>comp_of_dB</strong> (<em>list of IndexExpression</em>) – It allows to provide as output of <em>A_dB_ev</em> only the non-zero columns
-<em>A</em>. <code class="docutils literal"><span class="pre">A_dB_ev(x)[i]</span></code> is assumed to be the derivative of
-<code class="docutils literal"><span class="pre">A[comp_of_dB[i]]</span></code>.</li>
-<li><strong>patch_ids</strong> (<em>array</em>) – id of regions.</li>
-<li><strong>minimize_args</strong> (<em>list</em>) – Positional arguments to be passed to <cite>scipy.optimize.minimize</cite>.
+different parameter.</p></li>
+<li><p><strong>comp_of_dB</strong> (<em>tuple</em><em> or </em><em>list of tuples</em>) – It allows to provide as output of <em>A_dB_ev</em> only the non-zero columns
+<em>A</em>. If list, every entry refers to a parameter.
+Due to the presence of the <cite>patch_ids</cite> arguemnt, unlike <cite>comp_sep</cite> the
+tuple(s) can have only lenght 1. The element is the index (or slice) of
+the component dimension of A (the last one) that is affected by the
+derivative: <code class="docutils literal notranslate"><span class="pre">A_dB_ev(x)[i]</span></code> is assumed to be the derivative of
+<code class="docutils literal notranslate"><span class="pre">A[...,</span> <span class="pre">comp_of_dB[i]]</span></code>.</p></li>
+<li><p><strong>patch_ids</strong> (<em>array</em>) – id of regions.</p></li>
+<li><p><strong>minimize_args</strong> (<em>list</em>) – Positional arguments to be passed to <cite>scipy.optimize.minimize</cite>.
 At this moment, it just contains <em>x0</em>, the initial guess for the
 spectral parameters. It is required if A_ev is a function and ignored
-otherwise.</li>
-<li><strong>minimize_kwargs</strong> (<em>dict</em>) – Keyword arguments to be passed to <cite>scipy.optimize.minimize</cite>.
+otherwise.</p></li>
+<li><p><strong>minimize_kwargs</strong> (<em>dict</em>) – Keyword arguments to be passed to <cite>scipy.optimize.minimize</cite>.
 A good choice for most cases is
-<code class="docutils literal"><span class="pre">minimize_kwargs</span> <span class="pre">=</span> <span class="pre">{'tol':</span> <span class="pre">1,</span> <span class="pre">options:</span> <span class="pre">{'disp':</span> <span class="pre">True}}</span></code>. <em>tol</em> depends
+<code class="docutils literal notranslate"><span class="pre">minimize_kwargs</span> <span class="pre">=</span> <span class="pre">{'tol':</span> <span class="pre">1,</span> <span class="pre">options:</span> <span class="pre">{'disp':</span> <span class="pre">True}}</span></code>. <em>tol</em> depends
 on both the solver and your signal-to-noise: it should ensure that the
 difference between the best fit -logL and the minimum is way less
 than 1, without exagerating (a difference of 1e-4 is useless).
-<em>disp</em> also triggers a verbose callback that monitors the convergence.</li>
+<em>disp</em> also triggers a verbose callback that monitors the convergence.</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><p><strong>result</strong> – It gathers the results of the component separation on each patch.
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>result</strong> – It gathers the results of the component separation on each patch.
 It includes</p>
 <ul class="simple">
-<li><strong>x</strong>: <em>(ndarray)</em> - <code class="docutils literal"><span class="pre">x[i]</span></code> contains the best-fit spectra indices
-from the i-th patch.  Shape <em>(n_patches, n_param)</em></li>
-<li><strong>Sigma</strong>: <em>(ndarray)</em> - <code class="docutils literal"><span class="pre">Sigma[i]</span></code> contains the semi-analytic
+<li><p><strong>x</strong>: <em>(ndarray)</em> - <code class="docutils literal notranslate"><span class="pre">x[i]</span></code> contains the best-fit spectra indices
+from the i-th patch.  Shape <em>(n_patches, n_param)</em></p></li>
+<li><p><strong>Sigma</strong>: <em>(ndarray)</em> - <code class="docutils literal notranslate"><span class="pre">Sigma[i]</span></code> contains the semi-analytic
 covariance of the best-fit spectra indices estimated from the <cite>i</cite>-th
-patch.  Shape <em>(n_patches, n_param, n_param)</em></li>
-<li><strong>s</strong>: <em>(ndarray)</em> - Separated components, collected from all the
-patches.  Shape <em>(…, n_comp)</em></li>
-<li><strong>patch_res</strong>: <em>(list)</em> - the i-th entry is the result of
-<a class="reference internal" href="#fgbuster.algebra.comp_sep" title="fgbuster.algebra.comp_sep"><code class="xref py py-func docutils literal"><span class="pre">comp_sep()</span></code></a> on <code class="docutils literal"><span class="pre">patch_ids</span> <span class="pre">==</span> <span class="pre">i</span></code> (with the exception of the
-quantities collected from all the patches)</li>
+patch.  Shape <em>(n_patches, n_param, n_param)</em></p></li>
+<li><p><strong>s</strong>: <em>(ndarray)</em> - Separated components, collected from all the
+patches.  Shape <em>(…, n_comp)</em></p></li>
+<li><p><strong>patch_res</strong>: <em>(list)</em> - the i-th entry is the result of
+<a class="reference internal" href="#fgbuster.algebra.comp_sep" title="fgbuster.algebra.comp_sep"><code class="xref py py-func docutils literal notranslate"><span class="pre">comp_sep()</span></code></a> on <code class="docutils literal notranslate"><span class="pre">patch_ids</span> <span class="pre">==</span> <span class="pre">i</span></code> (with the exception of the
+quantities collected from all the patches)</p></li>
 </ul>
 </p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">The <em>…</em> in the arguments denote any extra set of dimension. They have to
+<p class="admonition-title">Note</p>
+<p>The <em>…</em> in the arguments denote any extra set of dimension. They have to
 be compatible among different arguments in the <cite>numpy</cite> broadcasting sense.</p>
 </div>
 </dd></dl>
 
 <dl class="function">
 <dt id="fgbuster.algebra.logL_dB">
-<code class="descclassname">fgbuster.algebra.</code><code class="descname">logL_dB</code><span class="sig-paren">(</span><em>A</em>, <em>d</em>, <em>invN</em>, <em>A_dB</em>, <em>comp_of_dB=Ellipsis</em>, <em>return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#logL_dB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.logL_dB" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">fgbuster.algebra.</code><code class="sig-name descname">logL_dB</code><span class="sig-paren">(</span><em class="sig-param">A</em>, <em class="sig-param">d</em>, <em class="sig-param">invN</em>, <em class="sig-param">A_dB</em>, <em class="sig-param">comp_of_dB=slice(None</em>, <em class="sig-param">None</em>, <em class="sig-param">None)</em>, <em class="sig-param">return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#logL_dB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.logL_dB" title="Permalink to this definition">¶</a></dt>
 <dd><p>Derivative of the log likelihood</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <em>(…, n_freq, n_comp)</em></li>
-<li><strong>d</strong> (<em>ndarray</em>) – The data vector. Shape <em>(…, n_freq)</em>.</li>
-<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.</li>
-<li><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
-derivative with respect to a different parameter.</li>
-<li><strong>comp_of_dB</strong> (<em>IndexExpression</em><em> or </em><em>list of IndexExpression</em>) – It allows to provide in <em>A_dB</em> only the non-zero columns <em>A</em>.
-<em>A_dB</em> is assumed to be the derivative of <code class="docutils literal"><span class="pre">A[comp_of_dB]</span></code>.
-If a list is provided, also <em>A_dB</em> has to be a list and
-<code class="docutils literal"><span class="pre">A_dB[i]</span></code> is assumed to be the derivative of <code class="docutils literal"><span class="pre">A[comp_of_dB[i]]</span></code>.</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <em>(…, n_freq, n_comp)</em></p></li>
+<li><p><strong>d</strong> (<em>ndarray</em>) – The data vector. Shape <em>(…, n_freq)</em>.</p></li>
+<li><p><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.</p></li>
+<li><p><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
+derivative with respect to a different parameter.</p></li>
+<li><p><strong>comp_of_dB</strong> (<em>tuple</em><em> or </em><em>list of tuples</em>) – It allows to provide as output of <em>A_dB_ev</em> only the non-zero columns
+<em>A</em>. If list, every entry refers to a parameter.
+Tuple(s) can have lenght 1 or 2. The first element is the index
+(or slice) of the component dimension of A (the last one) that is
+affected by the derivative: <code class="docutils literal notranslate"><span class="pre">A_dB_ev(x)[i]</span></code> is assumed to be the
+derivative of <code class="docutils literal notranslate"><span class="pre">A[...,</span> <span class="pre">comp_of_dB[i]]</span></code>. The second element of the
+touple, if present, is an array of integers. It can be used to specify
+that the same parameter is actually fitted for indpendentely on
+different sections of the <em>…</em> dimension(s). The index identifying
+these regions are collected in the array.</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>diff</strong> – Derivative of the spectral likelihood. If <em>A_dB</em> is a list, <code class="docutils literal"><span class="pre">diff[i]</span></code>
-is computed from <code class="docutils literal"><span class="pre">A_dB[i]</span></code>.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>diff</strong> – Derivative of the spectral likelihood. If <em>A_dB</em> is a list, <code class="docutils literal notranslate"><span class="pre">diff[i]</span></code>
+is computed from <code class="docutils literal notranslate"><span class="pre">A_dB[i]</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">The <em>…</em> in the shape of the arguments denote any extra set of dimensions.
+<p class="admonition-title">Note</p>
+<p>The <em>…</em> in the shape of the arguments denote any extra set of dimensions.
 They have to be compatible among different arguments in the <cite>numpy</cite>
 broadcasting sense.</p>
 </div>
@@ -412,106 +429,101 @@ broadcasting sense.</p>
 
 <dl class="function">
 <dt id="fgbuster.algebra.P_dBdB">
-<code class="descclassname">fgbuster.algebra.</code><code class="descname">P_dBdB</code><span class="sig-paren">(</span><em>A</em>, <em>A_dB</em>, <em>A_dBdB</em>, <em>comp_of_dB</em>, <em>invN=None</em>, <em>return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#P_dBdB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.P_dBdB" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">fgbuster.algebra.</code><code class="sig-name descname">P_dBdB</code><span class="sig-paren">(</span><em class="sig-param">A</em>, <em class="sig-param">A_dB</em>, <em class="sig-param">A_dBdB</em>, <em class="sig-param">comp_of_dB</em>, <em class="sig-param">invN=None</em>, <em class="sig-param">return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#P_dBdB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.P_dBdB" title="Permalink to this definition">¶</a></dt>
 <dd><p>Second Derivative of P</p>
 <p>which could be useful for the computation of
 curvature of the log likelihood for any point and data vector</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <em>(…, n_freq, n_comp)</em></li>
-<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.</li>
-<li><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
-derivative with respect to a different parameter.</li>
-<li><strong>A_dBdB</strong> (<em>ndarray</em><em> or </em><em>list of list of ndarray</em>) – The second derivative of the mixing matrix. If list, each entry is the
-derivative of A_dB with respect to a different parameter.</li>
-<li><strong>comp_of_dB</strong> (<em>index</em><em> or </em><em>list of indices</em>) – It allows to provide in <em>A_dB</em> only the non-zero columns <em>A</em>.
-<em>A_dB</em> is assumed to be the derivative of <code class="docutils literal"><span class="pre">A[comp_of_dB]</span></code>.
-If a list is provided, also <em>A_dB</em> and <em>A_dBdB</em> have to be a lists,
-<code class="docutils literal"><span class="pre">A_dB[i]</span></code> and <code class="docutils literal"><span class="pre">A_dBdB[i][j]</span></code> (for any j) are assumed to be the
-derivatives of <code class="docutils literal"><span class="pre">A[comp_of_dB[i]]</span></code>.</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <em>(…, n_freq, n_comp)</em></p></li>
+<li><p><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.</p></li>
+<li><p><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
+derivative with respect to a different parameter.</p></li>
+<li><p><strong>A_dBdB</strong> (<em>ndarray</em><em> or </em><em>list of list of ndarray</em>) – The second derivative of the mixing matrix. If list, each entry is the
+derivative of A_dB with respect to a different parameter.</p></li>
+<li><p><strong>comp_of_dB</strong> (<em>tuple</em><em> or </em><em>list of tuples</em>) – It allows to provide as output of <em>A_dB_ev</em> only the non-zero columns
+<em>A</em>. If list, every entry refers to a parameter.
+Unlike <cite>comp_sep</cite> the
+tuple(s) can have only lenght 1. The element is the index (or slice) of
+the component dimension of A (the last one) that is affected by the
+derivative: <code class="docutils literal notranslate"><span class="pre">A_dB_ev(x)[i]</span></code> is assumed to be the derivative of
+<code class="docutils literal notranslate"><span class="pre">A[...,</span> <span class="pre">comp_of_dB[i]]</span></code>.</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res</strong> – Second Derivative of P.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>res</strong> – Second Derivative of P.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="function">
 <dt id="fgbuster.algebra.W_dB">
-<code class="descclassname">fgbuster.algebra.</code><code class="descname">W_dB</code><span class="sig-paren">(</span><em>A</em>, <em>A_dB</em>, <em>comp_of_dB</em>, <em>invN=None</em>, <em>return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#W_dB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.W_dB" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">fgbuster.algebra.</code><code class="sig-name descname">W_dB</code><span class="sig-paren">(</span><em class="sig-param">A</em>, <em class="sig-param">A_dB</em>, <em class="sig-param">comp_of_dB</em>, <em class="sig-param">invN=None</em>, <em class="sig-param">return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#W_dB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.W_dB" title="Permalink to this definition">¶</a></dt>
 <dd><p>Derivative of W</p>
 <p>which could be particularly useful for the computation of residuals
 through the first order development of the map-making equation</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <em>(…, n_freq, n_comp)</em></li>
-<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.</li>
-<li><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
-derivative with respect to a different parameter.</li>
-<li><strong>comp_of_dB</strong> (<em>index</em><em> or </em><em>list of indices</em>) – It allows to provide in <em>A_dB</em> only the non-zero columns <em>A</em>.
-<em>A_dB</em> is assumed to be the derivative of <code class="docutils literal"><span class="pre">A[comp_of_dB]</span></code>.
-If a list is provided, also <em>A_dB</em> has to be a list and
-<code class="docutils literal"><span class="pre">A_dB[i]</span></code> is assumed to be the derivative of <code class="docutils literal"><span class="pre">A[comp_of_dB[i]]</span></code>.</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <em>(…, n_freq, n_comp)</em></p></li>
+<li><p><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.</p></li>
+<li><p><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
+derivative with respect to a different parameter.</p></li>
+<li><p><strong>comp_of_dB</strong> (<em>tuple</em><em> or </em><em>list of tuples</em>) – It allows to provide as output of <em>A_dB_ev</em> only the non-zero columns
+<em>A</em>. If list, every entry refers to a parameter.
+Unlike <cite>comp_sep</cite> the
+tuple(s) can have only lenght 1. The element is the index (or slice) of
+the component dimension of A (the last one) that is affected by the
+derivative: <code class="docutils literal notranslate"><span class="pre">A_dB_ev(x)[i]</span></code> is assumed to be the derivative of
+<code class="docutils literal notranslate"><span class="pre">A[...,</span> <span class="pre">comp_of_dB[i]]</span></code>.</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res</strong> – Derivative of W. If <em>A_dB</em> is a list, <code class="docutils literal"><span class="pre">res[i]</span></code>
-is computed from <code class="docutils literal"><span class="pre">A_dB[i]</span></code>.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>res</strong> – Derivative of W. If <em>A_dB</em> is a list, <code class="docutils literal notranslate"><span class="pre">res[i]</span></code>
+is computed from <code class="docutils literal notranslate"><span class="pre">A_dB[i]</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="function">
 <dt id="fgbuster.algebra.W_dBdB">
-<code class="descclassname">fgbuster.algebra.</code><code class="descname">W_dBdB</code><span class="sig-paren">(</span><em>A</em>, <em>A_dB</em>, <em>A_dBdB</em>, <em>comp_of_dB</em>, <em>invN=None</em>, <em>return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#W_dBdB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.W_dBdB" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">fgbuster.algebra.</code><code class="sig-name descname">W_dBdB</code><span class="sig-paren">(</span><em class="sig-param">A</em>, <em class="sig-param">A_dB</em>, <em class="sig-param">A_dBdB</em>, <em class="sig-param">comp_of_dB</em>, <em class="sig-param">invN=None</em>, <em class="sig-param">return_svd=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/algebra.html#W_dBdB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.algebra.W_dBdB" title="Permalink to this definition">¶</a></dt>
 <dd><p>Second Derivative of W</p>
 <p>which could be particularly useful for the computation of
 <em>statistical</em> residuals through the second order development
 of the map-making equation</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <em>(…, n_freq, n_comp)</em></li>
-<li><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.</li>
-<li><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
-derivative with respect to a different parameter.</li>
-<li><strong>A_dBdB</strong> (<em>ndarray</em><em> or </em><em>list of list of ndarray</em>) – The second derivative of the mixing matrix. If list, each entry is the
-derivative of A_dB with respect to a different parameter.</li>
-<li><strong>comp_of_dB</strong> (<em>index</em><em> or </em><em>list of indices</em>) – It allows to provide in <em>A_dB</em> only the non-zero columns <em>A</em>.
-<em>A_dB</em> is assumed to be the derivative of <code class="docutils literal"><span class="pre">A[comp_of_dB]</span></code>.
-If a list is provided, also <em>A_dB</em> and <em>A_dBdB</em> have to be a lists,
-<code class="docutils literal"><span class="pre">A_dB[i]</span></code> and <code class="docutils literal"><span class="pre">A_dBdB[i][j]</span></code> (for any <em>j</em>) are assumed to be the
-derivatives of <code class="docutils literal"><span class="pre">A[comp_of_dB[i]]</span></code>.</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> (<em>ndarray</em>) – Mixing matrix. Shape <em>(…, n_freq, n_comp)</em></p></li>
+<li><p><strong>invN</strong> (<em>ndarray</em><em> or </em><em>None</em>) – The inverse noise matrix. Shape <em>(…, n_freq, n_freq)</em>.</p></li>
+<li><p><strong>A_dB</strong> (<em>ndarray</em><em> or </em><em>list of ndarray</em>) – The derivative of the mixing matrix. If list, each entry is the
+derivative with respect to a different parameter.</p></li>
+<li><p><strong>A_dBdB</strong> (<em>ndarray</em><em> or </em><em>list of list of ndarray</em>) – The second derivative of the mixing matrix. If list, each entry is the
+derivative of A_dB with respect to a different parameter.</p></li>
+<li><p><strong>comp_of_dB</strong> (<em>tuple</em><em> or </em><em>list of tuples</em>) – It allows to provide as output of <em>A_dB_ev</em> only the non-zero columns
+<em>A</em>. If list, every entry refers to a parameter.
+Unlike <cite>comp_sep</cite> the
+tuple(s) can have only lenght 1. The element is the index (or slice) of
+the component dimension of A (the last one) that is affected by the
+derivative: <code class="docutils literal notranslate"><span class="pre">A_dB_ev(x)[i]</span></code> is assumed to be the derivative of
+<code class="docutils literal notranslate"><span class="pre">A[...,</span> <span class="pre">comp_of_dB[i]]</span></code>.</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res</strong> – Second Derivative of W.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>res</strong> – Second Derivative of W.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
 </dd></dl>
 
 </div>
@@ -527,7 +539,7 @@ derivatives of <code class="docutils literal"><span class="pre">A[comp_of_dB[i]]
         <a href="../examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="fgbuster.mixingmatrix.html" class="btn btn-neutral" title="fgbuster.mixingmatrix" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="fgbuster.mixingmatrix.html" class="btn btn-neutral float-left" title="fgbuster.mixingmatrix" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -536,11 +548,19 @@ derivatives of <code class="docutils literal"><span class="pre">A[comp_of_dB[i]]
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -552,37 +572,16 @@ derivatives of <code class="docutils literal"><span class="pre">A[comp_of_dB[i]]
   </div>
   
 
-
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'1.0.0',
-              LANGUAGE:'en',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

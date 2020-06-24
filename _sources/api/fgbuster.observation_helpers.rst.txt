@@ -1,0 +1,33 @@
+fgbuster.observation\_helpers
+=============================
+
+.. automodule:: fgbuster.observation_helpers
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      get_instrument
+      get_noise_realization
+      get_observation
+      get_sky
+      standardize_instrument
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

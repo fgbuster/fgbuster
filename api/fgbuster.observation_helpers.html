@@ -1,0 +1,389 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fgbuster.observation_helpers &mdash; FGBuster 1.0.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="fgbuster.cosmology" href="fgbuster.cosmology.html" />
+    <link rel="prev" title="fgbuster.component_model" href="fgbuster.component_model.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FGBuster
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.separation_recipes.html">fgbuster.separation_recipes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.component_model.html">fgbuster.component_model</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">fgbuster.observation_helpers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.cosmology.html">fgbuster.cosmology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.mixingmatrix.html">fgbuster.mixingmatrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fgbuster.algebra.html">fgbuster.algebra</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">FGBuster</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../api.html">API</a> &raquo;</li>
+        
+      <li>fgbuster.observation_helpers</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/fgbuster.observation_helpers.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="module-fgbuster.observation_helpers">
+<span id="fgbuster-observation-helpers"></span><h1>fgbuster.observation_helpers<a class="headerlink" href="#module-fgbuster.observation_helpers" title="Permalink to this headline">¶</a></h1>
+<p>Handy access to instrument configuration, map generation
+and other pysm3 functionalities</p>
+<p class="rubric">Functions</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.observation_helpers.get_instrument" title="fgbuster.observation_helpers.get_instrument"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_instrument</span></code></a>([tag])</p></td>
+<td><p>Get a pre-defined instrumental configuration</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.observation_helpers.get_noise_realization" title="fgbuster.observation_helpers.get_noise_realization"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_noise_realization</span></code></a>(nside, instrument[, unit])</p></td>
+<td><p>Generate noise maps for the instrument</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fgbuster.observation_helpers.get_observation" title="fgbuster.observation_helpers.get_observation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_observation</span></code></a>([instrument, sky, noise, …])</p></td>
+<td><p>Get a pre-defined instrumental configuration</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#fgbuster.observation_helpers.get_sky" title="fgbuster.observation_helpers.get_sky"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_sky</span></code></a>(nside[, tag])</p></td>
+<td><p>Get a pre-defined PySM sky</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">standardize_instrument</span></code>(instrument)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="fgbuster.observation_helpers.get_sky">
+<code class="sig-prename descclassname">fgbuster.observation_helpers.</code><code class="sig-name descname">get_sky</code><span class="sig-paren">(</span><em class="sig-param">nside</em>, <em class="sig-param">tag='c1d0s0'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/observation_helpers.html#get_sky"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.observation_helpers.get_sky" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a pre-defined PySM sky</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nside</strong> (<em>int</em>) – healpix nside of the sky templates</p></li>
+<li><p><strong>tag</strong> (<em>string</em>) – See the <a class="reference external" href="https://pysm3.readthedocs.io/en/latest/models.html#models">pysm documentation</a>
+for a complete list of available options.
+Default is ‘c1d0s0’, i.e. cmb (c1), dust with constant temperature and
+spectral index (d0), and synchrotron with constant spectral index (s0).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p><strong>sky</strong> – See the <a class="reference external" href="https://pysm3.readthedocs.io/en/latest/api/pysm.Sky.html#pysm.Sky">pysm documentation</a></p>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pysm3.Sky</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.observation_helpers.get_instrument">
+<code class="sig-prename descclassname">fgbuster.observation_helpers.</code><code class="sig-name descname">get_instrument</code><span class="sig-paren">(</span><em class="sig-param">tag=''</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/observation_helpers.html#get_instrument"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.observation_helpers.get_instrument" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a pre-defined instrumental configuration</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>tag</strong> (<em>string</em>) – name of the pre-defined experimental configurations.
+It can contain the name of multiple experiments separated by a space.
+Call the function with a random input to get the available instruments.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>instr</strong> – It contains the experimetnal configuration of the desired instrument(s).</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.observation_helpers.get_observation">
+<code class="sig-prename descclassname">fgbuster.observation_helpers.</code><code class="sig-name descname">get_observation</code><span class="sig-paren">(</span><em class="sig-param">instrument=''</em>, <em class="sig-param">sky=None</em>, <em class="sig-param">noise=False</em>, <em class="sig-param">nside=None</em>, <em class="sig-param">unit='uK_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/observation_helpers.html#get_observation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.observation_helpers.get_observation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a pre-defined instrumental configuration</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>instrument</strong> – <p>It can be either a <cite>str</cite> (see <a class="reference internal" href="#fgbuster.observation_helpers.get_instrument" title="fgbuster.observation_helpers.get_instrument"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_instrument()</span></code></a>) or an
+object that provides the following as a key or an attribute.</p>
+<ul>
+<li><p><strong>frequency</strong> (required)</p></li>
+<li><p><strong>depth_p</strong> (required if <code class="docutils literal notranslate"><span class="pre">noise=True</span></code>)</p></li>
+<li><p><strong>depth_i</strong> (required if <code class="docutils literal notranslate"><span class="pre">noise=True</span></code>)</p></li>
+</ul>
+<p>They can be anything that is convertible to a float numpy array.
+If only one of <code class="docutils literal notranslate"><span class="pre">depth_p</span></code> or <code class="docutils literal notranslate"><span class="pre">depth_i</span></code> is provided, the other is
+inferred assuming that the former is sqrt(2) higher than the latter.</p>
+</p></li>
+<li><p><strong>sky</strong> (<em>str of pysm3.Sky</em>) – Sky to observe. It can be a <cite>pysm3.Sky</cite> or a tag to create one.</p></li>
+<li><p><strong>noise</strong> (<em>bool</em>) – If true, add Gaussian, uncorrelated, isotropic noise.</p></li>
+<li><p><strong>nside</strong> (<em>int</em>) – Desired output healpix nside. It is optional if <cite>sky</cite> is a <cite>pysm3.Sky</cite>,
+and required if it is a <cite>str</cite> or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>unit</strong> (<em>str</em>) – Unit of the output. Only K_CMB and K_RJ (and multiples) are supported.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>observation</strong> – Shape is <code class="docutils literal notranslate"><span class="pre">(n_freq,</span> <span class="pre">3,</span> <span class="pre">n_pix)</span></code></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="fgbuster.observation_helpers.get_noise_realization">
+<code class="sig-prename descclassname">fgbuster.observation_helpers.</code><code class="sig-name descname">get_noise_realization</code><span class="sig-paren">(</span><em class="sig-param">nside</em>, <em class="sig-param">instrument</em>, <em class="sig-param">unit='uK_CMB'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/fgbuster/observation_helpers.html#get_noise_realization"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fgbuster.observation_helpers.get_noise_realization" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate noise maps for the instrument</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nside</strong> (<em>int</em>) – Desired output healpix nside.</p></li>
+<li><p><strong>instrument</strong> – <p>Object that provides the following as a key or an attribute.</p>
+<ul>
+<li><p><strong>frequency</strong> (required)</p></li>
+<li><p><strong>depth_p</strong> (required if <code class="docutils literal notranslate"><span class="pre">noise=True</span></code>)</p></li>
+<li><p><strong>depth_i</strong> (required if <code class="docutils literal notranslate"><span class="pre">noise=True</span></code>)</p></li>
+</ul>
+<p>They can be anything that is convertible to a float numpy array.
+If only one of <code class="docutils literal notranslate"><span class="pre">depth_p</span></code> or <code class="docutils literal notranslate"><span class="pre">depth_i</span></code> is provided, the other is
+inferred assuming that the former is sqrt(2) higher than the latter.</p>
+</p></li>
+<li><p><strong>unit</strong> (<em>str</em>) – Unit of the output. Only K_CMB and K_RJ (and multiples) are supported.</p></li>
+<li><p><strong>sky</strong> (<em>str of pysm3.Sky</em>) – Sky to observe. It can be a <cite>pysm3.Sky</cite> or a tag to create one.</p></li>
+<li><p><strong>noise</strong> (<em>bool</em>) – If true, add Gaussian, uncorrelated, isotropic noise.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>observation</strong> – Shape is <code class="docutils literal notranslate"><span class="pre">(n_freq,</span> <span class="pre">3,</span> <span class="pre">n_pix)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="fgbuster.cosmology.html" class="btn btn-neutral float-right" title="fgbuster.cosmology" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="fgbuster.component_model.html" class="btn btn-neutral float-left" title="fgbuster.component_model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

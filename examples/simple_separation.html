@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,43 +11,48 @@
   
 
   
-  
-  
-  
-
-  
-
-  
-  
-    
-
-  
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Forecasting" href="xForecast.html" />
-    <link rel="prev" title="Simple ILC example" href="simple_ilc.html" /> 
 
   
-  <script src="../_static/js/modernizr.min.js"></script>
+  
+  
+  
 
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Simple component separation" href="simple_separation-Copy1.html" />
+    <link rel="prev" title="Multi-resolution separation" href="multi_res_separation.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
-            <a href="../index.html" class="icon icon-home"> FGBuster
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FGBuster
           
 
           
@@ -75,6 +79,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -88,7 +93,7 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="component_and_mixingmatrix.html">SED evaluation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="intermediate_separation.html">Intermediate component separation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_ilc.html">Simple ILC example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="multi_res_separation.html">Multi-resolution separation</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Simple component separation</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#Simulate-your-frequency-maps">Simulate your frequency maps</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Define-what-you-fit-for">Define what you fit for</a></li>
@@ -96,6 +101,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#Explore-the-results">Explore the results</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="simple_separation-Copy1.html">Simple component separation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="xForecast.html">Forecasting</a></li>
 </ul>
 </li>
@@ -105,6 +111,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -143,7 +150,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../examples.html">Examples</a> &raquo;</li>
         
@@ -171,16 +178,16 @@
 /* CSS for nbsphinx extension */
 
 /* remove conflicting styling from Sphinx themes */
-div.nbinput,
-div.nbinput div.prompt,
-div.nbinput div.input_area,
-div.nbinput div[class*=highlight],
-div.nbinput div[class*=highlight] pre,
-div.nboutput,
-div.nbinput div.prompt,
-div.nbinput div.output_area,
-div.nboutput div[class*=highlight],
-div.nboutput div[class*=highlight] pre {
+div.nbinput.container,
+div.nbinput.container div.prompt,
+div.nbinput.container div.input_area,
+div.nbinput.container div[class*=highlight],
+div.nbinput.container div[class*=highlight] pre,
+div.nboutput.container,
+div.nboutput.container div.prompt,
+div.nboutput.container div.output_area,
+div.nboutput.container div[class*=highlight],
+div.nboutput.container div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -189,13 +196,13 @@ div.nboutput div[class*=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class*=highlight] pre {
+div.nboutput.container div[class*=highlight] pre {
     line-height: normal;
 }
 
 /* input/output containers */
-div.nbinput,
-div.nboutput {
+div.nbinput.container,
+div.nboutput.container {
     display: -webkit-flex;
     display: flex;
     align-items: flex-start;
@@ -203,92 +210,104 @@ div.nboutput {
     width: 100%;
 }
 @media (max-width: 540px) {
-    div.nbinput,
-    div.nboutput {
+    div.nbinput.container,
+    div.nboutput.container {
         flex-direction: column;
     }
 }
 
 /* input container */
-div.nbinput {
+div.nbinput.container {
     padding-top: 5px;
 }
 
 /* last container */
-div.nblast {
+div.nblast.container {
     padding-bottom: 5px;
 }
 
 /* input prompt */
-div.nbinput div.prompt pre {
-    color: #303F9F;
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
 }
 
 /* output prompt */
-div.nboutput div.prompt pre {
-    color: #D84315;
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
 }
 
 /* all prompts */
-div.nbinput div.prompt,
-div.nboutput div.prompt {
-    min-width: 8ex;
-    padding-top: 0.4em;
-    padding-right: 0.4em;
-    text-align: right;
-    flex: 0;
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
 }
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
 @media (max-width: 540px) {
-    div.nbinput div.prompt,
-    div.nboutput div.prompt {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
         text-align: left;
         padding: 0.4em;
     }
-    div.nboutput div.prompt.empty {
+    div.nboutput.container div.prompt.empty {
         padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
     }
 }
 
 /* disable scrollbars on prompts */
-div.nbinput div.prompt pre,
-div.nboutput div.prompt pre {
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
     overflow: hidden;
 }
 
 /* input/output area */
-div.nbinput div.input_area,
-div.nboutput div.output_area {
-    padding: 0.4em;
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
 @media (max-width: 540px) {
-    div.nbinput div.input_area,
-    div.nboutput div.output_area {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
         width: 100%;
     }
 }
 
 /* input area */
-div.nbinput div.input_area {
-    border: 1px solid #cfcfcf;
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
     border-radius: 2px;
-    background: #f7f7f7;
+    background: #f5f5f5;
 }
 
 /* override MathJax center alignment in output cells */
-div.nboutput div[class*=MathJax] {
+div.nboutput.container div[class*=MathJax] {
     text-align: left !important;
 }
 
-/* override sphinx.ext.pngmath center alignment in output cells */
-div.nboutput div.math p {
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
     text-align: left;
 }
 
 /* standard error */
-div.nboutput div.output_area.stderr {
+div.nboutput.container div.output_area.stderr {
     background: #fdd;
 }
 
@@ -332,88 +351,139 @@ div.nboutput div.output_area.stderr {
 .ansi-bold { font-weight: bold; }
 .ansi-underline { text-decoration: underline; }
 
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt a.copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
+.nbinput.nblast.container,
+.nboutput.nblast.container {
     margin-bottom: 19px;  /* padding has already 5px */
 }
 
 /* ... except between code cells! */
-.nblast + .nbinput {
+.nblast.container + .nbinput.container {
     margin-top: -19px;
 }
 
 .admonition > p:before {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
 </style>
 <div class="section" id="Simple-component-separation">
 <h1>Simple component separation<a class="headerlink" href="#Simple-component-separation" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
 <span class="o">%</span><span class="k">autoreload</span> 2
 <span class="o">%</span><span class="k">matplotlib</span> inline
 
 <span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
-<span class="kn">import</span> <span class="nn">pysm</span>
+<span class="kn">import</span> <span class="nn">pysm3</span>
 
-<span class="kn">from</span> <span class="nn">fgbuster.observation_helpers</span> <span class="k">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span>
-<span class="kn">from</span> <span class="nn">fgbuster.component_model</span> <span class="k">import</span> <span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span>
-<span class="kn">from</span> <span class="nn">fgbuster.separation_recipies</span> <span class="k">import</span> <span class="n">basic_comp_sep</span>
-<span class="kn">from</span> <span class="nn">fgbuster.visualization</span> <span class="k">import</span> <span class="n">corner_norm</span>
+<span class="kn">from</span> <span class="nn">fgbuster</span> <span class="kn">import</span> <span class="p">(</span><span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span><span class="p">,</span>
+                      <span class="n">basic_comp_sep</span><span class="p">,</span>
+                      <span class="n">get_observation</span><span class="p">,</span> <span class="n">get_instrument</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">fgbuster.visualization</span> <span class="kn">import</span> <span class="n">corner_norm</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="Simulate-your-frequency-maps">
 <h2>Simulate your frequency maps<a class="headerlink" href="#Simulate-your-frequency-maps" title="Permalink to this headline">¶</a></h2>
-<p>You have some frequecy maps to clean, they can be either data or
-simulations. For example, you can use <code class="docutils literal"><span class="pre">pysm</span></code> to simulate microwave
-skys with different complexities. ForeGroundBuster adds a couple of
-functions that make the process even easier.</p>
+<p>You have some frequecy maps to clean, they can be either data or simulations. For example, you can use <code class="docutils literal notranslate"><span class="pre">pysm</span></code> to simulate microwave skys with different complexities. ForeGroundBuster adds a couple of functions that make the process even easier.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">nside</span> <span class="o">=</span> <span class="mi">32</span>
-<span class="n">sky</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Sky</span><span class="p">(</span><span class="n">get_sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;c1d0s0&#39;</span><span class="p">))</span>
-<span class="n">instrument</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Instrument</span><span class="p">(</span><span class="n">get_instrument</span><span class="p">(</span><span class="s1">&#39;litebird&#39;</span><span class="p">,</span> <span class="n">nside</span><span class="p">))</span>
-<span class="n">freq_maps</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">observe</span><span class="p">(</span><span class="n">sky</span><span class="p">,</span> <span class="n">write_outputs</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-<span class="n">freq_maps</span> <span class="o">=</span> <span class="n">freq_maps</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>  <span class="c1"># Select polarization</span>
+<span class="n">instrument</span> <span class="o">=</span> <span class="n">get_instrument</span><span class="p">(</span><span class="s1">&#39;LiteBIRD&#39;</span><span class="p">)</span>
+<span class="n">freq_maps</span> <span class="o">=</span> <span class="n">get_observation</span><span class="p">(</span><span class="n">instrument</span><span class="p">,</span> <span class="s1">&#39;c1d0s0&#39;</span><span class="p">,</span> <span class="n">nside</span><span class="o">=</span><span class="n">nside</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
+<div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-nu (GHz) | sigma_I (uK_CMB amin) | sigma_P (uK_CMB amin) | FWHM (arcmin)
-
-0040.00 | 25.60 | 36.10 | 00.00
-0050.00 | 13.90 | 19.60 | 00.00
-0060.00 | 14.33 | 20.20 | 00.00
-0068.40 | 08.01 | 11.30 | 00.00
-0078.00 | 07.30 | 10.30 | 00.00
-0088.50 | 05.96 | 08.40 | 00.00
-0100.00 | 04.96 | 07.00 | 00.00
-0118.90 | 04.11 | 05.80 | 00.00
-0140.00 | 03.33 | 04.70 | 00.00
-0166.00 | 04.96 | 07.00 | 00.00
-0195.00 | 04.11 | 05.80 | 00.00
-0234.90 | 05.67 | 08.00 | 00.00
-0280.00 | 06.45 | 09.10 | 00.00
-0337.40 | 08.09 | 11.40 | 00.00
-0402.10 | 13.90 | 19.60 | 00.00
-Instrument attribute &#39;pixel_indices&#39; not set.
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/camb_lenspotentialCls.dat (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/delens_ells.txt (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_t_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_q_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_u_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_t_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_q_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_u_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
 </pre></div></div>
 </div>
 </div>
@@ -421,11 +491,10 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 <h2>Define what you fit for<a class="headerlink" href="#Define-what-you-fit-for" title="Permalink to this headline">¶</a></h2>
 <p>Create your sky model as a list of components</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">CMB</span><span class="p">(),</span> <span class="n">Dust</span><span class="p">(</span><span class="mf">150.</span><span class="p">),</span> <span class="n">Synchrotron</span><span class="p">(</span><span class="mf">20.</span><span class="p">)]</span>
 </pre></div>
 </div>
@@ -433,16 +502,12 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 </div>
 <div class="section" id="Component-separation">
 <h2>Component separation<a class="headerlink" href="#Component-separation" title="Permalink to this headline">¶</a></h2>
-<p>The tools inside ForeGroundBuster allow for very flexible and diverse
-component separation approaches. However, we also provide a set of
-predefined function that perform component separation out of the box.
-They suit most common use cases.</p>
+<p>The tools inside ForeGroundBuster allow for very flexible and diverse component separation approaches. However, we also provide a set of predefined function that perform component separation out of the box. They suit most common use cases.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">result</span> <span class="o">=</span> <span class="n">basic_comp_sep</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">instrument</span><span class="p">,</span> <span class="n">freq_maps</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -450,15 +515,13 @@ They suit most common use cases.</p>
 </div>
 <div class="section" id="Explore-the-results">
 <h2>Explore the results<a class="headerlink" href="#Explore-the-results" title="Permalink to this headline">¶</a></h2>
-<p>You have just solved for both the spectral parameters of your components
-and their amplitudes.</p>
+<p>You have just solved for both the spectral parameters of your components and their amplitudes.</p>
 <p>Get the spectral parameters name and values with</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
 </pre></div>
@@ -470,17 +533,15 @@ and their amplitudes.</p>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 [&#39;Dust.beta_d&#39;, &#39;Dust.temp&#39;, &#39;Synchrotron.beta_pl&#39;]
-[  1.54  20.    -3.  ]
+[ 1.54 20.   -3.  ]
 </pre></div></div>
 </div>
-<p>You can also have a look at their semi-analytic covariance, but remember
-that it is accurate only the high signal-to-noise regime</p>
+<p>You can also have a look at their semi-analytic covariance, but remember that it is accurate only the high signal-to-noise regime</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">corner_norm</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">Sigma</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -492,15 +553,12 @@ that it is accurate only the high signal-to-noise regime</p>
 <img alt="../_images/examples_simple_separation_11_0.png" src="../_images/examples_simple_separation_11_0.png" />
 </div>
 </div>
-<p>The amplitudes of the components are stacked in the <code class="docutils literal"><span class="pre">s</span></code> attribute and
-they are in the same format of the input frequency maps: Q and U healpix
-maps, in this case.</p>
+<p>The amplitudes of the components are stacked in the <code class="docutils literal notranslate"><span class="pre">s</span></code> attribute and they are in the same format of the input frequency maps: Q and U healpix maps, in this case.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;CMB&#39;</span><span class="p">)</span>
 <span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Dust&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">)</span>
 <span class="n">hp</span><span class="o">.</span><span class="n">mollview</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">s</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Synchrotron&#39;</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">)</span>
@@ -510,12 +568,9 @@ maps, in this case.</p>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="stderr output_area docutils container">
-<div class="highlight"><pre>
-/Users/dpoletti/Library/Python/2.7/lib/python/site-packages/healpy/projaxes.py:859: MaskedArrayFutureWarning: setting an item on a masked array which has a shared mask will not copy the mask and also change the original mask array in the future.
-Check the NumPy 1.11 release notes for more information.
-  result[np.isinf(val.data)] = -np.inf
-</pre></div></div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_simple_separation_13_0.png" src="../_images/examples_simple_separation_13_0.png" />
+</div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -524,18 +579,11 @@ Check the NumPy 1.11 release notes for more information.
 <img alt="../_images/examples_simple_separation_13_1.png" src="../_images/examples_simple_separation_13_1.png" />
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/examples_simple_separation_13_2.png" src="../_images/examples_simple_separation_13_2.png" />
-</div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_simple_separation_13_3.png" src="../_images/examples_simple_separation_13_3.png" />
+<img alt="../_images/examples_simple_separation_13_2.png" src="../_images/examples_simple_separation_13_2.png" />
 </div>
 </div>
 </div>
@@ -549,10 +597,10 @@ Check the NumPy 1.11 release notes for more information.
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="xForecast.html" class="btn btn-neutral float-right" title="Forecasting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="simple_separation-Copy1.html" class="btn btn-neutral float-right" title="Simple component separation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="simple_ilc.html" class="btn btn-neutral" title="Simple ILC example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="multi_res_separation.html" class="btn btn-neutral float-left" title="Multi-resolution separation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -561,11 +609,19 @@ Check the NumPy 1.11 release notes for more information.
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -577,37 +633,16 @@ Check the NumPy 1.11 release notes for more information.
   </div>
   
 
-
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'1.0.0',
-              LANGUAGE:'en',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

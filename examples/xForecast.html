@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,43 +11,48 @@
   
 
   
-  
-  
-  
-
-  
-
-  
-  
-    
-
-  
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Contributing" href="../contributing.html" />
-    <link rel="prev" title="Simple component separation" href="simple_separation.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
+    <link rel="prev" title="Simple component separation" href="simple_separation-Copy1.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
-            <a href="../index.html" class="icon icon-home"> FGBuster
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> FGBuster
           
 
           
@@ -75,6 +79,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -88,8 +93,9 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="component_and_mixingmatrix.html">SED evaluation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="intermediate_separation.html">Intermediate component separation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="simple_ilc.html">Simple ILC example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="multi_res_separation.html">Multi-resolution separation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="simple_separation.html">Simple component separation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simple_separation-Copy1.html">Simple component separation</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Forecasting</a></li>
 </ul>
 </li>
@@ -99,6 +105,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -137,7 +144,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../examples.html">Examples</a> &raquo;</li>
         
@@ -165,16 +172,16 @@
 /* CSS for nbsphinx extension */
 
 /* remove conflicting styling from Sphinx themes */
-div.nbinput,
-div.nbinput div.prompt,
-div.nbinput div.input_area,
-div.nbinput div[class*=highlight],
-div.nbinput div[class*=highlight] pre,
-div.nboutput,
-div.nbinput div.prompt,
-div.nbinput div.output_area,
-div.nboutput div[class*=highlight],
-div.nboutput div[class*=highlight] pre {
+div.nbinput.container,
+div.nbinput.container div.prompt,
+div.nbinput.container div.input_area,
+div.nbinput.container div[class*=highlight],
+div.nbinput.container div[class*=highlight] pre,
+div.nboutput.container,
+div.nboutput.container div.prompt,
+div.nboutput.container div.output_area,
+div.nboutput.container div[class*=highlight],
+div.nboutput.container div[class*=highlight] pre {
     background: none;
     border: none;
     padding: 0 0;
@@ -183,13 +190,13 @@ div.nboutput div[class*=highlight] pre {
 }
 
 /* avoid gaps between output lines */
-div.nboutput div[class*=highlight] pre {
+div.nboutput.container div[class*=highlight] pre {
     line-height: normal;
 }
 
 /* input/output containers */
-div.nbinput,
-div.nboutput {
+div.nbinput.container,
+div.nboutput.container {
     display: -webkit-flex;
     display: flex;
     align-items: flex-start;
@@ -197,92 +204,104 @@ div.nboutput {
     width: 100%;
 }
 @media (max-width: 540px) {
-    div.nbinput,
-    div.nboutput {
+    div.nbinput.container,
+    div.nboutput.container {
         flex-direction: column;
     }
 }
 
 /* input container */
-div.nbinput {
+div.nbinput.container {
     padding-top: 5px;
 }
 
 /* last container */
-div.nblast {
+div.nblast.container {
     padding-bottom: 5px;
 }
 
 /* input prompt */
-div.nbinput div.prompt pre {
-    color: #303F9F;
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
 }
 
 /* output prompt */
-div.nboutput div.prompt pre {
-    color: #D84315;
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
 }
 
 /* all prompts */
-div.nbinput div.prompt,
-div.nboutput div.prompt {
-    min-width: 8ex;
-    padding-top: 0.4em;
-    padding-right: 0.4em;
-    text-align: right;
-    flex: 0;
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
 }
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
 @media (max-width: 540px) {
-    div.nbinput div.prompt,
-    div.nboutput div.prompt {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
         text-align: left;
         padding: 0.4em;
     }
-    div.nboutput div.prompt.empty {
+    div.nboutput.container div.prompt.empty {
         padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
     }
 }
 
 /* disable scrollbars on prompts */
-div.nbinput div.prompt pre,
-div.nboutput div.prompt pre {
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
     overflow: hidden;
 }
 
 /* input/output area */
-div.nbinput div.input_area,
-div.nboutput div.output_area {
-    padding: 0.4em;
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
     -webkit-flex: 1;
     flex: 1;
     overflow: auto;
 }
 @media (max-width: 540px) {
-    div.nbinput div.input_area,
-    div.nboutput div.output_area {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
         width: 100%;
     }
 }
 
 /* input area */
-div.nbinput div.input_area {
-    border: 1px solid #cfcfcf;
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
     border-radius: 2px;
-    background: #f7f7f7;
+    background: #f5f5f5;
 }
 
 /* override MathJax center alignment in output cells */
-div.nboutput div[class*=MathJax] {
+div.nboutput.container div[class*=MathJax] {
     text-align: left !important;
 }
 
-/* override sphinx.ext.pngmath center alignment in output cells */
-div.nboutput div.math p {
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
     text-align: left;
 }
 
 /* standard error */
-div.nboutput div.output_area.stderr {
+div.nboutput.container div.output_area.stderr {
     background: #fdd;
 }
 
@@ -326,47 +345,106 @@ div.nboutput div.output_area.stderr {
 .ansi-bold { font-weight: bold; }
 .ansi-underline { text-decoration: underline; }
 
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt a.copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
-.nbinput.nblast,
-.nboutput.nblast {
+.nbinput.nblast.container,
+.nboutput.nblast.container {
     margin-bottom: 19px;  /* padding has already 5px */
 }
 
 /* ... except between code cells! */
-.nblast + .nbinput {
+.nblast.container + .nbinput.container {
     margin-top: -19px;
 }
 
 .admonition > p:before {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
 </style>
 <div class="section" id="Forecasting">
 <h1>Forecasting<a class="headerlink" href="#Forecasting" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
 <span class="o">%</span><span class="k">autoreload</span> 2
 
-<span class="kn">import</span> <span class="nn">pysm</span>
-<span class="kn">from</span> <span class="nn">fgbuster.observation_helpers</span> <span class="k">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span>
+<span class="kn">import</span> <span class="nn">pysm3</span>
+<span class="kn">from</span> <span class="nn">fgbuster</span> <span class="kn">import</span> <span class="n">get_instrument</span><span class="p">,</span> <span class="n">get_sky</span><span class="p">,</span> <span class="n">get_observation</span>
 <span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">fgbuster</span> <span class="k">import</span> <span class="n">xForecast</span><span class="p">,</span> <span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span>
+<span class="kn">from</span> <span class="nn">fgbuster</span> <span class="kn">import</span> <span class="n">xForecast</span><span class="p">,</span> <span class="n">CMB</span><span class="p">,</span> <span class="n">Dust</span><span class="p">,</span> <span class="n">Synchrotron</span>
 
 <span class="n">nside</span> <span class="o">=</span> <span class="mi">64</span>
 <span class="c1"># define sky and foregrounds simulations</span>
-<span class="n">sky</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Sky</span><span class="p">(</span><span class="n">get_sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;d0s0&#39;</span><span class="p">))</span>
+<span class="n">sky</span> <span class="o">=</span> <span class="n">get_sky</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="s1">&#39;d0s0&#39;</span><span class="p">)</span>
 <span class="c1"># define instrument</span>
-<span class="n">instrument</span> <span class="o">=</span> <span class="n">pysm</span><span class="o">.</span><span class="n">Instrument</span><span class="p">(</span><span class="n">get_instrument</span><span class="p">(</span><span class="s1">&#39;cmbs4&#39;</span><span class="p">,</span> <span class="n">nside</span><span class="p">))</span>
+<span class="n">instrument</span> <span class="o">=</span> <span class="n">get_instrument</span><span class="p">(</span><span class="s1">&#39;SO_SAT&#39;</span><span class="p">)</span>
 <span class="c1"># get noiseless frequency maps</span>
-<span class="n">freq_maps</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">observe</span><span class="p">(</span><span class="n">sky</span><span class="p">,</span> <span class="n">write_outputs</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">freq_maps</span> <span class="o">=</span> <span class="n">get_observation</span><span class="p">(</span><span class="n">instrument</span><span class="p">,</span> <span class="n">sky</span><span class="p">)</span>
 <span class="c1"># take only the Q and U maps</span>
 <span class="n">freq_maps</span> <span class="o">=</span> <span class="n">freq_maps</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:]</span>
 </pre></div>
@@ -375,28 +453,27 @@ div.nboutput div.output_area.stderr {
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
+<div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-nu (GHz) | sigma_I (uK_CMB amin) | sigma_P (uK_CMB amin) | FWHM (arcmin)
-
-0020.00 | 16.66 | 13.60 | 00.00
-0030.00 | 10.62 | 08.67 | 00.00
-0040.00 | 10.07 | 08.22 | 00.00
-0085.00 | 02.01 | 01.64 | 00.00
-0095.00 | 01.59 | 01.30 | 00.00
-0145.00 | 04.53 | 02.03 | 00.00
-0155.00 | 04.53 | 02.03 | 00.00
-0220.00 | 11.61 | 05.19 | 00.00
-0270.00 | 15.84 | 07.08 | 00.00
-Instrument attribute &#39;pixel_indices&#39; not set.
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_t_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_q_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/dust_u_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_t_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_q_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
+/Users/dpoletti/opt/miniconda3/envs/cosmo/lib/python3.7/site-packages/pysm3/utils/data.py:42: UserWarning: Retrieve data for pysm_2/synch_u_new.fits (if not cached already)
+  warnings.warn(f&#34;Retrieve data for {filename} (if not cached already)&#34;)
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># create 3% circular sky mask</span>
 <span class="n">RA</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">-</span><span class="mf">70.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span>
 <span class="n">DEC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="mf">70.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span>
@@ -414,22 +491,20 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># define components used in the modeling</span>
 <span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">CMB</span><span class="p">(),</span> <span class="n">Dust</span><span class="p">(</span><span class="mf">150.</span><span class="p">),</span> <span class="n">Synchrotron</span><span class="p">(</span><span class="mf">150.</span><span class="p">)]</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3"><div class="highlight"><pre>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># call for xForecast</span>
 <span class="c1"># with lmin=2, lmax=2*nside-1, and Alens=0.1</span>
 <span class="c1"># you can try with make_figure=True if you want to output angular power spectra and profile likelihood on r</span>
@@ -442,49 +517,49 @@ Instrument attribute &#39;pixel_indices&#39; not set.
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-(&#39;fsky = &#39;, 0.030192057291666668)
+fsky =  0.030192057291666668
 ======= ESTIMATION OF SPECTRAL PARAMETERS =======
-(&#39;res.x = &#39;, array([  1.54,  20.  ,  -3.  ]))
+res.x =  [ 1.53999982 20.         -3.00000003]
 ======= ESTIMATION OF NOISE AFTER COMP SEP =======
 ======= COMPUTATION OF CL_FGS =======
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="stderr output_area docutils container">
-<div class="highlight"><pre>
-/Users/dpoletti/software/fgbuster/fgbuster/algebra.py:840: RuntimeWarning: invalid value encountered in divide
-  / np.linalg.norm(As_dB_i, axis=-1))
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
 ======= ESTIMATION OF STAT AND SYS RESIDUALS =======
 ======= OPTIMIZATION OF COSMO LIKELIHOOD =======
-(&#39;bounds on r = &#39;, 0.00098625217948687845, &#39; / &#39;, 0.0010328281259410286)
-(&#39;starting point = &#39;, 0.0010092715146305707)
-(&#39;    ===&gt;&gt; fitted r = &#39;, array([ 0.00099999]))
+bounds on r =  0.0009862521794868784  /  0.0010328281259410286
+starting point =  0.0010092715146305707
+    ===&gt;&gt; fitted r =  [0.001]
 ======= ESTIMATION OF SIGMA(R) =======
-(&#39;ind_sr_min = &#39;, 1)
-(&#39;sr_grid[ind_sr_min-1] = &#39;, 0.00099999485115925737)
-(&#39;sr_grid[ind_sr_min+1] = &#39;, 0.0017782710169661007)
-(&#39;sr_grid = &#39;, array([  9.99994851e-04,   1.33351485e-03,   1.77827102e-03,
-         2.37136302e-03,   3.16226409e-03,   4.21694785e-03,
-         5.62339154e-03,   7.49891474e-03,   9.99996567e-03,
-         1.33351714e-02,   1.77827407e-02,   2.37136709e-02,
-         3.16226952e-02,   4.21695508e-02,   5.62340119e-02,
-         7.49892761e-02,   9.99998284e-02,   1.33351943e-01,
-         1.77827712e-01,   2.37137116e-01,   3.16227495e-01,
-         4.21696232e-01,   5.62341084e-01,   7.49894048e-01,
-         1.00000000e+00]))
+ind_sr_min =  2
+sr_grid[ind_sr_min-1] =  [0.00133352]
+sr_grid[ind_sr_min+1] =  [0.00237136]
+sr_grid =  [[9.99995139e-04]
+ [1.33351522e-03]
+ [1.77827149e-03]
+ [2.37136362e-03]
+ [3.16226485e-03]
+ [4.21694881e-03]
+ [5.62339275e-03]
+ [7.49891627e-03]
+ [9.99996759e-03]
+ [1.33351738e-02]
+ [1.77827437e-02]
+ [2.37136746e-02]
+ [3.16226997e-02]
+ [4.21695564e-02]
+ [5.62340186e-02]
+ [7.49892842e-02]
+ [9.99998380e-02]
+ [1.33351954e-01]
+ [1.77827725e-01]
+ [2.37137130e-01]
+ [3.16227510e-01]
+ [4.21696247e-01]
+ [5.62341097e-01]
+ [7.49894057e-01]
+ [1.00000000e+00]]
 case # 3
-(&#39;bounds on sigma(r) = &#39;, 0.00099999485115925737, &#39; / &#39;, 0.0017782710169661007)
-(&#39;starting point = &#39;, 0.0013335148521601984)
-(&#39;    ===&gt;&gt; sigma(r) = &#39;, array([ 0.00030872]))
+bounds on sigma(r) =  [0.00133352]  /  [0.00237136]
+starting point =  [0.00177827]
+    ===&gt;&gt; sigma(r) =  [0.00070175]
 ======= GRIDDING COSMO LIKELIHOOD =======
 </pre></div></div>
 </div>
@@ -492,7 +567,7 @@ case # 3
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/examples_xForecast_4_3.png" src="../_images/examples_xForecast_4_3.png" />
+<img alt="../_images/examples_xForecast_4_1.png" src="../_images/examples_xForecast_4_1.png" />
 </div>
 </div>
 </div>
@@ -508,7 +583,7 @@ case # 3
         <a href="../contributing.html" class="btn btn-neutral float-right" title="Contributing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="simple_separation.html" class="btn btn-neutral" title="Simple component separation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="simple_separation-Copy1.html" class="btn btn-neutral float-left" title="Simple component separation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -517,11 +592,19 @@ case # 3
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2018, Davide Poletti, Josquin Errard and the FGBuster developers
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -533,37 +616,16 @@ case # 3
   </div>
   
 
-
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'1.0.0',
-              LANGUAGE:'en',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>
