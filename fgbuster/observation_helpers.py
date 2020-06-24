@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-""" Provide handy access to pysm3 functionalities
+""" 
+Handy access to instrument configuration, map generation
+and other pysm3 functionalities
 """
 import types
 import numpy as np
