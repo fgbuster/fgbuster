@@ -276,6 +276,72 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
+#Added by Clement Leloup
+def harmonic_comp_sep(components, instrument, data, nside, invN=None, **minimize_kwargs):
+    
+    instrument = _force_keys_as_attributes(instrument)
+    lmax = 3 * nside - 1
+    n_comp = len(components)
+    if nblind is None:
+        nblind = len(components)-1
+        fsky = 1.
+
+    if mask is not None:
+        data *= mask
+        fsky = float(mask.sum())/mask.size
+
+    print('Computing alms')
+    try:
+        assert np.any(instrument.Beams)
+    except (KeyError, AssertionError):
+        beams = None
+    else:  # Deconvolve the beam
+        beams = instrument.Beams
+
+    alms = _get_alms(data, beams, lmax)[:,1:,:]
+    ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
+    ell = np.stack((ell, ell), axis=-1).reshape(-1) # For transformation into real alms
+    mask_lmin = [l >= lmin for l in ell]
+
+    #Add noise to data alms
+    if not noiseless:
+        #np.random.seed(5)
+        nlms_E = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+        nlms_B = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+        nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
+        alms += nlms
+
+    #Produce alms from maps
+    alms = _format_alms(alms, lmax, mask_lmin)
+
+    #Format the inverse noise matrix
+    invNlm = np.array([invN[l,:,:] for l in ell])[:,np.newaxis,:,:]
+    invNlm = invNlm[mask_lmin, ...]
+
+    A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components, instrument)
+    if not len(x0):
+        A_ev = A_ev()
+        
+    # Component separation
+        res = alg.comp_sep(A_ev, alms, invNlm, A_dB_ev, comp_of_param, x0, **minimize_kwargs)
+
+
+    # Craft output
+    # 1) Apply the mask, if any
+    # 2) Restore the ordering of the input data (pixel dimension last)
+    res.params = params
+    res.s = res.s.T
+    res.chi = res.chi.T
+    if 'chi_dB' in res:
+        for i in range(len(res.chi_dB)):
+            res.chi_dB[i] = res.chi_dB[i].T
+    if nside and len(x0):
+        res.x = res.x.T
+        res.Sigma = res.Sigma.T
+
+    return res
+        
+
 def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3):
     """ Internal Linear Combination
 
@@ -377,6 +443,22 @@ def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
             hp.almxfl(alm, 1.0/bl, inplace=True)
 
     return alms
+
+
+#Added by Clement Leloup
+#Format alms so that they are real and masked
+def _format_alms(alms, lmax, mask_lmin):
+
+    alms = np.asarray(alms, order='C')
+    alms = alms.view(np.float64)*np.sqrt(2)
+    alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN  # Mask imaginary m = 0
+    mask_alms = _intersect_mask(alms)
+    alms[..., mask_alms] = 0  # Thus no contribution to the spectral likelihood
+    alms = np.swapaxes(alms, 0, -1)
+    alms = alms[mask_lmin, ...]
+
+    return alms
+
 
 
 def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
