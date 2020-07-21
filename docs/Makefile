@@ -2,7 +2,7 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    = #-a -E
+SPHINXOPTS    = #-a -E -vvv
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = FGBuster
 SOURCEDIR     = source
