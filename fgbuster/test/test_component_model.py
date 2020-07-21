@@ -6,8 +6,8 @@ import scipy
 import numpy as np
 from fgbuster.component_model import AnalyticComponent, Dust
 from fgbuster.observation_helpers import get_sky, get_instrument, _jysr2rj
-import pysm
-import pysm.units as u
+import pysm3
+import pysm3.units as u
 
 class TestModifiedBlackBody(unittest.TestCase):
 
@@ -139,13 +139,13 @@ class TestAnalyticComponent(unittest.TestCase):
         weights /= np.trapz(weights, freqs*1e9)
         pysm_map = sky.get_emission(freqs * u.GHz, weights)[1].value  # Select Q
 
-        breakpoint()
-        weights = weights * _jysr2rj(freqs)
+        weights = weights / _jysr2rj(freqs)
+        weights /= np.trapz(weights, freqs * 1e9)
         dust = sky.components[0]
         fgb_map = Dust(dust.freq_ref_P.value, units='uK_RJ').eval(
             [(freqs, weights)], dust.mbb_index.value, dust.mbb_temperature.value)
         fgb_map = fgb_map[..., 0] * dust.Q_ref.value
-        np.testing.assert_allclose(pysm_map, fgb_map)
+        np.testing.assert_allclose(pysm_map, fgb_map, rtol=1e-6)
 
 
 if __name__ == '__main__':
