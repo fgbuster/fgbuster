@@ -31,7 +31,6 @@ from sympy.parsing.sympy_parser import parse_expr
 import scipy
 from scipy import constants
 from astropy.cosmology import Planck15
-import pysm
 
 
 __all__ = [
