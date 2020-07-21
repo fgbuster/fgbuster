@@ -72,17 +72,12 @@ def bandpass_integration(f):
     Returns
     -------
     f: callable
-        The function now accepts as a first argument
+        The function now accepts as the first argument
 
         * array with the frequencies, as before (delta bandpasses)
-        * the list or tuple with the bandpasses 
-
-        Each entry of the tuple or list specifies one bandpass. The entry can be
-
-        * an array of frequencies: integrate the SED sampling the function
-          at these frequencies
-        * the pair of arrays (frequencies, transmittance): as before, but
-          the value of the function is multiplied by the transmittance
+        * the list or tuple with the bandpasses. Each entry is a pair of arrays
+          (frequencies, transmittance). The SED is evaluated at these frequencies
+          multiplied by the transmittance and integrated with the trapezoid rule.
 
         Note that the routine does not perform anything more that this. In
         particular it does NOT:
@@ -146,8 +141,8 @@ class Component(object):
         result: ndarray
             SED. The shape is ``np.broadcast(*params).shape + nu.shape``
             (or broadcastable to it).
-            In particular, if the parameters are all floats, the shape is the
-            same of `nu`.
+            In particular, if the parameters are all floats, the shape is
+            `nu.shape`.
 
         """
         assert len(params) == self.n_param
