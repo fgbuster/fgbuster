@@ -136,7 +136,6 @@ class TestAnalyticComponent(unittest.TestCase):
         sky = get_sky(NSIDE, 'd1')
         freqs = np.linspace(80, 120, N_SAMPLE_BAND)
         weights = np.ones(N_SAMPLE_BAND)
-        weights /= np.trapz(weights, freqs*1e9)
         pysm_map = sky.get_emission(freqs * u.GHz, weights)[1].value  # Select Q
 
         weights = weights / _jysr2rj(freqs)
