@@ -8,7 +8,6 @@ import numpy as np
 from numpy.testing import assert_allclose as aac
 from scipy.stats import kstest
 import healpy as hp
-import pysm
 from fgbuster.algebra import _mv
 from fgbuster.mixingmatrix import MixingMatrix
 from fgbuster.observation_helpers import get_instrument, standardize_instrument
@@ -17,7 +16,8 @@ from fgbuster.separation_recipes import (basic_comp_sep, weighted_comp_sep,
                                          multi_res_comp_sep,
                                          _my_ud_grade,
                                          _my_nside2npix,
-                                         ilc, harmonic_ilc)
+                                         ilc, harmonic_ilc,
+                                         _empirical_harmonic_covariance)
 
 from contextlib import contextmanager
 @contextmanager
@@ -420,6 +420,39 @@ class TestMultiResCompSep(unittest.TestCase):
             aac(res_x, xx, rtol=2e-5)
 
 
+class TestEmpiricalHarmonicCovariance(unittest.TestCase):
+
+    def test_no_stokes(self):
+        NFREQ = 3
+        NSIDE = 2
+        np.random.seed(0)
+        alms = [hp.map2alm(np.random.normal(size=(12*NSIDE**2)))
+                for i in range(NFREQ)]
+        res = _empirical_harmonic_covariance(alms)
+        ref = np.empty_like(res)
+        for f1 in range(NFREQ):
+            for f2 in range(NFREQ):
+                ref[f1, f2] = hp.alm2cl(alms[f1], alms[f2])
+
+        aac(ref, res)
+
+    def test_stokes(self):
+        NFREQ = 2
+        NSIDE = 2
+        np.random.seed(0)
+        alms = [hp.map2alm(np.random.normal(size=(3, 12*NSIDE**2)))
+                for i in range(NFREQ)]
+        res = _empirical_harmonic_covariance(alms)
+        ref = np.empty_like(res)
+        for s in range(3):
+            for f1 in range(NFREQ):
+                for f2 in range(NFREQ):
+                    ref[s, f1, f2] = hp.alm2cl(alms[f1][s], alms[f2][s])
+
+        aac(ref, res)
+
+
+
 class TestILC(unittest.TestCase):
 
     def setUp(self):
@@ -588,7 +621,7 @@ class TestHILC(unittest.TestCase):
 
         aac(norm_diff[..., 2: int(2.5*self.nside)],
             np.zeros_like(norm_diff[..., 2: int(2.5*self.nside)]),
-            atol=5)
+            atol=3)
 
         # This is a very weak test:
         # recovery is bad at small scales at the poles, especially in Q and U
@@ -622,7 +655,7 @@ class TestHILC(unittest.TestCase):
 
         aac(norm_diff[..., 2:],
             np.zeros_like(norm_diff[..., 2:]),
-            atol=5)
+            atol=3)
 
         # This is a weak test:
         # recovery is bad in polarization, mostly at small scales

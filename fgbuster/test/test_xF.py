@@ -2,7 +2,6 @@
 import unittest
 import numpy as np
 from numpy.testing import assert_allclose as aac
-import pysm
 from fgbuster import (xForecast, CMB, Dust, Synchrotron,
                       get_instrument, get_sky, get_observation)
 from fgbuster.test.test_separation_recipes import suppress_stdout
