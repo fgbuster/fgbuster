@@ -99,7 +99,6 @@ class Component(object):
             same `nu`.
 
         """
-        nu = np.array(nu)
         assert len(params) == self.n_param
         if params and np.broadcast(*params).ndim == 0:
             # Parameters are all scalars.
@@ -130,7 +129,6 @@ class Component(object):
             :meth:`eval` for more details about the format of the
             evaluated derivative
         """
-        nu = np.array(nu)
         assert len(params) == self.n_param
         if not params:
             return []
@@ -151,7 +149,6 @@ class Component(object):
         return res
 
     def diff_diff(self, nu, *params):
-        nu = np.array(nu)
         assert len(params) == self.n_param
         if not params:
             return [[]]
