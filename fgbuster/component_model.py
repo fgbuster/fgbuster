@@ -31,7 +31,6 @@ from sympy.parsing.sympy_parser import parse_expr
 import scipy
 from scipy import constants
 from astropy.cosmology import Planck15
-import pysm
 
 
 __all__ = [
@@ -61,6 +60,50 @@ K_RJ2K_CMB = K_RJ2K_CMB.replace('h_over_k', str(H_OVER_K))
 K_RJ2K_CMB_NU0 = K_RJ2K_CMB + ' / ' + K_RJ2K_CMB.replace('nu', 'nu0')
 
 
+def bandpass_integration(f):
+    ''' Decorator for bandpass integration
+
+    Parameters
+    ----------
+    f: callable
+        Function to evaluate an SED. Its first argument must be a frequency
+        array. The other positional or keyword arguments are arbitrary.
+
+    Returns
+    -------
+    f: callable
+        The function now accepts as the first argument
+
+        * array with the frequencies, as before (delta bandpasses)
+        * the list or tuple with the bandpasses. Each entry is a pair of arrays
+          (frequencies, transmittance). The SED is evaluated at these frequencies
+          multiplied by the transmittance and integrated with the trapezoid rule.
+
+        Note that the routine does not perform anything more that this. In
+        particular it does NOT:
+
+        * normalize the transmittance to 1 or any other value
+        * perform any unit conversion before integrating the SED
+
+        Make sure you normalize and "convert the units" of the
+        transmittance in such a way that you get the correct result.
+    '''
+    def integrated_f(nu, *params, **kwargs):
+        # It is user's responsibility to provide weights in the same units
+        # as the components
+        if isinstance(nu, (list, tuple)):
+            out_shape = f(np.array(100.), *params, **kwargs).shape[:-1]
+            res = np.empty(out_shape + (len(nu),))
+            for i, (band_nu, band_w) in enumerate(nu):
+                res[..., i] = np.trapz(
+                    f(band_nu, *params, **kwargs) * band_w,
+                    band_nu * 1e9)
+            return res
+        return f(nu, *params)
+
+    return integrated_f
+
+
 class Component(object):
     """ Abstract class for SED evaluation
 
@@ -85,8 +128,10 @@ class Component(object):
 
         Parameters
         ----------
-        nu: array
-            Frequencies at which the SED is evaluated
+        nu: array, tuple or list
+            Frequencies or banpasses for the SED evaluation
+            See the result of :func:`bandpass_integration`.
+                
         *params: float or ndarray
             Value of each of the free parameters. They can be arrays and, in
             this case, they should be broadcastable to a common shape.
@@ -94,9 +139,10 @@ class Component(object):
         Returns
         -------
         result: ndarray
-            SED. The shape is always ``np.broadcast(*params).shape + nu.shape``.
-            In particular, if the parameters are all floats, the shape is the
-            same `nu`.
+            SED. The shape is ``np.broadcast(*params).shape + nu.shape``
+            (or broadcastable to it).
+            In particular, if the parameters are all floats, the shape is
+            `nu.shape`.
 
         """
         assert len(params) == self.n_param
@@ -117,7 +163,8 @@ class Component(object):
         Parameters
         ----------
         nu: array
-            Frequencies at which the SED is evaluated
+            Frequencies or banpasses for the SED evaluation
+            See the result of :func:`bandpass_integration`.
         *params: float or ndarray
             Value of the free parameters. They can be arrays and, in this case,
             they should be broadcastable to a common shape.
@@ -295,11 +342,14 @@ class AnalyticComponent(Component):
         self._params.pop(0)
 
         # Create lambda functions
-        self._lambda = lambdify(symbols, self._expr)
-        lambdify_diff_param = lambda param: lambdify(
+
+        _lambdify = lambda *args, **kwargs: bandpass_integration(
+            lambdify(*args, **kwargs))
+        self._lambda = _lambdify(symbols, self._expr)
+        lambdify_diff_param = lambda param: _lambdify(
             symbols, self._expr.diff(param))
         self._lambda_diff = [lambdify_diff_param(p) for p in self._params]
-        lambdify_diff_diff_params = lambda param1, param2: lambdify(
+        lambdify_diff_diff_params = lambda param1, param2: _lambdify(
             symbols, self._expr.diff(param1, param2))
         self._lambda_diff_diff = []
         for p1 in self._params:
@@ -420,7 +470,7 @@ class CMB(AnalyticComponent):
         super(CMB, self).__init__(analytic_expr)
 
         if 'K_CMB' in units:
-            self.eval = lambda nu: np.ones_like(nu)
+            self.eval = bandpass_integration(lambda nu: np.ones_like(nu))
 
 
 class ThermalSZ(AnalyticComponent):
