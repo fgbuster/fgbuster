@@ -192,13 +192,6 @@ def get_noise_realization(nside, instrument, unit='uK_CMB'):
         Shape is ``(n_freq, 3, n_pix)``.
     """
     instrument = standardize_instrument(instrument)
-    if not hasattr(instrument, 'depth_i'):
-        print('adding i')
-        instrument.depth_i = instrument.depth_p / np.sqrt(2)
-    if not hasattr(instrument, 'depth_p'):
-        print('adding p')
-        instrument.depth_p = instrument.depth_i * np.sqrt(2)
-
 
     n_freq = len(instrument.frequency)
     n_pix = hp.nside2npix(nside)

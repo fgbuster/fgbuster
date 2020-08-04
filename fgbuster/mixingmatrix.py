@@ -94,7 +94,7 @@ class MixingMatrix(tuple):
         for i_c, c in enumerate(self):
             param_slice = slice(self.__first_param_of_comp[i_c],
                                 self.__first_param_of_comp[i_c] + c.n_param)
-            res += [np.array(g)[..., np.newaxis]
+            res += [g[..., np.newaxis]
                     for g in c.diff(nu, *params[param_slice])]
         return res
 
