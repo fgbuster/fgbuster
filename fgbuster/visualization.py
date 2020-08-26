@@ -33,3 +33,17 @@ def plot_component(component, nu_min, nu_max):
     nus = np.logspace(np.log10(nu_min), np.log10(nu_max), 1000)
     emission = component.eval(nus, *(component.defaults))
     plt.loglog(nus, emission, label=type(component).__name__)
+
+
+#Added by Clement Leloup
+def plot_cls_BB(cls):
+
+    ell = np.arange(2, cls.shape[-1])
+
+    plt.yscale('log')
+    plt.xscale('log')
+    for i in np.arange(cls.shape[0]):
+        plt.plot(ell, ell*(ell+1)*cls[i,1,2:]/(2*np.pi))
+    plt.ylabel(r'$\frac{\ell \left( \ell + 1 \right)}{2\pi}C_{\ell}^{BB}$', fontsize=25, labelpad=15)
+    plt.xlabel(r'$\ell$', fontsize=25, labelpad=15)
+    plt.tick_params(axis='both', which='major', labelsize=12, length=7, width=1.2)

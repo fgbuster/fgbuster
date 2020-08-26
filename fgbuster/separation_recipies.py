@@ -277,19 +277,17 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
 
 #Added by Clement Leloup
-def harmonic_comp_sep(components, instrument, data, nside, invN=None, **minimize_kwargs):
+def harmonic_comp_sep(components, instrument, data, nside, invN=None, mask=None, **minimize_kwargs):
     
     instrument = _force_keys_as_attributes(instrument)
     lmax = 3 * nside - 1
     n_comp = len(components)
-    if nblind is None:
-        nblind = len(components)-1
-        fsky = 1.
-
+    fsky = 1.0
+    
     if mask is not None:
         data *= mask
-        fsky = float(mask.sum())/mask.size
-
+        fsky = float(mask.sum()) / mask.size
+    
     print('Computing alms')
     try:
         assert np.any(instrument.Beams)
@@ -299,38 +297,44 @@ def harmonic_comp_sep(components, instrument, data, nside, invN=None, **minimize
         beams = instrument.Beams
 
     alms = _get_alms(data, beams, lmax)[:,1:,:]
+    cl_in = np.array([hp.alm2cl(alm) for alm in alms])
     ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
     ell = np.stack((ell, ell), axis=-1).reshape(-1) # For transformation into real alms
-    mask_lmin = [l >= lmin for l in ell]
+    #mask_lmin = [l < lmin for l in ell]
 
     #Add noise to data alms
-    if not noiseless:
-        #np.random.seed(5)
-        nlms_E = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
-        nlms_B = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
-        nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
-        alms += nlms
+    #np.random.seed(5)
+    nlms_E = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+    nlms_B = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+    nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
+    alms += nlms
 
     #Produce alms from maps
-    alms = _format_alms(alms, lmax, mask_lmin)
+    alms = _format_alms(alms, lmax)#, mask_lmin)
 
     #Format the inverse noise matrix
     invNlm = np.array([invN[l,:,:] for l in ell])[:,np.newaxis,:,:]
-    invNlm = invNlm[mask_lmin, ...]
+    #invNlm = invNlm[mask_lmin, ...]
 
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components, instrument)
     if not len(x0):
         A_ev = A_ev()
-        
+
     # Component separation
-        res = alg.comp_sep(A_ev, alms, invNlm, A_dB_ev, comp_of_param, x0, **minimize_kwargs)
+    res = alg.comp_sep(A_ev, alms, invNlm, A_dB_ev, comp_of_param, x0, **minimize_kwargs)
 
 
     # Craft output
     # 1) Apply the mask, if any
     # 2) Restore the ordering of the input data (pixel dimension last)
     res.params = params
-    res.s = res.s.T
+    res.s = np.swapaxes(res.s, 0, 2)
+    res.s[res.s == hp.UNSEEN] = 0.
+    res.s = np.asarray(res.s, order='C').view(np.complex128)
+    cl_out = np.array([hp.alm2cl(alm) for alm in res.s])
+    res.cl_in = cl_in/fsky
+    res.cl_out = cl_out/fsky
+    res.fsky = fsky
     res.chi = res.chi.T
     if 'chi_dB' in res:
         for i in range(len(res.chi_dB)):
@@ -447,15 +451,17 @@ def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
 
 #Added by Clement Leloup
 #Format alms so that they are real and masked
-def _format_alms(alms, lmax, mask_lmin):
+def _format_alms(alms, lmax, mask_lmin=None):
 
     alms = np.asarray(alms, order='C')
-    alms = alms.view(np.float64)*np.sqrt(2)
+    alms = alms.view(np.float64)
     alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN  # Mask imaginary m = 0
     mask_alms = _intersect_mask(alms)
     alms[..., mask_alms] = 0  # Thus no contribution to the spectral likelihood
     alms = np.swapaxes(alms, 0, -1)
-    alms = alms[mask_lmin, ...]
+
+    if mask_lmin is not None:
+        alms[mask_lmin, ...] = 0
 
     return alms
 

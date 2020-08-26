@@ -159,6 +159,11 @@ def _logL_svd(u_e_v, d):
     return 0.5 * np.linalg.norm(_mtv(u_e_v[0], d))**2
 
 
+#Added by Clement Leloup
+def _mism_term_logL_svd(u_e_v, N):
+    return 0.5 * np.sum(np.trace(_mmm(u_e_v[0], _T(u_e_v[0]), N), axis1=-2, axis2=-1))
+
+
 def logL(A, d, invN=None, return_svd=False):
     try:
         u_e_v, L = _svd_sqrt_invN_A(A, invN)
@@ -547,6 +552,20 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
                          * Dd[freq_of_dB])
     return diff
 
+#Added by Clement Leloup
+def _mism_term_logL_dB_svd(u_e_v, N, A_dB):
+    u, e, v = u_e_v
+
+    P = np.eye(u.shape[-2])[np.newaxis, np.newaxis, ...] - _mm(u, _T(u))
+    
+    n_param = len(A_dB)
+    mism_dB = np.empty(n_param)
+    for i in range(n_param):
+        H_dB = _mm(A_dB[i], _T(v)/e[..., np.newaxis, :])
+        mism_dB[i] = np.sum(np.trace(_mmm(P, _mm(H_dB, _T(u)), N), axis1=-2, axis2=-1))
+
+    return mism_dB
+
 
 def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
     """ Derivative of the log likelihood
@@ -639,8 +658,16 @@ def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
     return A_dB_ev, comp_of_dB
 
 
-def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
-    u, _, _ = u_e_v
+#Modified by Clement Leloup
+def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None):
+
+    if N is not None:
+        assert L is not None
+        N = _mtmm(L, N, L)
+    
+    u, e, v = u_e_v
+
+    P = np.eye(u.shape[-2])[np.newaxis, np.newaxis, ...] - _mm(u, _T(u))
 
     # Expand A_dB
     n_dB = len(A_dB)
@@ -652,12 +679,32 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
         A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
 
     D_A_dB_s = []
+    mism_term = np.array((len(A_dB), len(A_dB)))
     for i in range(len(A_dB)):
         A_dB_s = _mv(A_dB_full[i], s)
         D_A_dB_s.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
 
-    return np.array([[np.sum(i*j) for i in D_A_dB_s] for j in D_A_dB_s])
+        if N is not None:
+            for j in range(len(A_dB)):
+                H_dB = _mm(A_dB_full[i], vprime)
+                H_dB_prime = _mm(A_dB_full[j], vprime)
+                H_dBdB = _mm(A_dBdB_full[i, j], vprime)
 
+                m1 = _mmm(P, H_dBdB, _T(u))
+                m2 = - _mtmm(_mm(H_dB_prime, _T(u)), P, _mm(H_dB, _T(u)))
+                m3 = - _mmm(P, _mm(H_dB, _T(u)), _mm(H_dB_prime, _T(u)))
+                m4 = - _mmm(P, _mm(H_dB_prime, _T(u)), _mm(H_dB, _T(u)))
+                m5 = _mmm(P, _mm(H_dB, _T(H_dBprime)), P)
+
+                mism_term[i, j] = np.sum(np.trace(_mm(m1+m2+m3+m4+m5, N), axis1=-2, axis2=-1))
+
+    L_dB_dB = np.array([[np.sum(i*j) for i in D_A_dB_s] for j in D_A_dB_s])
+        
+    if N is None:
+        return L_dB_dB
+    else:
+        return L_dB_dB + mism_term
+    
 
 def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
     A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
@@ -670,8 +717,9 @@ def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
     return res
 
 
+#Modified by Clement Leloup
 def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
-                                      A_dB_ev=None, comp_of_dB=None):
+                                      A_dB_ev=None, comp_of_dB=None, N_true=None):
     # XXX: Turn this function into a class?
     """ Produce the functions -logL(x) and -logL_dB(x)
 
@@ -702,30 +750,55 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
                 else:
                     pw_d[0] = _mtv(L[0], d)
 
-    def _inv_logL(x):
-        try:
-            _update_old(x)
-        except np.linalg.linalg.LinAlgError:
-            print('SVD of A failed -> logL = -inf')
-            return np.inf
-        return - _logL_svd(u_e_v_old[0], pw_d[0])
-
-    if A_dB_ev is None:
-        def _inv_logL_dB(x):
-            return sp.optimize.approx_fprime(x, _inv_logL, _EPSILON_LOGL_DB)
-    else:
-        def _inv_logL_dB(x):
+    #Modified by Clement Leloup
+    if N_true is None:
+        def _inv_logL(x):
             try:
                 _update_old(x)
             except np.linalg.linalg.LinAlgError:
-                print('SVD of A failed -> logL_dB not updated')
-            return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
-                                  A_dB_old[0], comp_of_dB)
+                print('SVD of A failed -> logL = -inf')
+                return np.inf
+            return - _logL_svd(u_e_v_old[0], pw_d[0])
+
+        if A_dB_ev is None:
+            def _inv_logL_dB(x):
+                return sp.optimize.approx_fprime(x, _inv_logL, _EPSILON_LOGL_DB)
+        else:
+            def _inv_logL_dB(x):
+                try:
+                    _update_old(x)
+                except np.linalg.linalg.LinAlgError:
+                    print('SVD of A failed -> logL_dB not updated')
+                return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
+                                      A_dB_old[0], comp_of_dB)
+
+    else:
+        def _inv_logL(x):
+            try:
+                _update_old(x)
+            except np.linalg.linalg.LinAlgError:
+                print('SVD of A failed -> logL = -inf')
+                return np.inf
+            return - _logL_svd(u_e_v_old[0], pw_d[0]) - _mism_term_logL_svd(u_e_v_old[0], _mtmm(L[0], N_true, L[0]))
+        
+        if A_dB_ev is None:
+            def _inv_logL_dB(x):
+                return sp.optimize.approx_fprime(x, _inv_logL, _EPSILON_LOGL_DB)
+        else:
+            def _inv_logL_dB(x):
+                try:
+                    _update_old(x)
+                except np.linalg.linalg.LinAlgError:
+                    print('SVD of A failed -> logL_dB not updated')
+                return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
+                                      A_dB_old[0], comp_of_dB) - _mism_term_logL_dB_svd(u_e_v_old[0], _mtmm(L[0], N_true, L[0]), A_dB_old[0], comp_of_dB)
+
 
     return _inv_logL, _inv_logL_dB, (u_e_v_old, A_dB_old, x_old, pw_d)
 
 
-def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
+#Modified by Clement Leloup
+def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, N_true=None,
              *minimize_args, **minimize_kwargs):
     """ Perform component separation
 
@@ -807,8 +880,9 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
         disp = False
 
     # Prepare functions for minimize
+    #Modified by Clement Leloup
     fun, jac, last_values = _build_bound_inv_logL_and_logL_dB(
-        A_ev, d, invN, A_dB_ev, comp_of_dB)
+        A_ev, d, invN, A_dB_ev, comp_of_dB, N_true)
     minimize_kwargs['jac'] = jac
 
     # Gather minmize arguments
@@ -820,6 +894,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
 
     # Gather results
     u_e_v_last, A_dB_last, x_last, pw_d = last_values
+    _, L = _svd_sqrt_invN_A(A_ev(x_last), invN)
     if not np.all(x_last[0] == res.x):
         fun(res.x) #  Make sure that last_values refer to the minimum
 
@@ -829,15 +904,15 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     if A_dB_ev is None:
         fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
     else:
+        #Modified by Clement Leloup
         fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
-                                        A_dB_last[0], comp_of_dB)
+                                        A_dB_last[0], comp_of_dB, N_true, L)
         As_dB = (_mv(A_dB_i, res.s[comp_of_dB_i])
                  for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
         res.chi_dB = []
         for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
             freq_of_dB = comp_of_dB_i[:-1] + (slice(None),)
-            res.chi_dB.append(np.sum(res.chi[freq_of_dB] * As_dB_i, -1)
-                              / np.linalg.norm(As_dB_i, axis=-1))
+            res.chi_dB.append(np.sum(res.chi[freq_of_dB] * As_dB_i, -1)/np.linalg.norm(As_dB_i, axis=-1))
     try:
         res.Sigma = np.linalg.inv(fisher)
     except np.linalg.LinAlgError:
