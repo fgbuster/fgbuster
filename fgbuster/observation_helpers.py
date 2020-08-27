@@ -14,19 +14,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-""" Provide handy access to pysm ojects
+""" 
+Handy access to instrument configuration, map generation
+and other pysm3 functionalities
 """
-import sys
+import types
 import numpy as np
-import pysm
+import pandas as pd
 import healpy as hp
+import pysm3
+import pysm3.units as u
+from cmbdb import cmbdb
 
 
 __all__ = [
     'get_sky',
     'get_instrument',
+    'get_observation',
+    'get_noise_realization',
 ]
 
+INSTRUMENT_STD_ATTR = 'frequency depth_i depth_p fwhm'.split()
+_NL = '\n'
 
 def get_sky(nside, tag='c1d0s0'):
     """ Get a pre-defined PySM sky
@@ -36,181 +45,230 @@ def get_sky(nside, tag='c1d0s0'):
     nside: int
         healpix nside of the sky templates
     tag: string
-        See `pysm.nominal
-        <https://github.com/bthorne93/PySM_public/blob/master/pysm/nominal.py>`_ 
+        See the `pysm documentation
+        <https://pysm3.readthedocs.io/en/latest/models.html#models>`_
         for a complete list of available options.
         Default is 'c1d0s0', i.e. cmb (c1), dust with constant temperature and
         spectral index (d0), and synchrotron with constant spectral index (s0).
 
     Returns
     -------
-    sky: dict
-        Configuration dictionary. It can be used for constructing a ``PySM.Sky``
+    sky: pysm3.Sky
+        See the `pysm documentation
+        <https://pysm3.readthedocs.io/en/latest/api/pysm.Sky.html#pysm.Sky>`_
     """
-    comp_names = {
-        'a': 'ame',
-        'c': 'cmb',
-        'd': 'dust',
-        'f': 'freefree',
-        's': 'synchrotron',
-    }
-    sky_config = {}
-    for i in range(0, len(tag), 2):
-        sky_config[comp_names[tag[i]]] = pysm.nominal.models(tag[i:i+2], nside)
-
-    return sky_config
+    preset_strings = [tag[i:i+2] for i in range(0, len(tag), 2)]
+    return pysm3.Sky(nside, preset_strings=preset_strings)
 
 
-def get_instrument(tag, nside=None, units='uK_CMB'):
+def get_instrument(tag=''):
     """ Get a pre-defined instrumental configuration
 
     Parameters
     ----------
     tag: string
-        name of the pre-defined experimental configurations. See the source or
-        set tag to something random to have a list of the available
-        configurations. It can contain the name of multiple experiments
-        separated by a space.
-    nside: int
-        If you plan to build 
+        name of the pre-defined experimental configurations.
+        It can contain the name of multiple experiments separated by a space.
+        Call the function with a random input to get the available instruments.
 
     Returns
     -------
-    instr: dict
-        It contains the experimetnal configuration of the desired instrument.
-        It can be used to construct a ``pysm.Instrument`` or as the
-        ``instrument`` argument for, e.g., :func:`basic_comp_sep` and
-        :func:`xForecast`
+    instr: pandas.DataFrame
+        It contains the experimetnal configuration of the desired instrument(s).
     """
-    module = sys.modules[__name__]
-    instruments = []
-    for t in tag.split():
-        try:
-            instrument = getattr(module, '_dict_instrument_'+t)(nside, units)
-        except AttributeError:
-            raise ValueError('Instrument %s not available. Choose between: %s.'
-                             % (t, ', '.join(_get_available_instruments())))
+    df = cmbdb.loc[cmbdb['experiment'].isin(tag.split())]
+    if df.empty:
+        if tag == 'test':
+            df = pd.DataFrame()
+            df['frequency'] = np.arange(10., 300, 30.)
+            df['depth_p'] = (np.linspace(20, 40, 10) - 30)**2
+            df['depth_i'] = (np.linspace(20, 40, 10) - 30)**2
         else:
-            instruments.append(instrument)
-
-    for key in instruments[0]:
-        if isinstance(instruments[0][key], np.ndarray):
-            instruments[0][key] = np.concatenate([i[key] for i in instruments])
-
-    instruments[0]['prefix'] = '__'.join(tag.split())
-
-    return instruments[0]
-
-
-def _get_available_instruments():
-    prefix = '_dict_instrument_'
-    module = sys.modules[__name__]
-    has_prefix = lambda x: x.find(prefix) != -1
-    return [fun.replace(prefix, '') for fun in dir(module) if has_prefix(fun)]
+            from importlib.util import find_spec
+            exp_file = find_spec('cmbdb').submodule_search_locations[0]
+            exp_file += '/experiments.yaml'
+            github = 'https://github.com/dpole/cmbdb'
+            raise ValueError(
+                (f"Instrument(s) {tag} not available." if tag else "") +
+                f"Choose between: {' '.join(cmbdb.experiment.unique())}{_NL}"
+                f"Add your instrument to your local copy of cmbdb: {exp_file}\n"
+                f"Beware, you might lose changes when you update: "
+                f"push your new configuration to {github}")
+    return df.dropna(1, 'all')
 
 
-def _dict_instrument_test(nside=None, units='uK_CMB'):
-    # Mock instrument configuration for testing purposes
-    return {
-        'frequencies': np.arange(10., 300, 30.),
-        'sens_I': (np.linspace(20, 40, 10) - 30)**2,
-        'sens_P': (np.linspace(20, 40, 10) - 30)**2,
-        'beams': np.ones(9),
-        'nside': nside,
-        'add_noise': True,
-        'noise_seed': 1234,
-        'use_bandpass': False,
-        'output_units': units,
-        'output_directory': '/dev/null',
-        'output_prefix': 'test',
-        'use_smoothing': False,
-    }
+def get_observation(instrument='', sky=None,
+                    noise=False, nside=None, unit='uK_CMB'):
+    """ Get a pre-defined instrumental configuration
+
+    Parameters
+    ----------
+    instrument:
+        It can be either a `str` (see :func:`get_instrument`) or an
+        object that provides the following as a key or an attribute.
+
+        - **frequency** (required)
+        - **depth_p** (required if ``noise=True``)
+        - **depth_i** (required if ``noise=True``)
+
+        They can be anything that is convertible to a float numpy array.
+        If only one of ``depth_p`` or ``depth_i`` is provided, the other is
+        inferred assuming that the former is sqrt(2) higher than the latter.
+    sky: str of pysm3.Sky
+        Sky to observe. It can be a `pysm3.Sky` or a tag to create one.
+    noise: bool
+        If true, add Gaussian, uncorrelated, isotropic noise.
+    nside: int
+        Desired output healpix nside. It is optional if `sky` is a `pysm3.Sky`,
+        and required if it is a `str` or ``None``.
+    unit: str
+        Unit of the output. Only K_CMB and K_RJ (and multiples) are supported.
+
+    Returns
+    -------
+    observation: array
+        Shape is ``(n_freq, 3, n_pix)``
+    """
+    if isinstance(instrument, str):
+        instrument = get_instrument(instrument)
+    else:
+        instrument = standardize_instrument(instrument)
+    if nside is None:
+        nside = sky.nside
+    elif not isinstance(sky, str):
+        try:
+            assert nside == sky.nside, (
+                "Mismatch between the value of the nside of the pysm3.Sky "
+                "argument and the one passed in the nside argument.")
+        except AttributeError:
+            raise ValueError("Either provide a pysm3.Sky as sky argument "
+                             " or specify the nside argument.")
+
+    if noise:
+        res = get_noise_realization(nside, instrument, unit)
+    else:
+        res = np.zeros((len(instrument.frequency), 3, hp.nside2npix(nside)))
+
+    if sky is None or sky == '':
+        return res
+
+    if isinstance(sky, str):
+        sky = get_sky(nside, sky)
+
+    for res_freq, freq in zip(res, instrument.frequency):
+        emission = sky.get_emission(freq * u.GHz).to(
+            getattr(u, unit),
+            equivalencies=u.cmb_equivalencies(freq * u.GHz))
+        res_freq += emission.value
+
+    return res
 
 
-def _dict_instrument_planck_P(nside=None, units='uK_CMB'):
-    # Planck 2015 results X, A&A, Volume 594, id.A10, 63 pp.
-    return {
-        'frequencies': np.array([30.0, 44.0, 70.0, 100.0, 143.0, 217.0, 353.0]),
-        'sens_I': np.array([2.8, 3.0, 4.0, 0.85, 0.9, 1.8, 4]) * 60,
-        'sens_P': np.array([7.5, 7.5, 4.8, 1.3, 1.1, 1.6, 6.9]) * 40.0,
-        'beams': np.array([32.4, 27.1, 13.3, 9.5, 7.2, 5.0, 4.9]),
-        'nside': nside,
-        'add_noise': True,
-        'noise_seed': 1234,
-        'use_bandpass': False,
-        'output_units': units,
-        'output_directory': '/dev/null',
-        'output_prefix': 'planck',
-        'use_smoothing': False,
-    }
+def get_noise_realization(nside, instrument, unit='uK_CMB'):
+    """ Generate noise maps for the instrument
+
+    Parameters
+    ----------
+    nside: int
+        Desired output healpix nside.
+    instrument:
+        Object that provides the following as a key or an attribute.
+
+        - **frequency** (required)
+        - **depth_p** (required if ``noise=True``)
+        - **depth_i** (required if ``noise=True``)
+
+        They can be anything that is convertible to a float numpy array.
+        If only one of ``depth_p`` or ``depth_i`` is provided, the other is
+        inferred assuming that the former is sqrt(2) higher than the latter.
+    unit: str
+        Unit of the output. Only K_CMB and K_RJ (and multiples) are supported.
+    sky: str of pysm3.Sky
+        Sky to observe. It can be a `pysm3.Sky` or a tag to create one.
+    noise: bool
+        If true, add Gaussian, uncorrelated, isotropic noise.
+
+    Returns
+    -------
+    observation: array
+        Shape is ``(n_freq, 3, n_pix)``.
+    """
+    instrument = standardize_instrument(instrument)
+    if not hasattr(instrument, 'depth_i'):
+        instrument.depth_i = instrument.depth_p / np.sqrt(2)
+    if not hasattr(instrument, 'depth_p'):
+        instrument.depth_p = instrument.depth_i * np.sqrt(2)
 
 
-def _dict_instrument_litebird(nside=None, units='uK_CMB'):
-    # Matsumura et al., Journal of Low Temperature Physics 184, 824 (2016)
-    return {
-        'frequencies': np.array([40.0, 50.0, 60.0, 68.4, 78.0, 88.5, 100.0, 118.9, 140.0, 166.0, 195.0, 234.9, 280.0, 337.4, 402.1]),
-        'sens_I': np.array([36.1, 19.6, 20.2, 11.3, 10.3, 8.4, 7.0, 5.8, 4.7, 7.0, 5.8, 8.0, 9.1, 11.4, 19.6]) / 1.41,
-        'sens_P': np.array([36.1, 19.6, 20.2, 11.3, 10.3, 8.4, 7.0, 5.8, 4.7, 7.0, 5.8, 8.0, 9.1, 11.4, 19.6]),
-        'beams': np.array([60, 56, 48, 43, 39, 35, 29, 25, 23, 21, 20, 19, 24, 20, 17]),
-        'nside': nside,
-        'add_noise': True,
-        'noise_seed': 1234,
-        'use_bandpass': False,
-        'output_units': units,
-        'output_directory': '/dev/null',
-        'output_prefix': 'litebird',
-        'use_smoothing': False,
-    }
+    n_freq = len(instrument.frequency)
+    n_pix = hp.nside2npix(nside)
+    res = np.random.normal(size=(n_pix, 3, n_freq))
+    depth = np.stack(
+        (instrument.depth_i, instrument.depth_p, instrument.depth_p))
+    depth *= u.arcmin * u.uK_CMB
+    depth = depth.to(
+        getattr(u, unit) * u.arcmin,
+        equivalencies=u.cmb_equivalencies(instrument.frequency * u.GHz))
+    res *= depth.value / hp.nside2resol(nside, True)
+    return res.T
 
 
-def _dict_instrument_pico(nside=None, units='uK_CMB'):
-    # https://sites.google.com/umn.edu/picomission/home
-    return {
-        'frequencies': np.array([21.0, 25.0, 30.0, 36.0, 43.2, 51.8, 62.2, 74.6, 89.6, 107.5, 129.0, 154.8, 185.8, 222.9, 267.5, 321.0, 385.2, 462.2, 554.7, 665.6, 798.7]),
-        'sens_I': np.array([16.9, 11.8, 8.1, 5.7, 5.8, 4.1, 3.8, 2.9, 2.0, 1.6, 1.6, 1.3, 2.6, 3.0, 2.1, 2.9, 3.5, 7.4, 34.6, 143.7, 896.4]) / 1.41,
-        'sens_P': np.array([16.9, 11.8, 8.1, 5.7, 5.8, 4.1, 3.8, 2.9, 2.0, 1.6, 1.6, 1.3, 2.6, 3.0, 2.1, 2.9, 3.5, 7.4, 34.6, 143.7, 896.4]),
-        'beams': np.array([40.9, 34.1, 28.4, 23.7, 19.7, 16.4, 13.7, 11.4, 9.5, 7.9, 6.6, 5.5, 4.6, 3.8, 3.2, 2.7, 2.2, 1.8, 1.5, 1.3, 1.1]),
-        'nside': nside,
-        'add_noise': True,
-        'noise_seed': 1234,
-        'use_bandpass': False,
-        'output_units': units,
-        'output_directory': '/dev/null',
-        'output_prefix': 'pico',
-        'use_smoothing': False,
-    }
+def standardize_instrument(instrument):
+    f"""Handle different input instruments
+
+    Parameters
+    ----------
+    instrument:
+        Anything that has
+
+    {_NL.join(['    * '+attr for attr in INSTRUMENT_STD_ATTR]) }
+
+        as keys or attributes, including `pandas.DataFrame`.
+
+    Returns
+    -------
+    std_instr: SimpleNamespace
+        It contains the properties above as attributes. They are converted to a
+        float array.
+    """
+    std_instr = types.SimpleNamespace()
+    for attr in INSTRUMENT_STD_ATTR:
+        try:
+            try:
+                value = np.array(getattr(instrument, attr), dtype=np.float64)
+            except AttributeError:
+                value = np.array(instrument[attr], dtype=np.float64)
+            setattr(std_instr, attr, value.copy())
+        except (TypeError, KeyError):  # Not subscriptable or missing key
+            pass
+
+    return std_instr
 
 
-def _dict_instrument_cmbs4(nside=None, units='uK_CMB'):
-    # https://cmb-s4.org/wiki/index.php/Survey_Performance_Expectations
-    return {
-        'frequencies': np.array([20, 30, 40, 85, 95, 145, 155, 220, 270]),
-        'sens_I': np.array([16.66, 10.62, 10.07, 2.01, 1.59, 4.53, 4.53, 11.61, 15.84]),
-        'sens_P': np.array([13.6, 8.67, 8.22, 1.64, 1.30, 2.03, 2.03, 5.19, 7.08]),
-        'beams': np.array([11.0, 76.6, 57.5, 27.0, 24.2, 15.9, 14.8, 10.7, 8.5]),
-        'nside': nside,
-        'add_noise': True,
-        'noise_seed': 1234,
-        'use_bandpass': False,
-        'output_units': units,
-        'output_directory': '/dev/null',
-        'output_prefix': 'cmbs4',
-        'use_smoothing': False,
-    }
+def _rj2cmb(freqs):
+    return (np.ones_like(freqs) * u.K_RJ).to(
+        u.K_CMB, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value
 
-def _dict_instrument_so_la(nside=None, units='uK_CMB'):
-    sens = np.array([52., 27., 5.8, 6.3, 15., 37.])
-    return {
-        'frequencies': np.array([27.,39.,93.,145.,225.,280.]),
-        'sens_I': sens / np.sqrt(2),
-        'sens_P': sens,
-        'beams': np.array([7.4, 5.1, 2.2, 1.4, 1.0, 0.9]),
-        'nside': nside,
-        'add_noise': True,
-        'noise_seed': 1234,
-        'use_bandpass': False,
-        'output_units': units,
-        'output_directory': '/dev/null',
-        'output_prefix': 'so_la',
-        'use_smoothing': False,
-    }
+
+def _cmb2rj(freqs):
+    return (np.ones_like(freqs) * u.K_CMB).to(
+        u.K_RJ, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value
+
+def _rj2jysr(freqs):
+    return (np.ones_like(freqs) * u.K_RJ).to(
+        u.Jy / u.sr, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value
+
+
+def _jysr2rj(freqs):
+    return (np.ones_like(freqs) * u.Jy / u.sr).to(
+        u.K_RJ, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value
+
+
+def _cmb2jysr(freqs):
+    return (np.ones_like(freqs) * u.K_CMB).to(
+        u.Jy / u.sr, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value
+
+
+def _jysr2cmb(freqs):
+    return (np.ones_like(freqs) * u.Jy / u.sr).to(
+        u.K_CMB, equivalencies=u.cmb_equivalencies(freqs * u.GHz)).value

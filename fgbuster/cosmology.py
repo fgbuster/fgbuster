@@ -24,6 +24,7 @@ import scipy as sp
 from .algebra import comp_sep, W_dBdB, W_dB, W, _mmm, _utmv, _mmv, _mv, _T, _mtmm
 from .mixingmatrix import MixingMatrix
 from .separation_recipes import _force_keys_as_attributes, _format_alms
+from .observation_helpers import standardize_instrument
 import sys
 
 
@@ -52,17 +53,15 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     ----------
     components: list
          `Components` of the mixing matrix
-    instrument: PySM.Instrument
-        Instrument object used to define the mixing matrix and the
-        frequency-dependent noise weight.
-        It is required to have:
+    instrument:
+        Object that provides the following as a key or an attribute.
 
-         - frequencies
+        - **frequency**
+        - **depth_p** (optional, frequencies are inverse-noise
+          weighted according to these noise levels)
+        - **fwhm** (optional)
 
-        however, also the following are taken into account, if provided
-
-         - sens_P (define the frequency inverse noise)
-
+        They can be anything that is convertible to a float numpy array.
     d_fgs: ndarray
         The foreground maps. No CMB. Shape `(n_freq, n_stokes, n_pix)`.
         If some pixels have to be masked, set them to zero.
@@ -102,11 +101,11 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
 
     """
     # Preliminaries
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument)
     nside = hp.npix2nside(d_fgs.shape[-1])
     n_stokes = d_fgs.shape[1]
     n_freqs = d_fgs.shape[0]
-    invN = np.diag(hp.nside2resol(nside, arcmin=True) / (instrument.Sens_P))**2
+    invN = np.diag(hp.nside2resol(nside, arcmin=True) / (instrument.depth_p))**2
     mask = d_fgs[0, 0, :] != 0.
     fsky = mask.astype(float).sum() / mask.size
     ell = np.arange(lmin, lmax+1)
@@ -117,8 +116,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     # grab the max-L spectra parameters with the associated error bars
     print('======= ESTIMATION OF SPECTRAL PARAMETERS =======')
     A = MixingMatrix(*components)
-    A_ev = A.evaluator(instrument.Frequencies)
-    A_dB_ev = A.diff_evaluator(instrument.Frequencies)
+    A_ev = A.evaluator(instrument.frequency)
+    A_dB_ev = A.diff_evaluator(instrument.frequency)
 
     x0 = np.array([x for c in components for x in c.defaults])
     if n_stokes == 3:  # if T and P were provided, extract P
@@ -133,7 +132,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     res.s = res.s.T
     A_maxL = A_ev(res.x)
     A_dB_maxL = A_dB_ev(res.x)
-    A_dBdB_maxL = A.diff_diff_evaluator(instrument.Frequencies)(res.x)
+    A_dBdB_maxL = A.diff_diff_evaluator(instrument.frequency)(res.x)
 
     print('res.x = ', res.x)
 
@@ -327,7 +326,11 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         bound_1 = sr_grid[ind_sr_min+1]
     print('bounds on sigma(r) = ', bound_0, ' / ', bound_1)
     print('starting point = ', sr0)
-    res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, [sr0], bounds=[(bound_0,bound_1)], **minimize_kwargs)
+    res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, sr0,
+            bounds=[(bound_0.item(),bound_1.item())],
+            # item required for test to pass but reason unclear. sr_grid has
+            # extra dimension?
+            **minimize_kwargs)
     print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
     res.cosmo_params = {}
     res.cosmo_params['r'] = (res_Lr['x'], res_sr['x']- res_Lr['x'])
@@ -668,10 +671,10 @@ def harmonic_noise_cov(instrument, lmax):
 
     try:
         bl = np.array([hp.gauss_beam(np.radians(b/60.), lmax=lmax)
-                       for b in instrument.Beams])
+                       for b in instrument.fwhm])
     except AttributeError:
-        bl = np.ones((len(instrument.Frequencies), lmax+1))
+        bl = np.ones((len(instrument.frequency), lmax+1))
     
     #bl = [hp.gauss_beam(np.radians(b/60.), lmax=lmax) for b in instrument.Beams]
-    nl = (np.array(bl) / np.radians(instrument.Sens_P/60.)[:, np.newaxis])**2
+    nl = (np.array(bl) / np.radians(instrument.depth_p/60.)[:, np.newaxis])**2
     return nl
