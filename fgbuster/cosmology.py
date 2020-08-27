@@ -23,8 +23,9 @@ import healpy as hp
 import scipy as sp
 from .algebra import comp_sep, W_dBdB, W_dB, W, _mmm, _utmv, _mmv, _mv, _T, _mtmm
 from .mixingmatrix import MixingMatrix
-from .separation_recipies import _force_keys_as_attributes, _format_alms
+from .separation_recipes import _force_keys_as_attributes, _format_alms
 import sys
+
 
 __all__ = [
     'xForecast',

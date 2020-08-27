@@ -290,15 +290,17 @@ def D(A, invN=None, return_svd=False):
 
 
 def _W_dB_svd(u_e_v, A_dB, comp_of_dB):
+    _raise_if_not_simple_comp_of_dB(comp_of_dB)
     u, e, v = u_e_v
     res = []
     for comp_of_dB_i, A_dB_i in zip(comp_of_dB, A_dB):
         # res = v^t e^-2 v A_dB (1 - u u^t) - v^t e^-1 u^t A_dB v^t e^-1 u^t
         inve_v = v / e[..., np.newaxis]
-        slice_inve_v = _T(_T(inve_v)[comp_of_dB_i+(slice(None),)])
+        slice_inve_v = inve_v[(Ellipsis,)+comp_of_dB_i]
         res_i = _mm(_mtm(inve_v, slice_inve_v), _T(A_dB_i))
         res_i -= _mmm(res_i, u, _T(u))
-        res_i -= _mmm(_mmm(_T(inve_v), _T(u), A_dB_i), _T(slice_inve_v), _T(u))
+        res_i -= _mmm(_mmm(_T(inve_v), _T(u), A_dB_i),
+                      _T(slice_inve_v), _T(u))
         res.append(res_i)
     return np.array(res)
 
@@ -318,11 +320,14 @@ def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
     A_dB : ndarray or list of ndarray
         The derivative of the mixing matrix. If list, each entry is the
         derivative with respect to a different parameter.
-    comp_of_dB: index or list of indices
-        It allows to provide in *A_dB* only the non-zero columns *A*.
-        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
-        If a list is provided, also *A_dB* has to be a list and
-        ``A_dB[i]`` is assumed to be the derivative of ``A[comp_of_dB[i]]``.
+    comp_of_dB: tuple or list of tuples
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. If list, every entry refers to a parameter.
+        Unlike `comp_sep` the
+        tuple(s) can have only lenght 1. The element is the index (or slice) of
+        the component dimension of A (the last one) that is affected by the
+        derivative: ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[..., comp_of_dB[i]]``.
 
     Returns
     -------
@@ -345,18 +350,17 @@ def W_dB(A, A_dB, comp_of_dB, invN=None, return_svd=False):
 
 
 def _P_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
+    _raise_if_not_simple_comp_of_dB(comp_of_dB)
     u, e, v = u_e_v
     n_dB = len(A_dB)
 
     # Expand A_dB and A_dBdB to full shape
-    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
-                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
     A_dB_full = np.zeros((n_dB,)+u.shape)
     A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
     for i in range(n_dB):
-        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+        A_dB_full[(i, Ellipsis) + comp_of_dB[i]] = A_dB[i]
         for j in range(n_dB):
-            A_dBdB_full[(i, j)+comp_of_dB_A[i]] = A_dBdB[i][j]
+            A_dBdB_full[(i, j, Ellipsis)+comp_of_dB[i]] = A_dBdB[i][j]
 
     # Apply diag(e^(-1)) * v to the domain of the components
     # In this basis A' = u and (A'^t A') = 1
@@ -401,12 +405,14 @@ def P_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
     A_dBdB : ndarray or list of list of ndarray
         The second derivative of the mixing matrix. If list, each entry is the
         derivative of A_dB with respect to a different parameter.
-    comp_of_dB: index or list of indices
-        It allows to provide in *A_dB* only the non-zero columns *A*.
-        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
-        If a list is provided, also *A_dB* and *A_dBdB* have to be a lists,
-        ``A_dB[i]`` and ``A_dBdB[i][j]`` (for any j) are assumed to be the
-        derivatives of ``A[comp_of_dB[i]]``.
+    comp_of_dB: tuple or list of tuples
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. If list, every entry refers to a parameter.
+        Unlike `comp_sep` the
+        tuple(s) can have only lenght 1. The element is the index (or slice) of
+        the component dimension of A (the last one) that is affected by the
+        derivative: ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[..., comp_of_dB[i]]``.
 
     Returns
     -------
@@ -437,18 +443,17 @@ def P_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
 
 
 def _W_dBdB_svd(u_e_v, A_dB, A_dBdB, comp_of_dB):
+    _raise_if_not_simple_comp_of_dB(comp_of_dB)
     u, e, v = u_e_v
     n_dB = len(A_dB)
 
     # Expand A_dB and A_dBdB to full shape
-    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
-                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
     A_dB_full = np.zeros((n_dB,)+u.shape)
     A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
     for i in range(n_dB):
-        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
+        A_dB_full[(i, Ellipsis) + comp_of_dB[i]] = A_dB[i]
         for j in range(n_dB):
-            A_dBdB_full[(i, j)+comp_of_dB_A[i]] = A_dBdB[i][j]
+            A_dBdB_full[(i, j, Ellipsis)+comp_of_dB[i]] = A_dBdB[i][j]
 
     # Apply diag(e^(-1)) * v to the domain of the components
     # In this basis A' = u and (A'^t A') = 1
@@ -502,12 +507,14 @@ def W_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
     A_dBdB : ndarray or list of list of ndarray
         The second derivative of the mixing matrix. If list, each entry is the
         derivative of A_dB with respect to a different parameter.
-    comp_of_dB: index or list of indices
-        It allows to provide in *A_dB* only the non-zero columns *A*.
-        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
-        If a list is provided, also *A_dB* and *A_dBdB* have to be a lists,
-        ``A_dB[i]`` and ``A_dBdB[i][j]`` (for any *j*) are assumed to be the
-        derivatives of ``A[comp_of_dB[i]]``.
+    comp_of_dB: tuple or list of tuples
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. If list, every entry refers to a parameter.
+        Unlike `comp_sep` the
+        tuple(s) can have only lenght 1. The element is the index (or slice) of
+        the component dimension of A (the last one) that is affected by the
+        derivative: ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[..., comp_of_dB[i]]``.
 
     Returns
     -------
@@ -537,6 +544,9 @@ def W_dBdB(A, A_dB, A_dBdB, comp_of_dB, invN=None, return_svd=False):
 
 
 def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
+    # logL_dB = d^t (1 - uu^t) A_dB s
+    # Compute it as the dot between (1 - uu^t)d and A_dB s
+    # Note that (1 - uu^t) is referred to as D (deprojector)
     u, e, v = u_e_v
     utd = _mtv(u, d)
     Dd = d - _mv(u, utd)
@@ -544,13 +554,31 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
         s = _mtv(v, utd / e)
     s[~np.isfinite(s)] = 0.
 
-    n_param = len(A_dB)
-    diff = np.empty(n_param)
-    for i in range(n_param):
-        freq_of_dB = comp_of_dB[i][:-1] + (slice(None),)
-        diff[i] = np.sum(_mv(A_dB[i], s[comp_of_dB[i]])
-                         * Dd[freq_of_dB])
-    return diff
+    diff = []
+    # Iterate over the parameter types (i.e. over A_dB), compute log_dB
+    # and append it to diff        
+    for par_comp_of_dB, par_A_dB in zip(comp_of_dB, A_dB):
+        # A_dB is compressed: it contains only the column that acts
+        # on the following slice of s
+        s_comp = s[..., par_comp_of_dB[0]]
+        dt_D_A_dB_s = _mv(par_A_dB, s_comp) * Dd  # Only product, not sum
+        try:
+            ids = np.array(np.broadcast_to(par_comp_of_dB[1].T,
+                                           s.T[0].shape)).T
+        except IndexError:
+            # The `...` dimensions were not partitioned in sub-domains over
+            # which the parameters are fitted independently
+            # -> do the sum and produce only one value
+            diff.append(np.array([dt_D_A_dB_s.sum()]))
+        else:
+            # comp_of_dB specified the domains over which the sky 
+            # is partitioned. They are indexed by ids.
+            # Accumulate dt_D_A_dB_s for the entries that share the same id.
+            # The size of the output vector is the number of domains.
+            # NOTE: it assumes that ids doesn't have any missing values
+            diff.append(np.bincount(
+                ids.ravel(), (_mv(par_A_dB, s_comp) * Dd).sum(-1).ravel()))
+    return np.concatenate(diff)
 
 #Added by Clement Leloup
 def _mism_term_logL_dB_svd(u_e_v, N, A_dB):
@@ -567,7 +595,7 @@ def _mism_term_logL_dB_svd(u_e_v, N, A_dB):
     return mism_dB
 
 
-def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
+def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[:], return_svd=False):
     """ Derivative of the log likelihood
 
     Parameters
@@ -581,11 +609,17 @@ def logL_dB(A, d, invN, A_dB, comp_of_dB=np.s_[...], return_svd=False):
     A_dB : ndarray or list of ndarray
         The derivative of the mixing matrix. If list, each entry is the
         derivative with respect to a different parameter.
-    comp_of_dB: IndexExpression or list of IndexExpression
-        It allows to provide in *A_dB* only the non-zero columns *A*.
-        *A_dB* is assumed to be the derivative of ``A[comp_of_dB]``.
-        If a list is provided, also *A_dB* has to be a list and
-        ``A_dB[i]`` is assumed to be the derivative of ``A[comp_of_dB[i]]``.
+    comp_of_dB: tuple or list of tuples
+        It allows to provide as output of *A_dB_ev* only the non-zero columns
+        *A*. If list, every entry refers to a parameter.
+        Tuple(s) can have lenght 1 or 2. The first element is the index
+        (or slice) of the component dimension of A (the last one) that is
+        affected by the derivative: ``A_dB_ev(x)[i]`` is assumed to be the
+        derivative of ``A[..., comp_of_dB[i]]``. The second element of the
+        touple, if present, is an array of integers. It can be used to specify
+        that the same parameter is actually fitted for indpendentely on
+        different sections of the *...* dimension(s). The index identifying
+        these regions are collected in the array.
 
     Returns
     -------
@@ -620,7 +654,7 @@ def _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB):
     else:
         comp_of_dB = [comp_of_dB] * len(A_dB)
 
-    # The following ensures that s[comp_of_dB[i]] still has all the axes
+    # The following ensures that s[..., comp_of_dB[i]] still has all the axes
     comp_of_dB = [_turn_into_slice_if_integer(c) for c in comp_of_dB]
 
     return A_dB, comp_of_dB
@@ -630,6 +664,8 @@ def _turn_into_slice_if_integer(index_expression):
     # When you index an array with an integer you lose one dimension.
     # To avoid this we turn the integer into a slice
     res = []
+    if not isinstance(index_expression, tuple):
+        index_expression = (index_expression,)
     for i in index_expression:
         if isinstance(i, six.integer_types):
             res.append(slice(i, i+1, None))
@@ -652,36 +688,39 @@ def _A_dB_ev_and_comp_of_dB_as_compatible_list(A_dB_ev, comp_of_dB, x):
     else:
         comp_of_dB = [comp_of_dB] * len(A_dB)
 
-    # The following ensures that s[comp_of_dB[i]] still has all the axes
+    # The following ensures that s[..., comp_of_dB[i]] still has all the axes
     comp_of_dB = [_turn_into_slice_if_integer(c) for c in comp_of_dB]
 
     return A_dB_ev, comp_of_dB
 
 
+def _is_simple_comp_of_dB(comp_of_dB):
+    return all([len(comp_of_dB_i) == 1 for comp_of_dB_i in comp_of_dB])
+
+
+def _raise_if_not_simple_comp_of_dB(comp_of_dB):
+    if not _is_simple_comp_of_dB(comp_of_dB):
+        raise NotImplementedError(
+            "This routine supports only simple comp_of_dB, which containt only "
+            "the slice of the component dimension. "
+            "You may be trying to compute it for maps of parameters.")
+
+
 #Modified by Clement Leloup
 def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None):
+    
+    _raise_if_not_simple_comp_of_dB(comp_of_dB)
 
     if N is not None:
         assert L is not None
         N = _mtmm(L, N, L)
     
     u, e, v = u_e_v
-
     P = np.eye(u.shape[-2])[np.newaxis, np.newaxis, ...] - _mm(u, _T(u))
-
-    # Expand A_dB
-    n_dB = len(A_dB)
-    comp_of_dB_A = [comp_of_dB_i[:-1] + (np.s_[:],) + comp_of_dB_i[-1:]
-                    for comp_of_dB_i in comp_of_dB]  # Add freq dimension
-    A_dB_full = np.zeros((n_dB,)+u.shape)
-    A_dBdB_full = np.zeros((n_dB, n_dB)+u.shape)
-    for i in range(n_dB):
-        A_dB_full[(i,)+comp_of_dB_A[i]] = A_dB[i]
-
     D_A_dB_s = []
     mism_term = np.array((len(A_dB), len(A_dB)))
     for i in range(len(A_dB)):
-        A_dB_s = _mv(A_dB_full[i], s)
+        A_dB_s = _mv(A_dB[i], s[(Ellipsis,) + comp_of_dB[i]])
         D_A_dB_s.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
 
         if N is not None:
@@ -820,10 +859,17 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, N_true=None,
         The evaluator of the derivative of the mixing matrix.
         It returns a list, each entry is the derivative with respect to a
         different parameter.
-    comp_of_dB: list of IndexExpression
+    comp_of_dB: tuple or list of tuples
         It allows to provide as output of *A_dB_ev* only the non-zero columns
-        *A*. ``A_dB_ev(x)[i]`` is assumed to be the derivative of
-        ``A[comp_of_dB[i]]``.
+        *A*. If list, every entry refers to a parameter.
+        Tuple(s) can have lenght 1 or 2. The first element is the index
+        (or slice) of the component dimension of A (the last one) that is
+        affected by the derivative: ``A_dB_ev(x)[i]`` is assumed to be the
+        derivative of ``A[..., comp_of_dB[i]]``. The second element of the
+        touple, if present, is an array of integers. It can be used to specify
+        that the same parameter is actually fitted for indpendentely on
+        different sections of the *...* dimension(s). The index identifying
+        these regions are collected in the array.
     minimize_args: list
         Positional arguments to be passed to `scipy.optimize.minimize`.
         At this moment it just contains *x0*, the initial guess for the spectral
@@ -901,23 +947,27 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, N_true=None,
     res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
     res.chi = pw_d[0] - _As_svd(u_e_v_last[0], res.s)
-    if A_dB_ev is None:
-        fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
-    else:
-        #Modified by Clement Leloup
-        fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
-                                        A_dB_last[0], comp_of_dB, N_true, L)
-        As_dB = (_mv(A_dB_i, res.s[comp_of_dB_i])
-                 for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
-        res.chi_dB = []
-        for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
-            freq_of_dB = comp_of_dB_i[:-1] + (slice(None),)
-            res.chi_dB.append(np.sum(res.chi[freq_of_dB] * As_dB_i, -1)/np.linalg.norm(As_dB_i, axis=-1))
-    try:
-        res.Sigma = np.linalg.inv(fisher)
-    except np.linalg.LinAlgError:
-        res.Sigma = fisher * np.nan
-    res.Sigma_inv = fisher
+
+    if _is_simple_comp_of_dB(comp_of_dB):
+        if A_dB_ev is None:
+            fisher = numdifftools.Hessian(fun)(res.x)  # TODO: something cheaper
+        else:
+            #Modified by Clement Leloup
+            fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
+                                            A_dB_last[0], comp_of_dB, N_true, L)
+            As_dB = (_mv(A_dB_i, res.s[comp_of_dB_i])
+                     for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
+            res.chi_dB = []
+            for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    res.chi_dB.append(np.sum(res.chi * As_dB_i, -1)
+                                      / np.linalg.norm(As_dB_i, axis=-1))
+        try:
+            res.Sigma = np.linalg.inv(fisher)
+        except np.linalg.LinAlgError:
+            res.Sigma = fisher * np.nan
+        res.Sigma_inv = fisher
+
     return res
 
 
@@ -945,10 +995,14 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
         The evaluator of the derivative of the mixing matrix.
         It returns a list, each entry is the derivative with respect to a
         different parameter.
-    comp_of_dB : list of IndexExpression
+    comp_of_dB: tuple or list of tuples
         It allows to provide as output of *A_dB_ev* only the non-zero columns
-        *A*. ``A_dB_ev(x)[i]`` is assumed to be the derivative of
-        ``A[comp_of_dB[i]]``.
+        *A*. If list, every entry refers to a parameter.
+        Due to the presence of the `patch_ids` arguemnt, unlike `comp_sep` the
+        tuple(s) can have only lenght 1. The element is the index (or slice) of
+        the component dimension of A (the last one) that is affected by the
+        derivative: ``A_dB_ev(x)[i]`` is assumed to be the derivative of
+        ``A[..., comp_of_dB[i]]``.
     patch_ids : array
         id of regions.
     minimize_args : list
@@ -1049,7 +1103,8 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             if r is not None:
                 del r.x
                 del r.Sigma
-    except (AttributeError, IndexError):  # The mixing matrix was constant
+    except (AttributeError, IndexError):
+        # No Sigma: constant mixing matrix or too too many parameters
         pass
 
     try:
@@ -1057,6 +1112,8 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
     except TypeError:
         n_param = 0
 
+    #TODO: This multipatch chi_dB needs better definition (or should be removed)
+    """
     try:
         # Does not work if patch_ids has more than one dimension
         for i in range(n_param):
@@ -1064,7 +1121,6 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             if i == 0:
                 res.chi_dB = []
             res.chi_dB.append(np.full(shape_chi_dB, np.NaN)) # NaN for testing
-    #except (AttributeError, TypeError):  # No chi_dB (no A_dB_ev)
     except AttributeError:  # No chi_dB (no A_dB_ev)
         pass
     else:
@@ -1077,6 +1133,7 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             for r in res.patch_res:
                 if r is not None:
                     del r.chi_dB
+    """
 
     return res
 
