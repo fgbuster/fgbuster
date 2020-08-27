@@ -665,6 +665,13 @@ def _get_Cl_noise(instrument, A, lmax):
 
 #Added by Clement Leloup
 def harmonic_noise_cov(instrument, lmax):
-    bl = [hp.gauss_beam(np.radians(b/60.), lmax=lmax) for b in instrument.Beams]
+
+    try:
+        bl = np.array([hp.gauss_beam(np.radians(b/60.), lmax=lmax)
+                       for b in instrument.Beams])
+    except AttributeError:
+        bl = np.ones((len(instrument.Frequencies), lmax+1))
+    
+    #bl = [hp.gauss_beam(np.radians(b/60.), lmax=lmax) for b in instrument.Beams]
     nl = (np.array(bl) / np.radians(instrument.Sens_P/60.)[:, np.newaxis])**2
     return nl
