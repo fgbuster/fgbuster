@@ -214,7 +214,7 @@ def get_noise_realization(nside, instrument, unit='uK_CMB'):
 
 
 def standardize_instrument(instrument):
-    f"""Handle different input instruments
+    """Handle different input instruments
 
     Parameters
     ----------

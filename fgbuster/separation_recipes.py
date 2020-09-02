@@ -281,7 +281,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 #Added by Clement Leloup
 def harmonic_comp_sep(components, instrument, data, nside, invN=None, mask=None, **minimize_kwargs):
     
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument) #_force_keys_as_attributes(instrument)
     lmax = 3 * nside - 1
     n_comp = len(components)
     fsky = 1.0
@@ -540,7 +540,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
       pixels
 
     """
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument) #_force_keys_as_attributes(instrument)
     nside = hp.get_nside(data[0])
     lmax = 3 * nside - 1
     lmax = min(lmax, lbins.max())
@@ -572,30 +572,6 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
         res.s[c] = hp.alm2map(alms[c], nside)
 
     return res
-
-
-def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
-    alms = []
-    for f, fdata in enumerate(data):
-        if weights is None:
-            alms.append(hp.map2alm(fdata, lmax=lmax, iter=iter))
-        else:
-            alms.append(hp.map2alm(hp.ma(fdata)*weights, lmax=lmax, iter=iter))
-        logging.info('%i of %i complete' % (f+1, len(data)))
-    alms = np.array(alms)
-
-    if beams is not None:
-        logging.info('Correcting alms for the beams')
-        for fwhm, alm in zip(beams, alms):
-            bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax, pol=(alm.ndim==2))
-            if alm.ndim == 1:
-                alm = [alm]
-                bl = [bl]
-
-            for i_alm, i_bl in zip(alm, bl.T):
-                hp.almxfl(i_alm, 1.0/i_bl, inplace=True)
-
-    return alms
 
 
 #Added by Clement Leloup
@@ -705,7 +681,7 @@ def ilc(components, instrument, data, patch_ids=None):
       frequencies is masked.
     """
     # Checks
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument) #_force_keys_as_attributes(instrument)
     np.broadcast(data, patch_ids)
     n_freq = data.shape[0]
     assert len(instrument.Frequencies) == n_freq,\
@@ -852,7 +828,8 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
     return res
 
 
-def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
+#Modified by Clement Leloup
+def _get_alms(data, beams=None, lmax=None, weights=None, smoothing=False, iter=3):
     alms = []
     for f, fdata in enumerate(data):
         if weights is None:
@@ -871,8 +848,11 @@ def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
                 bl = [bl]
 
             for i_alm, i_bl in zip(alm, bl.T):
-                hp.almxfl(i_alm, 1.0/i_bl, inplace=True)
-
+                if smoothing:
+                    hp.almxfl(i_alm, i_bl, inplace=True)
+                else:
+                    hp.almxfl(i_alm, 1.0/i_bl, inplace=True)
+                    
     return alms
 
 

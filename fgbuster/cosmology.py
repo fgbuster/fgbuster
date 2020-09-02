@@ -23,7 +23,7 @@ import healpy as hp
 import scipy as sp
 from .algebra import comp_sep, W_dBdB, W_dB, W, _mmm, _utmv, _mmv, _mv, _T, _mtmm
 from .mixingmatrix import MixingMatrix
-from .separation_recipes import _force_keys_as_attributes, _format_alms
+from .separation_recipes import _format_alms
 from .observation_helpers import standardize_instrument
 import sys
 
@@ -109,7 +109,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     mask = d_fgs[0, 0, :] != 0.
     fsky = mask.astype(float).sum() / mask.size
     ell = np.arange(lmin, lmax+1)
-    print('fsky = ', fsky)
+    #print('fsky = ', fsky)
 
     ############################################################################
     # 1. Component separation using the noise-free foregrounds templare
@@ -125,8 +125,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     else:
         d_comp_sep = d_fgs
 
-    res = comp_sep(A_ev, d_comp_sep.T, invN, A_dB_ev, A.comp_of_dB, x0,
-                   **minimize_kwargs)
+    res = comp_sep(A_ev, d_comp_sep.T, invN, A_dB_ev, A.comp_of_dB, x0, **minimize_kwargs)
 
     res.params = A.params
     res.s = res.s.T
@@ -347,7 +346,9 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         ax0.axvline(x=r, color='k', linestyle='--')
         ax0.set_ylabel(r'$\mathcal{L}(r)$', fontsize=20)
         ax0.set_xlabel(r'tensor-to-scalar ratio $r$', fontsize=20)
-        pl.show()
+        #pl.show()
+
+        return res, fig
 
     return res
 
@@ -356,7 +357,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
 def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None, fsky=1.0, Alens=1.0, r=0.001, Nl=None, make_figure=False, **minimize_kwargs):
 
     # Preliminaries
-    instrument = _force_keys_as_attributes(instrument)
+    instrument = standardize_instrument(instrument) #_force_keys_as_attributes(instrument)
     
     ell_em = hp.Alm.getlm(lmax, np.arange(alms_fgs.shape[-1]))[0]
     ell_em = np.stack((ell_em, ell_em), axis=-1).reshape(-1) # For transformation into real alms
@@ -388,8 +389,8 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     # grab the max-L spectra parameters with the associated error bars
     print('======= ESTIMATION OF SPECTRAL PARAMETERS =======')
     A = MixingMatrix(*components)
-    A_ev = A.evaluator(instrument.Frequencies)
-    A_dB_ev = A.diff_evaluator(instrument.Frequencies)
+    A_ev = A.evaluator(instrument.frequency)
+    A_dB_ev = A.diff_evaluator(instrument.frequency)
 
     x0 = np.array([x for c in components for x in c.defaults])
 
@@ -401,13 +402,13 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     mask_lmin = ell_em < lmin
     d_comp_sep[mask_lmin, ...] = 0
 
-    res = comp_sep(A_ev, d_comp_sep, invNlm, A_dB_ev, A.comp_of_dB, Nlm, x0, **minimize_kwargs)
+    res = comp_sep(A_ev, d_comp_sep, invNlm, A_dB_ev, A.comp_of_dB, x0, N_true=Nlm, **minimize_kwargs)
 
     res.params = A.params
     res.s = res.s.T
     A_maxL = A_ev(res.x)
     A_dB_maxL = A_dB_ev(res.x)
-    A_dBdB_maxL = A.diff_diff_evaluator(instrument.Frequencies)(res.x)
+    A_dBdB_maxL = A.diff_diff_evaluator(instrument.frequency)(res.x)
 
     print('res.x = ', res.x)
 
@@ -674,7 +675,6 @@ def harmonic_noise_cov(instrument, lmax):
                        for b in instrument.fwhm])
     except AttributeError:
         bl = np.ones((len(instrument.frequency), lmax+1))
-    
-    #bl = [hp.gauss_beam(np.radians(b/60.), lmax=lmax) for b in instrument.Beams]
+
     nl = (np.array(bl) / np.radians(instrument.depth_p/60.)[:, np.newaxis])**2
     return nl

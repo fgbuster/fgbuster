@@ -837,8 +837,7 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
 
 
 #Modified by Clement Leloup
-def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, N_true=None,
-             *minimize_args, **minimize_kwargs):
+def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, N_true=None, **minimize_kwargs):
     """ Perform component separation
 
     Build the (inverse) spectral likelihood and minimize it to estimate the
