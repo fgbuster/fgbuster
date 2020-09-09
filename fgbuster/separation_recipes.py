@@ -580,6 +580,10 @@ def _format_alms(alms, lmax, mask_lmin=None):
 
     alms = np.asarray(alms, order='C')
     alms = alms.view(np.float64)
+    em = hp.Alm.getlm(lmax)[1]
+    em = np.stack((em, em), axis=-1).reshape(-1)
+    mask_em = [m != 0 for m in em]
+    alms[..., mask_em] *= np.sqrt(2)
     alms[..., np.arange(1, lmax+1, 2)] = hp.UNSEEN  # Mask imaginary m = 0
     mask_alms = _intersect_mask(alms)
     alms[..., mask_alms] = 0  # Thus no contribution to the spectral likelihood
