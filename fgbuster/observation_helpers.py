@@ -239,7 +239,7 @@ def standardize_instrument(instrument):
             if attr == 'frequency':
                 # If frequency contains bandpasses, this step is needed to
                 # ensure that it can be converted to an array from a DataFrame
-                std_instr.frequency = [x for x in std_instr.frequency]
+                value = [x for x in value]
                 value = np.array(value, dtype=np.float64)
                 if value.ndim > 1:
                     value = [x.copy() for x in std_instr.frequency]
