@@ -237,6 +237,9 @@ def standardize_instrument(instrument):
         except (TypeError, KeyError):  # Not subscriptable or missing key
             pass
 
+    if std_instr.frequency.ndim > 1:
+        std_instr.frequency.ndim = [x for x in std_instr.frequency]
+
     return std_instr
 
 
