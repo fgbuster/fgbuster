@@ -230,15 +230,23 @@ def standardize_instrument(instrument):
     for attr in INSTRUMENT_STD_ATTR:
         try:
             try:
-                value = np.array(getattr(instrument, attr), dtype=np.float64)
+                value = getattr(instrument, attr)
             except AttributeError:
-                value = np.array(instrument[attr], dtype=np.float64)
-            setattr(std_instr, attr, value.copy())
+                value = instrument[attr]
         except (TypeError, KeyError):  # Not subscriptable or missing key
             pass
+        else:
+            if attr == 'frequency':
+                # If frequency contains bandpasses, this step is needed to
+                # ensure that it can be converted to an array from a DataFrame
+                std_instr.frequency = [x for x in std_instr.frequency]
+                value = np.array(value, dtype=np.float64)
+                if value.ndim > 1:
+                    value = [x.copy() for x in std_instr.frequency]
+                else:
+                    value = value.copy()
 
-    if std_instr.frequency.ndim > 1:
-        std_instr.frequency.ndim = [x for x in std_instr.frequency]
+            setattr(std_instr, attr, value)
 
     return std_instr
 
