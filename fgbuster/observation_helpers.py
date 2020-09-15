@@ -242,7 +242,7 @@ def standardize_instrument(instrument):
                 value = [x for x in value]
                 value = np.array(value, dtype=np.float64)
                 if value.ndim > 1:
-                    value = [x.copy() for x in std_instr.frequency]
+                    value = [x.copy() for x in value]
                 else:
                     value = value.copy()
 
