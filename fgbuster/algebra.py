@@ -707,33 +707,35 @@ def _raise_if_not_simple_comp_of_dB(comp_of_dB):
 
 
 #Modified by Clement Leloup
-def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None):
+def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=None):
     
     _raise_if_not_simple_comp_of_dB(comp_of_dB)
 
     if N is not None:
         assert L is not None
+        assert A_dBdB is not None
         N = _mtmm(L, N, L)
     
     u, e, v = u_e_v
+    vprime = _T(v)/e[..., np.newaxis, :]
     P = np.eye(u.shape[-2])[np.newaxis, np.newaxis, ...] - _mm(u, _T(u))
     D_A_dB_s = []
-    mism_term = np.array((len(A_dB), len(A_dB)))
+    mism_term = np.zeros((len(A_dB), len(A_dB)))
     for i in range(len(A_dB)):
         A_dB_s = _mv(A_dB[i], s[(Ellipsis,) + comp_of_dB[i]])
         D_A_dB_s.append(A_dB_s - _mv(u, _mtv(u, A_dB_s)))
 
         if N is not None:
             for j in range(len(A_dB)):
-                H_dB = _mm(A_dB_full[i], vprime)
-                H_dB_prime = _mm(A_dB_full[j], vprime)
-                H_dBdB = _mm(A_dBdB_full[i, j], vprime)
+                H_dB = _mm(A_dB[i], vprime)
+                H_dB_prime = _mm(A_dB[j], vprime)
+                H_dBdB = _mm(A_dBdB[i][j], vprime)
 
                 m1 = _mmm(P, H_dBdB, _T(u))
                 m2 = - _mtmm(_mm(H_dB_prime, _T(u)), P, _mm(H_dB, _T(u)))
                 m3 = - _mmm(P, _mm(H_dB, _T(u)), _mm(H_dB_prime, _T(u)))
                 m4 = - _mmm(P, _mm(H_dB_prime, _T(u)), _mm(H_dB, _T(u)))
-                m5 = _mmm(P, _mm(H_dB, _T(H_dBprime)), P)
+                m5 = _mmm(P, _mm(H_dB, _T(H_dB_prime)), P)
 
                 mism_term[i, j] = np.sum(np.trace(_mm(m1+m2+m3+m4+m5, N), axis1=-2, axis2=-1))
 
@@ -830,14 +832,14 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
                 except np.linalg.linalg.LinAlgError:
                     print('SVD of A failed -> logL_dB not updated')
                 return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
-                                      A_dB_old[0], comp_of_dB) - _mism_term_logL_dB_svd(u_e_v_old[0], _mtmm(L[0], N_true, L[0]), A_dB_old[0], comp_of_dB)
+                                      A_dB_old[0], comp_of_dB) - _mism_term_logL_dB_svd(u_e_v_old[0], _mtmm(L[0], N_true, L[0]), A_dB_old[0])
 
 
     return _inv_logL, _inv_logL_dB, (u_e_v_old, A_dB_old, x_old, pw_d)
 
 
 #Modified by Clement Leloup
-def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, N_true=None, **minimize_kwargs):
+def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, N_true=None, A_dBdB_ev=None, **minimize_kwargs):
     """ Perform component separation
 
     Build the (inverse) spectral likelihood and minimize it to estimate the
@@ -943,6 +945,12 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, N_true=None, **
     if not np.all(x_last[0] == res.x):
         fun(res.x) #  Make sure that last_values refer to the minimum
 
+    #Modified by Clement Leloup
+    if A_dBdB_ev is not None:
+        A_dBdB_last = A_dBdB_ev(x_last[0])
+    else:
+        A_dBdB_last = None
+
     res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
     res.chi = pw_d[0] - _As_svd(u_e_v_last[0], res.s)
@@ -953,7 +961,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, N_true=None, **
         else:
             #Modified by Clement Leloup
             fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
-                                            A_dB_last[0], comp_of_dB, N_true, L)
+                                            A_dB_last[0], comp_of_dB, N_true, L, A_dBdB_last)
             As_dB = (_mv(A_dB_i, res.s[comp_of_dB_i])
                      for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
             res.chi_dB = []

@@ -391,6 +391,10 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     A = MixingMatrix(*components)
     A_ev = A.evaluator(instrument.frequency)
     A_dB_ev = A.diff_evaluator(instrument.frequency)
+    if Nl is not None:
+        A_dBdB_ev = A.diff_diff_evaluator(instrument.frequency)
+    else:
+        A_dBdB_ev = None
 
     x0 = np.array([x for c in components for x in c.defaults])
 
@@ -402,7 +406,7 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     mask_lmin = ell_em < lmin
     d_comp_sep[mask_lmin, ...] = 0
 
-    res = comp_sep(A_ev, d_comp_sep, invNlm, A_dB_ev, A.comp_of_dB, x0, N_true=Nlm, **minimize_kwargs)
+    res = comp_sep(A_ev, d_comp_sep, invNlm, A_dB_ev, A.comp_of_dB, x0, N_true=Nlm, A_dBdB_ev=A_dBdB_ev, **minimize_kwargs)
 
     res.params = A.params
     res.s = res.s.T
@@ -417,8 +421,11 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     ### A^T N_ell^-1 A
     print('======= ESTIMATION OF NOISE AFTER COMP SEP =======')
     i_cmb = A.components.index('CMB')
-    #Cl_noise = _get_Cl_noise(instrument, A_maxL, lmax)[i_cmb, i_cmb, lmin:]
-    Cl_noise = np.linalg.inv(_mtmm(A_maxL, invNl, A_maxL))[lmin:, i_cmb, i_cmb]
+    AtNA = np.linalg.inv(_mtmm(A_maxL, invNl, A_maxL))
+    if Nl is None:
+        Cl_noise = np.linalg.inv(_mtmm(A_maxL, invNl, A_maxL))[lmin:, i_cmb, i_cmb]
+    else:
+        Cl_noise = _mmm(AtNA, _mtmm(A_maxL, _mmm(invNl, Nl, invNl), A_maxL), AtNA)[lmin:, i_cmb, i_cmb]
     '''
     print(Cl_noise.shape)
     print(Cl_noise_test.shape)
