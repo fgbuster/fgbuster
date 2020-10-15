@@ -194,11 +194,6 @@ def get_noise_realization(nside, instrument, unit='uK_CMB'):
         Shape is ``(n_freq, 3, n_pix)``.
     """
     instrument = standardize_instrument(instrument)
-    if not hasattr(instrument, 'depth_i'):
-        instrument.depth_i = instrument.depth_p / np.sqrt(2)
-    if not hasattr(instrument, 'depth_p'):
-        instrument.depth_p = instrument.depth_i * np.sqrt(2)
-
 
     n_freq = len(instrument.frequency)
     n_pix = hp.nside2npix(nside)
@@ -235,12 +230,23 @@ def standardize_instrument(instrument):
     for attr in INSTRUMENT_STD_ATTR:
         try:
             try:
-                value = np.array(getattr(instrument, attr), dtype=np.float64)
+                value = getattr(instrument, attr)
             except AttributeError:
-                value = np.array(instrument[attr], dtype=np.float64)
-            setattr(std_instr, attr, value.copy())
+                value = instrument[attr]
         except (TypeError, KeyError):  # Not subscriptable or missing key
             pass
+        else:
+            if attr == 'frequency':
+                # If frequency contains bandpasses, this step is needed to
+                # ensure that it can be converted to an array from a DataFrame
+                value = [x for x in value]
+                value = np.array(value, dtype=np.float64)
+                if value.ndim > 1:
+                    value = [x.copy() for x in value]
+                else:
+                    value = value.copy()
+
+            setattr(std_instr, attr, value)
 
     return std_instr
 

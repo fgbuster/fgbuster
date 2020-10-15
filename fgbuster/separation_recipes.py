@@ -34,6 +34,7 @@ __all__ = [
     'ilc',
     'harmonic_ilc',
     'harmonic_ilc_alm',
+    'adaptive_comp_sep',
     'multi_res_comp_sep',
 ]
 
@@ -347,8 +348,9 @@ def harmonic_comp_sep(components, instrument, data, nside, invN=None, mask=None,
     return res
 
 
-def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
-    """ Basic component separation
+def adaptive_comp_sep(components, instrument, data, patch_ids,
+                      **minimize_kwargs):
+    """ Arbitrary clusters for each parameter
 
     Parameters
     ----------
@@ -372,21 +374,20 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
 
         Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
         neglected during the component separation process.
-    nsides: seq
-        Specify the ``nside`` for each free parameter of the components
-
+    patch_ids: list
+        The *i*-th element is the clusters map of the *i*-th parameter.
+        A cluster map is a map of integers that, for each pixel defines the
+        index of the cluster the pixel belongs to.
+        
     Returns
     -------
     result: dict
 	It includes
 
 	- **param**: *(list)* - Names of the parameters fitted
-	- **x**: *(seq)* - ``x[i]`` is the best-fit (map of) the *i*-th
-          parameter. The map has ``nside = nsides[i]``
-        - **Sigma**: *(ndarray)* - ``Sigma[i, j]`` is the (map of) the
-          semi-analytic covariance between the *i*-th and the *j*-th parameter.
-          It is meaningful only in the high signal-to-noise regime and when the
-          *cov* is the true covariance of the data
+	- **x**: *(seq)* - ``x[i][j]`` is the best-fit values of the *j*-th
+          clusters of the *i*-th parameter.
+	- **x_map**: *(seq)* - ``x[i]`` is the map of the *i*-th parameter.
         - **s**: *(ndarray)* - Component amplitude maps
         - **mask_good**: *(ndarray)* - mask of the entries actually used in the
           component separation
@@ -406,9 +407,6 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
 
     """
     instrument = standardize_instrument(instrument)
-    max_nside = max(nsides)
-    if max_nside == 0:
-        return basic_comp_sep(components, instrument, data, **minimize_kwargs)
 
     # Prepare mask and set to zero all the frequencies in the masked pixels:
     # NOTE: mask are bad pixels
@@ -421,72 +419,68 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     except TypeError:
         raise ValueError("data has to be a stack of healpix maps")
 
-    invN = _get_prewhiten_factors(instrument, data.shape, data_nside)
-    invN = np.diag(invN**2)
+    prewhiten_factors = _get_prewhiten_factors(instrument, data.shape, data_nside)
+    invN = np.zeros(prewhiten_factors.shape+prewhiten_factors.shape[-1:])
+    np.einsum('...ii->...i', invN)[:] = prewhiten_factors**2
+
+    for ids in patch_ids:
+        assert np.all(ids >= 0)
+        assert ids.dtype.kind in 'ui'
+    n_clusters = [ids.max()+1 for ids in patch_ids]
 
     def array2maps(x):
         i = 0
         maps = []
-        for nside in nsides:
-            npix = _my_nside2npix(nside)
-            maps.append(x[i:i+npix])
-            i += npix
+        for n_cluster, ids in zip(n_clusters, patch_ids):
+            maps.append(x[i:i+n_cluster][ids])
+            i += n_cluster
         return maps
 
-    extra_dim = [1]*(data.ndim-1)
-    unpack = lambda x: [
-        _my_ud_grade(m, max_nside).reshape(-1, *extra_dim)
-        for m in array2maps(x)]
+    extra_dim = [1] * (data.ndim - 2)
+    unpack = lambda x: [m.reshape(-1, *extra_dim) for m in array2maps(x)]
 
-    # Traspose the the data and put the pixels that share the same spectral
-    # indices next to each other
-    n_pix_max_nside = hp.nside2npix(max_nside)
-    pix_ids = np.argsort(hp.ud_grade(np.arange(n_pix_max_nside), data_nside))
-    data = data.T[pix_ids].reshape(
-        n_pix_max_nside, (data_nside // max_nside)**2, *data.T.shape[1:])
-    back_pix_ids = np.argsort(pix_ids)
-
-    A = MixingMatrix(*components)
-    assert A.n_param == len(nsides), (
-        "%i free parameters but %i nsides" % (len(A.defaults), len(nsides)))
-    A_ev = A.evaluator(instrument.frequency, unpack)
-    A_dB_ev = A.diff_evaluator(instrument.frequency, unpack)
     x0 = [x for c in components for x in c.defaults]
-    x0 = [np.full(_my_nside2npix(nside), px0) for nside, px0 in zip(nsides, x0)]
+    x0 = [np.full(n_cluster, px0) for n_cluster, px0 in zip(n_clusters, x0)]
     x0 = np.concatenate(x0)
 
-    if len(x0) == 0:
-        A_ev = A_ev()
+    A = MixingMatrix(*components)
+    assert A.n_param == len(patch_ids), (
+        "%i free parameters but %i patch_ids"
+        % (len(A.defaults), len(patch_ids)))
+    A_ev = A.evaluator(instrument.frequency, unpack)
+    A_dB_ev = A.diff_evaluator(instrument.frequency, unpack)
 
-    comp_of_dB = [
-        (c_db, _my_ud_grade(np.arange(_my_nside2npix(p_nside)), max_nside))
-        for p_nside, c_db in zip(nsides, A.comp_of_dB)]
+    comp_of_dB = list(zip(A.comp_of_dB, patch_ids))
+    bounds = minimize_kwargs.get('bounds')
+    if bounds is not None:
+        minimize_kwargs['bounds'] = _get_bounds(patch_ids, bounds)
 
     # Component separation
-    res = alg.comp_sep(A_ev, data, invN, A_dB_ev, comp_of_dB, x0,
+    res = alg.comp_sep(A_ev, data.T, invN, A_dB_ev, comp_of_dB, x0,
                        **minimize_kwargs)
-
     # Craft output
     # 1) Apply the mask, if any
     # 2) Restore the ordering of the input data (pixel dimension last)
-    def restore_index_mask_transpose(x):
-        x = x.reshape(-1, *x.shape[2:])[back_pix_ids]
+    def mask_transpose(x):
         x[mask] = hp.UNSEEN
         return x.T
 
     res.params = A.params
-    res.s = restore_index_mask_transpose(res.s)
-    res.chi = restore_index_mask_transpose(res.chi)
+    res.s = mask_transpose(res.s)
+    res.chi = mask_transpose(res.chi)
+    res.x_map = array2maps(res.x)
+    for m in res.x_map:
+        m[mask] = hp.UNSEEN
+
+    res.x = [res.x[stop-n:stop]
+             for n, stop in zip(n_clusters, np.cumsum(n_clusters))]
+    for x, ids, n_cluster in zip(res.x, patch_ids, n_clusters):
+        # Clusters witn no valid pixels are set to UNSEEN
+        x[np.bincount(ids[~mask], minlength=n_cluster) == 0] = hp.UNSEEN
+
     if 'chi_dB' in res:
         for i in range(len(res.chi_dB)):
-            res.chi_dB[i] = restore_index_mask_transpose(res.chi_dB[i])
-
-    if len(x0) > 0:
-        x_masks = [_my_ud_grade(mask.astype(float), nside) == 1.
-                   for nside in nsides]
-        res.x = array2maps(res.x)
-        for x, x_mask in zip(res.x, x_masks):
-            x[x_mask] = hp.UNSEEN
+            res.chi_dB[i] = mask_transpose(res.chi_dB[i])
 
     res.mask_good = ~mask
     return res
@@ -746,6 +740,61 @@ def ilc(components, instrument, data, patch_ids=None):
     res.components = mm.components
 
     return res
+
+
+def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
+    """ Basic component separation
+
+    Parameters
+    ----------
+    components: list
+        List storing the :class:`Component` s of the mixing matrix
+    instrument:
+        Object that provides the following as a key or an attribute.
+
+        - **frequency**
+        - **depth_i** or **depth_p** (optional, frequencies are inverse-noise
+          weighted according to these noise levels)
+
+        They can be anything that is convertible to a float numpy array.
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape *(n_freq, ..., n_pix).*
+        *...* can be
+
+        - absent or 1: temperature maps
+        - 2: polarization maps
+        - 3: temperature and polarization maps (see note)
+
+        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
+        neglected during the component separation process.
+    nsides: seq
+        Specify the ``nside`` for each free parameter of the components
+
+    Returns
+    -------
+    result: dict
+	See `adaptive_comp_sep`
+
+    Note
+    ----
+
+    * During the component separation, a pixel is masked if at least one of
+      its frequencies is masked.
+    * If you provide temperature and polarization maps, they will constrain the
+      **same** set of parameters. In particular, separation is **not** done
+      independently for temperature and polarization. If you want an
+      independent fitting for temperature and polarization, please launch
+
+      >>> res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)
+      >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
+
+    """
+    nside_data = hp.get_nside(data[0])
+    patch_ids = [
+        _my_ud_grade(np.arange(_my_nside2npix(nside)), nside_data).astype(int)
+        for nside in nsides]
+    return adaptive_comp_sep(components, instrument, data, patch_ids,
+                             **minimize_kwargs)
 
 
 def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3):
@@ -1153,6 +1202,14 @@ def _A_evaluator(components, instrument, prewhiten_factors=None):
     return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
 
 
+def _get_bounds(idss, bounds):
+    res = []
+    for ids, bound in zip(idss, bounds):
+        n_clusters = ids.max(-1) + 1
+        res += [bound] * n_clusters
+    return res
+
+
 def _my_nside2npix(nside):
     if nside:
         return hp.nside2npix(nside)
@@ -1182,9 +1239,11 @@ def _my_ud_grade(map_in, nside_out, **kwargs):
             res = hp.ud_grade(out, 1, **kwargs)
             return res[:1]
     try:
-        return hp.ud_grade(np.full(12, map_in.item()),
+        # Input has nside = 0 (or 1)
+        return hp.ud_grade(np.ones(12) * map_in,
                            nside_out, **kwargs)
     except ValueError:
+        # Fall back to standard healpy ud_grade
         return hp.ud_grade(map_in, nside_out, **kwargs)
 
 
