@@ -26,7 +26,7 @@ from .mixingmatrix import MixingMatrix
 from .separation_recipes import _format_alms
 from .observation_helpers import standardize_instrument
 import sys
-
+import matplotlib.colors as col
 
 __all__ = [
     'xForecast',
@@ -363,7 +363,7 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     ell_em = np.stack((ell_em, ell_em), axis=-1).reshape(-1) # For transformation into real alms
 
     #Transform healpy complex alms into real alms
-    alms_fgs = _format_alms(alms_fgs, lmax)
+    alms_fgs = _format_alms(alms_fgs, lmin)
 
     #Format the inverse noise matrix
     if invNl is None:
@@ -410,10 +410,13 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
 
     res.params = A.params
     res.s = res.s.T
+
+    #Test when parameters are at true value
+    #res.x = x0
+    
     A_maxL = A_ev(res.x)
     A_dB_maxL = A_dB_ev(res.x)
     A_dBdB_maxL = A.diff_diff_evaluator(instrument.frequency)(res.x)
-
     print('res.x = ', res.x)
 
     ############################################################################
@@ -512,7 +515,6 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
         ax0 = fig.add_axes([left, bottom, width, height])
         ax0.set_title(r'$\ell_{\min}=$'+str(lmin)+\
             r'$ \rightarrow \ell_{\max}=$'+str(lmax), fontsize=16)
-
         ax.loglog(ell, Cl_fid['BB'], color='DarkGray', linestyle='-', label='BB tot', linewidth=2.0)
         ax.loglog(ell, Cl_fid['BuBu']*r , color='DarkGray', linestyle='--', label='primordial BB for r='+str(r), linewidth=2.0)
         ax.loglog(ell, res.stat, 'DarkOrange', label='statistical residuals', linewidth=2.0)
@@ -594,7 +596,7 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
         THRESHOLD = 1.00
         # THRESHOLD = 2.30 when two fitted parameters
         delta = np.abs( cosmo_likelihood(r_loc) - res_Lr['fun'] - THRESHOLD )
-        # print r_loc, cosmo_likelihood(r_loc),  res_Lr['fun']
+        #print(r_loc, cosmo_likelihood(r_loc),  res_Lr['fun'])
         return delta
 
     if res_Lr['x'] != 0.0:

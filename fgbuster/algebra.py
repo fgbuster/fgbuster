@@ -727,6 +727,8 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
         
     if N is None:
         return L_dB_dB
+    else:
+        return L_dB_dB + mism_term
     """
     else:
         D_A_dB_s = []
@@ -826,9 +828,6 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
 
         return fisher
     """        
-
-    else:
-        return L_dB_dB + mism_term
 
 
 def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):

@@ -280,44 +280,56 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
 
 #Added by Clement Leloup
-def harmonic_comp_sep(components, instrument, data, nside, invN=None, mask=None, **minimize_kwargs):
+def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask=None, noiseless=False, **minimize_kwargs):
     
-    instrument = standardize_instrument(instrument) #_force_keys_as_attributes(instrument)
-    lmax = 3 * nside - 1
+    #instrument = standardize_instrument(instrument)
+    #lmax = 3 * nside - 1
     n_comp = len(components)
     fsky = 1.0
     
-    if mask is not None:
-        data *= mask
-        fsky = float(mask.sum()) / mask.size
-    
     print('Computing alms')
     try:
-        assert np.any(instrument.Beams)
+        assert np.any(instrument.fwhm)
     except (KeyError, AssertionError):
         beams = None
     else:  # Deconvolve the beam
-        beams = instrument.Beams
+        beams = instrument.fwhm
 
-    alms = _get_alms(data, beams, lmax)[:,1:,:]
+    alms_unmasked = _get_alms(data, beams, lmax=lmax)
+    
+    if mask is not None:
+        data_masked = np.asarray([hp.alm2map(alms_unmasked[f], nside) for f in range(len(instrument.frequency))])
+        data_masked *= mask
+        fsky = float(mask.sum()) / mask.size
+        print(data.shape)
+        print(data_masked.shape)
+        alms = _get_alms(data_masked, lmax=lmax)[:,1:,:] # Here we take only polarization
+    else:
+        alms = alms_unmasked[:,1:,:] # Here we take only polarization
+        
+    
     cl_in = np.array([hp.alm2cl(alm) for alm in alms])
     ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
     ell = np.stack((ell, ell), axis=-1).reshape(-1) # For transformation into real alms
     #mask_lmin = [l < lmin for l in ell]
 
     #Add noise to data alms
-    #np.random.seed(5)
-    nlms_E = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
-    nlms_B = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
-    nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
-    alms += nlms
-
+    if not noiseless:
+        #np.random.seed(5)
+        nlms_E = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+        nlms_B = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+        nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
+        alms += nlms
+        
     #Produce alms from maps
-    alms = _format_alms(alms, lmax)#, mask_lmin)
+    alms = _format_alms(alms)
 
     #Format the inverse noise matrix
-    invNlm = np.array([invN[l,:,:] for l in ell])[:,np.newaxis,:,:]
-    #invNlm = invNlm[mask_lmin, ...]
+    if invN is not None:
+        invNlm = np.array([invN[l,:,:] for l in ell])[:,np.newaxis,:,:]
+        #invNlm = invNlm[mask_lmin, ...]
+    else:
+        invNlm = None
 
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components, instrument)
     if not len(x0):
@@ -570,8 +582,9 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
 
 #Added by Clement Leloup
 #Format alms so that they are real and masked
-def _format_alms(alms, lmax, mask_lmin=None):
+def _format_alms(alms, lmin=0):
 
+    lmax = hp.Alm.getlmax(alms.shape[-1])
     alms = np.asarray(alms, order='C')
     alms = alms.view(np.float64)
     em = hp.Alm.getlm(lmax)[1]
@@ -583,11 +596,24 @@ def _format_alms(alms, lmax, mask_lmin=None):
     alms[..., mask_alms] = 0  # Thus no contribution to the spectral likelihood
     alms = np.swapaxes(alms, 0, -1)
 
-    if mask_lmin is not None:
+    if lmin != 0:
+        ell = hp.Alm.getlm(lmax)[0]
+        ell = np.stack((ell, ell), axis=-1).reshape(-1)
+        mask_lmin = [l < lmin for l in ell]
         alms[mask_lmin, ...] = 0
 
     return alms
 
+#Transform back real alms into complex alms
+def _r_to_c_alms(alms):
+
+    alms = np.asarray(alms, order='C').view(np.complex128)
+    lmax = hp.Alm.getlmax(alms.shape[-1])
+    em = hp.Alm.getlm(lmax)[1]
+    mask_em = [m != 0 for m in em]
+    alms[..., mask_em] /= np.sqrt(2)
+
+    return alms
 
 
 def _harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
@@ -894,8 +920,17 @@ def _get_alms(data, beams=None, lmax=None, weights=None, smoothing=False, iter=3
 
     if beams is not None:
         logging.info('Correcting alms for the beams')
-        for fwhm, alm in zip(beams, alms):
-            bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax, pol=(alm.ndim==2))
+        for f in np.arange(alms.shape[0]):
+            alm = alms[f]
+        
+            #for fwhm, alm in zip(beams, alms):
+
+            if beams.ndim == 1:
+                fwhm = beams[f]
+                bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax, pol=(alm.ndim==2))
+            else:
+                bl = beams[f].T
+                
             if alm.ndim == 1:
                 alm = [alm]
                 bl = [bl]
@@ -1164,7 +1199,8 @@ def _get_prewhiten_factors(instrument, data_shape, nside):
         if len(data_shape) < 3 or data_shape[1] == 1:
             sens = instrument.depth_i
         elif data_shape[1] == 2:
-            sens = instrument.depth_p
+            #sens = instrument.depth_p
+            sens = np.stack((instrument.depth_p, instrument.depth_p))
         elif data_shape[1] == 3:
             sens = np.stack(
                 (instrument.depth_i, instrument.depth_p, instrument.depth_p))
