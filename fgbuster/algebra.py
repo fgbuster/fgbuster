@@ -47,6 +47,7 @@ In that case, you have two options
 #     - _foo_svd doesn't perform all the checks that foo is required to do
 #     - foo can return the SVD, which can then be reused in _bar_svd(...)
 
+import logging
 import inspect
 from time import time
 import six
@@ -941,7 +942,11 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
 
     # Gather minmize arguments
     if disp and 'callback' not in minimize_kwargs:
-        minimize_kwargs['callback'] = verbose_callback()
+        if 'checkpoint' in minimize_kwargs:
+            minimize_kwargs['callback'] = checkpoint_callback(**minimize_kwargs['checkpoint'])
+            del minimize_kwargs['checkpoint']
+        else:
+            minimize_kwargs['callback'] = verbose_callback()
 
     # Likelihood maximization
     res = sp.optimize.minimize(fun, *minimize_args, **minimize_kwargs)
@@ -949,7 +954,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     # Gather results
     u_e_v_last, A_dB_last, x_last, pw_d = last_values
     if not np.all(x_last[0] == res.x):
-        fun(res.x) #  Make sure that last_values refer to the minimum
+        fun(res.x)  # Make sure that last_values refer to the minimum
 
     res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
@@ -1184,6 +1189,21 @@ def _indexed_matrix(matrix, data_shape, data_indexing):
             else:
                 matrix_indexing.append(indexing)
     return matrix[tuple(matrix_indexing)]
+
+
+def checkpoint_callback(start=0, delta=1, odir='./'):
+    logging.warn(f'Checkpoint callback active: starting from iteration {start}')
+    logging.warn('[The logs of the minimizer always start from 0]')
+    i_iter = [start]
+
+    def callback(xk):
+        i_iter[0] += 1
+        if i_iter[0] % delta == 0:
+            fn = f'{odir}/iter_{i_iter[0]}'
+            np.save(fn, xk)
+            logging.warn(fn)
+
+    return callback
 
 
 def verbose_callback():
