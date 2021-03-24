@@ -18,6 +18,9 @@
 
 """
 import logging
+from glob import glob
+import os.path as op
+import os
 import numpy as np
 from scipy.optimize import OptimizeResult
 import healpy as hp
@@ -307,6 +310,21 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
         The *i*-th element is the clusters map of the *i*-th parameter.
         A cluster map is a map of integers that, for each pixel defines the
         index of the cluster the pixel belongs to.
+    minimize_kwargs: dict
+        kwargs of `scipy.optimize.minimize`. In addition it allows for 
+        saving/restoring checkpoints. Add the following dictionary to 
+        `minimize_kwargs['checkpoint']`::
+
+            # The values are the defaults
+            {
+                'odir': './',  
+                # Save iteraton x to `odir/iter_x.npy`
+                'start': 0,  
+                # Start from this iteration, If not provided use that largest
+                # stored iteration
+                'delta': 1,
+                # Save a checkpoint every `delta` iterations
+            }
         
     Returns
     -------
@@ -368,9 +386,26 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
     extra_dim = [1] * (data.ndim - 2)
     unpack = lambda x: [m.reshape(-1, *extra_dim) for m in array2maps(x)]
 
-    x0 = [x for c in components for x in c.defaults]
-    x0 = [np.full(n_cluster, px0) for n_cluster, px0 in zip(n_clusters, x0)]
-    x0 = np.concatenate(x0)
+    try:
+        checkpoint_dir = minimize_kwargs['checkpoint'].get('odir', './')
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        try:
+            x0 = np.load(op.join(checkpoint_dir, f"iter_{minimize_kwargs['checkpoint']['start']}.npy"))
+            logging.warn(f"Iteration number {minimize_kwargs['checkpoint']['start']} loaded")
+        except (KeyError, IOError):  # Either start is not set, or the file is missing
+            iter_files = glob(op.join(checkpoint_dir, 'iter_*.npy'))
+            iter_ids = [int(op.splitext(op.basename(f))[0].split('_')[1])
+                        for f in iter_files]
+            i_iter = max(iter_ids+[0])
+            logging.warn(f'Highest iteration number found is {i_iter}')
+            x0 = np.load(iter_files[iter_ids.index(i_iter)])
+            minimize_kwargs['checkpoint']['start'] = i_iter
+        if 'options' in minimize_kwargs and 'maxiter' in minimize_kwargs['options']:
+            minimize_kwargs['options']['maxiter'] -= i_iter
+    except (KeyError, ValueError):
+        x0 = [x for c in components for x in c.defaults]
+        x0 = [np.full(n_cluster, px0) for n_cluster, px0 in zip(n_clusters, x0)]
+        x0 = np.concatenate(x0)
 
     A = MixingMatrix(*components)
     assert A.n_param == len(patch_ids), (
@@ -378,6 +413,13 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
         % (len(A.defaults), len(patch_ids)))
     A_ev = A.evaluator(instrument.frequency, unpack)
     A_dB_ev = A.diff_evaluator(instrument.frequency, unpack)
+    end_w_last_checkpoint = (
+        'options' in minimize_kwargs
+        and 'maxiter' in minimize_kwargs['options']
+        and minimize_kwargs['options']['maxiter'] < 1
+    )
+    if end_w_last_checkpoint:
+        A_ev = A_ev(x0)
 
     comp_of_dB = list(zip(A.comp_of_dB, patch_ids))
     bounds = minimize_kwargs.get('bounds')
@@ -387,6 +429,9 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
     # Component separation
     res = alg.comp_sep(A_ev, data.T, invN, A_dB_ev, comp_of_dB, x0,
                        **minimize_kwargs)
+
+    if end_w_last_checkpoint:
+        res.x = x0
     # Craft output
     # 1) Apply the mask, if any
     # 2) Restore the ordering of the input data (pixel dimension last)
