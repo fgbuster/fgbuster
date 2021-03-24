@@ -16,11 +16,13 @@
 
 """ Forecasting toolbox
 """
+import os
 import os.path as op
 import numpy as np
 import pylab as pl
 import healpy as hp
 import scipy as sp
+from tqdm import tqdm
 from .algebra import comp_sep, W_dBdB, W_dB, W, _mmm, _utmv, _mmv
 from .mixingmatrix import MixingMatrix
 from .observation_helpers import standardize_instrument
@@ -33,6 +35,157 @@ __all__ = [
 
 CMB_CL_FILE = op.join(
      op.dirname(__file__), 'templates/Cls_Planck2018_%s.fits')
+
+
+def _get_statistical_information(components, freqs,
+                                 var_t=None, var_p=None):
+    assert not (var_t is None and var_p is None), (
+        "Both var_t and var_p are None")
+    mm = MixingMatrix(*components)
+    n_stokes = int(var_t is not None) + 2 * int(var_p is not None)
+    n_freq = freqs.size
+    n_comp = len(components)
+    n_param = mm.n_param
+    A = np.zeros((n_freq * n_stokes, n_comp * n_stokes + n_param))
+    diff = np.hstack(mm.diff(freqs, *(mm.defaults)))
+    A_single_stokes = mm.eval(freqs, *(mm.defaults))
+    for i in range(n_stokes):
+        i_row = n_freq * i
+        i_col = n_comp * i
+        A[i_row:i_row+n_freq, i_col:i_col+n_comp] = A_single_stokes
+        A[i_row:i_row+n_freq, -n_param:] = diff
+
+    invN_diag = [var for var in [var_t, var_p, var_p] if var is not None]
+    invN_diag = 1 / np.concatenate(invN_diag)
+
+    return np.einsum('fc,f,fk->ck', A, invN_diag, A)
+
+
+def _get_wn_shape(nside, nside_wn, path=op.join(op.dirname(__file__), 'cache')):
+    if nside == nside_wn:
+        return np.ones(3*nside)
+    elif nside_wn == 0:
+        res = np.zeros(3*nside)
+        res[0] = 1
+        return res
+
+    try:  # Return the cached value
+        return _get_wn_shape.cache[nside, nside_wn]
+    except KeyError:
+        pass
+    except AttributeError:
+        _get_wn_shape.cache = {}
+
+    try:  # Load cached value from file
+        filename = f'{path}/wn_{nside}_{nside_wn}.npy'
+        _get_wn_shape.cache[nside, nside_wn] = np.load(filename)
+        return _get_wn_shape(nside, nside_wn)
+    except IOError:
+        pass
+
+    # Calculation
+    NSIM = 10000
+    sims = []
+    for i in tqdm(range(NSIM), f'{nside}-{nside_wn}'):
+        wn = np.random.normal(size=hp.nside2npix(nside))
+        wn = hp.ud_grade(wn, nside_wn)
+        wn = hp.ud_grade(wn, nside)
+        sims.append(hp.anafast(wn))
+    mean = np.array(sims).mean(0)
+    mean /= np.radians(hp.nside2resol(nside, arcmin=True) / 60.)**2
+    os.makedirs(path, exist_ok=True)
+    np.save(filename, mean)
+    return _get_wn_shape(nside, nside_wn)
+
+
+def get_post_comp_sep_power(
+        components, instrument, nside, nsides, nosum_and_white_noise=False,
+        temp=False, pol=False, target_comp='CMB'):
+    """ Multi-resolution statistical noise and foregrounds
+
+    Parameters
+    ----------
+    components: list
+        List storing the :class:`Component` s of the mixing matrix
+    instrument:
+        Object that provides the following as a key or an attribute.
+
+        - **frequency**
+        - **depth_i** or **depth_p** in uK CMB
+
+        They can be anything that is convertible to a float numpy array.
+    nside: nside of the data map. The output spectra will have
+        ``lmax = 3 * nside - 1``
+    nsides: seq
+        Specify the ``nside`` for each free parameter of the components
+    nosum_and_white_noise: bool
+        If True, return the contribution from each of the nsides instead of
+        their sum
+    temp: bool
+        If True, assume temperature in the component separation.
+    pol: bool
+        If True, assume polarization in the component separation.
+    target_comp: str
+        Name of the component in ``components`` of which the power spectrum is
+        computed
+
+    Returns
+    -------
+    result: array
+        Power spectrum of the post-multiresolution component separation
+        statistical noise and foregrounds.
+	The shape is (stokes, ell). The number of stokes can be 1, 2 or 3,
+        corresponding to ``temp``, ``pol`` or both being True.
+        Note that the two polarization stokes are identical.
+
+        If ``nosum_and_white_noise`` is True return the contributions from the
+        individual *unique* nsides, together with the corresponding white noise
+        levels.
+
+    """
+    assert temp or pol, "At least one of temp and pol has to be True"
+    nsides = np.array(nsides)
+    instrument = standardize_instrument(instrument)
+    freqs = instrument.frequency
+    if temp:
+        var_t = np.radians(instrument.depth_i / 60)**2
+    else:
+        var_t = None
+    if pol:
+        var_p = np.radians(instrument.depth_p / 60)**2
+    else:
+        var_p = None
+    info = _get_statistical_information(components, freqs, var_t, var_p)
+    mask = np.full(len(info), True)
+    wn_levels = []
+    noise_shapes = []
+
+    n_stokes = temp + 2 * pol
+    cmb_idx = np.arange(n_stokes) * len(components)
+    cmb_idx += [type(c).__name__ for c in components].index(target_comp)
+
+    def cmb_noise(mask):
+        inv_info = np.linalg.inv(info[mask][:, mask])
+        return np.diag(inv_info)[cmb_idx]
+
+    for n in np.unique(nsides):
+        mask[-len(nsides):] = nsides >= n
+        wn_levels.append(cmb_noise(mask))
+        noise_shapes.append(_get_wn_shape(nside, n))
+
+    mask[-len(nsides):] = False
+    wn_levels.append(cmb_noise(mask))
+    wn_levels = np.array(wn_levels)  # (nside, stokes)
+    noise_shapes.append(_get_wn_shape(nside, nside))
+    wn_shapes = np.array(noise_shapes)  # (nside, ell)
+
+    wn_shapes[1:] -= wn_shapes[:-1]
+
+    terms = np.einsum('ns,nl->snl', wn_levels, wn_shapes)
+
+    if nosum_and_white_noise:
+        return terms, wn_levels  # (stokes, nsides, ell)
+    return terms.sum(1)
 
 
 def xForecast(components, instrument, d_fgs, lmin, lmax,
