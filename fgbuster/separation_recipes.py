@@ -908,7 +908,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
 
 
 #Modified by Clement Leloup
-def _get_alms(data, beams=None, lmax=None, weights=None, smoothing=False, iter=3):
+def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
     alms = []
     for f, fdata in enumerate(data):
         if weights is None:
@@ -936,10 +936,7 @@ def _get_alms(data, beams=None, lmax=None, weights=None, smoothing=False, iter=3
                 bl = [bl]
 
             for i_alm, i_bl in zip(alm, bl.T):
-                if smoothing:
-                    hp.almxfl(i_alm, i_bl, inplace=True)
-                else:
-                    hp.almxfl(i_alm, 1.0/i_bl, inplace=True)
+                hp.almxfl(i_alm, 1.0/i_bl, inplace=True)
                     
     return alms
 

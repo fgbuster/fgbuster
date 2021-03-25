@@ -220,9 +220,9 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         ax.loglog(ell, res.stat, 'DarkOrange', label='statistical residuals', linewidth=2.0)
         ax.loglog(ell, res.bias, 'DarkOrange', linestyle='--', label='systematic residuals', linewidth=2.0)
         ax.loglog(ell, res.noise, 'DarkBlue', linestyle='--', label='noise after component separation', linewidth=2.0)
-        ax.legend()
+        ax.legend(loc='upper right', prop={'size':15})
         ax.set_xlabel('$\ell$', fontsize=20)
-        ax.set_ylabel('$C_\ell$ [$\mu$K-arcmin]', fontsize=20)
+        ax.set_ylabel('$C_\ell$ [$\mu \mathrm{K}^{2}$]', fontsize=20)
         ax.set_xlim(lmin,lmax)
 
     ## 5.1. data 
@@ -353,9 +353,223 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     return res
 
 
-#Added by Clement Leloup
-def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None, fsky=1.0, Alens=1.0, r=0.001, Nl=None, make_figure=False, **minimize_kwargs):
 
+#Added by Clement Leloup
+def residuals_from_dbeta(components, instrument, alms_fgs, lmin, lmax, x0, sigma, invNl=None, fsky=1.0, Alens=1.0, r=0.001, **minimize_kwargs):
+
+    if x0 is None:
+        x0 = np.array([x for c in components for x in c.defaults])
+
+    # Check dimension of sigma matches dimension of covariance of spectral parameters
+    assert sigma.ndim == 2
+    assert x0.shape[0] == sigma.shape[0] == sigma.shape[1]
+    
+    
+    print("Covariance matrix of spectral parameters = ", sigma)
+    
+    # Preliminaries
+    instrument = standardize_instrument(instrument) #_force_keys_as_attributes(instrument)
+    
+    ell_em = hp.Alm.getlm(lmax, np.arange(alms_fgs.shape[-1]))[0]
+    ell_em = np.stack((ell_em, ell_em), axis=-1).reshape(-1) # For transformation into real alms
+
+    #Transform healpy complex alms into real alms
+    alms_fgs = _format_alms(alms_fgs, lmin)
+
+    #Format the inverse noise matrix
+    if invNl is None:
+        invNl = harmonic_noise_cov(instrument, lmax)
+        invNl = np.array([np.diag(invNl[:,l]) for l in np.arange(invNl.shape[1])])
+
+
+    n_stokes = alms_fgs.shape[1]
+    n_freqs = alms_fgs.shape[2]
+    ell = np.arange(lmin, lmax+1)
+    #print('fsky = ', fsky)
+
+    ############################################################################
+    # 1. Compute mixing matrix and its derivatives
+    #print('======= COMPUTATION OF MIXING MATRIX =======')
+    A = MixingMatrix(*components)
+    A_maxL = A.evaluator(instrument.frequency)(x0)
+    A_dB_maxL = A.diff_evaluator(instrument.frequency)(x0)
+    A_dBdB_maxL = A.diff_diff_evaluator(instrument.frequency)(x0)
+    #print('x = ', x0)
+
+    ############################################################################
+    # 2. Estimate noise after component separation
+    ### A^T N_ell^-1 A
+    #print('======= ESTIMATION OF NOISE AFTER COMP SEP =======')
+    i_cmb = A.components.index('CMB')
+    AtNA = np.linalg.inv(_mtmm(A_maxL, invNl, A_maxL))
+    Cl_noise = np.linalg.inv(_mtmm(A_maxL, invNl, A_maxL))[lmin:, i_cmb, i_cmb]
+    
+    ############################################################################
+    # 3. Compute spectra of the input foregrounds maps
+    ### TO DO: which size for Cl_fgs??? N_spec != 1 ? 
+    #print ('======= COMPUTATION OF CL_FGS =======')
+    if n_stokes == 3:  
+        d_spectra = alms_fgs
+    else:  # Only P is provided, add T for map2alm
+        d_spectra = np.zeros((alms_fgs.shape[0], 3, n_freqs), dtype=alms_fgs.dtype)
+        d_spectra[:, 1:] = alms_fgs
+
+    # Compute cross-spectra
+    almBs = np.asarray(d_spectra.T, order='C').view(np.complex128)[:,2,:] #Only B-modes
+    #almBs = [hp.map2alm(freq_map, lmax=lmax, iter=10)[2] for freq_map in d_spectra]
+    Cl_fgs = np.zeros((n_freqs, n_freqs, lmax+1), dtype=alms_fgs.dtype)
+    for f1 in range(n_freqs):
+        for f2 in range(n_freqs):
+            if f1 > f2:
+                Cl_fgs[f1, f2] = Cl_fgs[f2, f1]
+            else:
+                Cl_fgs[f1, f2] = hp.alm2cl(almBs[f1], almBs[f2], lmax=lmax)
+
+    Cl_fgs = Cl_fgs[..., lmin:] / fsky
+
+    ############################################################################
+    # 4. Estimate the statistical and systematic foregrounds residuals
+    #print('======= ESTIMATION OF STAT AND SYS RESIDUALS =======')
+
+
+    W_maxL = W(A_maxL, invN=invNl)[lmin:, i_cmb, :] #Careful, in this case, W depends on ell
+    W_dB_maxL = W_dB(A_maxL, A_dB_maxL, A.comp_of_dB, invN=invNl)[..., lmin:, i_cmb, :]
+    W_dBdB_maxL = W_dBdB(A_maxL, A_dB_maxL, A_dBdB_maxL, A.comp_of_dB, invN=invNl)[..., lmin:, i_cmb, :]
+    V_maxL = np.einsum('ij,ij...->...', sigma, W_dBdB_maxL)
+
+    # Check dimentions
+    assert ((n_freqs,) == W_maxL.shape[1:] == W_dB_maxL.shape[2:]
+                       == W_dBdB_maxL.shape[3:] == V_maxL.shape[1:])
+    assert (len(A.params) == W_dB_maxL.shape[0] 
+                            == W_dBdB_maxL.shape[0] == W_dBdB_maxL.shape[1])
+
+    # format in right shape
+    W_dB_maxL = np.swapaxes(W_dB_maxL, 0, 1)
+    W_dBdB_maxL = np.swapaxes(W_dBdB_maxL, 0, 2)
+    
+    # elementary quantities defined in Stompor, Errard, Poletti (2016)
+    Cl_xF = {}
+    Cl_xF['yy'] = _utmv(W_maxL, Cl_fgs.T, W_maxL)  # (ell,)
+    Cl_xF['YY'] = _mmm(W_dB_maxL, Cl_fgs.T, _T(W_dB_maxL))  # (ell, param, param)
+    Cl_xF['yz'] = _utmv(W_maxL, Cl_fgs.T, V_maxL )  # (ell,)
+    Cl_xF['Yy'] = _mmv(W_dB_maxL, Cl_fgs.T, W_maxL)  # (ell, param)
+    Cl_xF['Yz'] = _mmv(W_dB_maxL, Cl_fgs.T, V_maxL)  # (ell, param)
+    
+    ###############################################################################
+    # 5. Plug into the cosmological likelihood
+    #print ('======= OPTIMIZATION OF COSMO LIKELIHOOD =======')
+    Cl_fid = {}
+    Cl_fid['BB'] = _get_Cl_cmb(Alens=Alens, r=r)[2][lmin:lmax+1]
+    Cl_fid['BuBu'] = _get_Cl_cmb(Alens=0.0, r=1.0)[2][lmin:lmax+1]
+    Cl_fid['BlBl'] = _get_Cl_cmb(Alens=1.0, r=0.0)[2][lmin:lmax+1]
+
+    ## 5.1. data 
+    Cl_obs = Cl_fid['BB'] + Cl_noise
+    dof = (2 * ell + 1) * fsky
+    YY = Cl_xF['YY']
+    tr_SigmaYY = np.einsum('ij, lji -> l', sigma, YY)
+
+    ## 5.2. modeling
+    def cosmo_likelihood(r_):
+        # S16, Appendix C
+        Cl_model = Cl_fid['BlBl'] * Alens + Cl_fid['BuBu'] * r_ + Cl_noise
+        dof_over_Cl = dof / Cl_model
+        ## Eq. C3
+        U = np.linalg.inv(np.linalg.inv(sigma) + np.dot(YY.T, dof_over_Cl))
+        
+        ## Eq. C9
+        first_row = np.sum(dof_over_Cl * (
+            Cl_obs * (1 - np.einsum('ij, lji -> l', U, YY) / Cl_model) 
+            + tr_SigmaYY))
+        second_row = - np.einsum(
+            'l, m, ij, mjk, kf, lfi',
+            dof_over_Cl, dof_over_Cl, U, YY, sigma, YY)
+        trCinvC = first_row + second_row
+       
+        ## Eq. C10
+        first_row = np.sum(dof_over_Cl * (Cl_xF['yy'] + 2 * Cl_xF['yz']))
+        ### Cyclicity + traspose of scalar + grouping terms -> trace becomes
+        ### Yy_ell^T U (Yy + 2 Yz)_ell'
+        trace = np.einsum('li, ij, mj -> lm',
+                          Cl_xF['Yy'], U, Cl_xF['Yy'] + 2 * Cl_xF['Yz'])
+        second_row = - _utmv(dof_over_Cl, trace, dof_over_Cl)
+        trECinvC = first_row + second_row
+
+        ## Eq. C12
+        logdetC = np.sum(dof * np.log(Cl_model)) - np.log(np.linalg.det(U))
+
+        # Cl_hat = Cl_obs + tr_SigmaYY
+
+        ## Bringing things together
+        return trCinvC + trECinvC + logdetC
+
+
+    # Likelihood maximization
+    r_grid = np.logspace(-5,5,num=500)
+    logL = np.array([cosmo_likelihood(r_loc) for r_loc in r_grid])
+    ind_r_min = np.argmin(logL)
+    r0 = r_grid[ind_r_min]
+    if ind_r_min == 0:
+        bound_0 = 0.0
+        bound_1 = r_grid[1]
+    elif ind_r_min == len(r_grid)-1:
+        bound_0 = r_grid[-2]
+        bound_1 = 1.0
+    else:
+        bound_0 = r_grid[ind_r_min-1]
+        bound_1 = r_grid[ind_r_min+1]
+    #print('bounds on r = ', bound_0, ' / ', bound_1)
+    #print('starting point = ', r0)
+    res_Lr = sp.optimize.minimize(cosmo_likelihood, [r0], bounds=[(bound_0,bound_1)], **minimize_kwargs)
+    #print ('    ===>> fitted r = ', res_Lr['x'])
+
+    print ('======= ESTIMATION OF SIGMA(R) =======')
+    def sigma_r_computation_from_logL(r_loc):
+        THRESHOLD = 1.00
+        # THRESHOLD = 2.30 when two fitted parameters
+        delta = np.abs( cosmo_likelihood(r_loc) - res_Lr['fun'] - THRESHOLD )
+        #print(r_loc, cosmo_likelihood(r_loc),  res_Lr['fun'])
+        return delta
+
+    if res_Lr['x'] != 0.0:
+        sr_grid = np.logspace(np.min(np.log10(res_Lr['x']), -3.0), np.max(np.log10(res_Lr['x']), 0), num=25)
+    else:
+        sr_grid = np.logspace(-5,0,num=25)
+
+    slogL = np.array([sigma_r_computation_from_logL(sr_loc) for sr_loc in sr_grid ])
+    ind_sr_min = np.argmin(slogL)
+    sr0 = sr_grid[ind_sr_min]
+    #print('ind_sr_min = ', ind_sr_min)
+    #print('sr_grid[ind_sr_min-1] = ', sr_grid[ind_sr_min-1])
+    #print('sr_grid[ind_sr_min+1] = ', sr_grid[ind_sr_min+1])
+    #print('sr_grid = ', sr_grid)
+    if ind_sr_min == 0:
+        #print('case # 1')
+        bound_0 = res_Lr['x']
+        bound_1 = sr_grid[1]
+    elif ind_sr_min == len(sr_grid)-1:
+        #print('case # 2')
+        bound_0 = sr_grid[-2]
+        bound_1 = 1.0
+    else:
+        #print('case # 3')
+        bound_0 = sr_grid[ind_sr_min-1]
+        bound_1 = sr_grid[ind_sr_min+1]
+    #print('bounds on sigma(r) = ', bound_0, ' / ', bound_1)
+    #print('starting point = ', sr0)
+    res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, sr0,
+            bounds=[(bound_0.item(),bound_1.item())],
+            # item required for test to pass but reason unclear. sr_grid has
+            # extra dimension?
+            **minimize_kwargs)
+    print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
+
+    return res_Lr['x'], res_sr['x'] - res_Lr['x']
+
+
+#Added by Clement Leloup
+def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None, fsky=1.0, Alens=1.0, r=0.001, Nl=None, make_figure=False, lite=False, **minimize_kwargs):
+    
     # Preliminaries
     instrument = standardize_instrument(instrument) #_force_keys_as_attributes(instrument)
     
@@ -382,7 +596,7 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     #mask = alms_fgs[0, 0, :] != 0.
     #fsky = mask.astype(float).sum() / mask.size
     ell = np.arange(lmin, lmax+1)
-    print('fsky = ', fsky)
+    #print('fsky = ', fsky)
 
     ############################################################################
     # 1. Component separation using the noise-free foregrounds templare
@@ -398,6 +612,8 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
 
     x0 = np.array([x for c in components for x in c.defaults])
 
+    #print(x0, A_ev(x0), A_dB_ev(x0))
+    
     if n_stokes == 3:  # if T and P were provided, extract P
         d_comp_sep = alms_fgs[:, 1:, :]
     else:
@@ -411,13 +627,18 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     res.params = A.params
     res.s = res.s.T
 
+    #print(res)
+    
+    if lite:
+        return res
+    
     #Test when parameters are at true value
     #res.x = x0
     
     A_maxL = A_ev(res.x)
     A_dB_maxL = A_dB_ev(res.x)
     A_dBdB_maxL = A.diff_diff_evaluator(instrument.frequency)(res.x)
-    print('res.x = ', res.x)
+    #print('res.x = ', res.x)
 
     ############################################################################
     # 2. Estimate noise after component separation
@@ -516,13 +737,13 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
         ax0.set_title(r'$\ell_{\min}=$'+str(lmin)+\
             r'$ \rightarrow \ell_{\max}=$'+str(lmax), fontsize=16)
         ax.loglog(ell, Cl_fid['BB'], color='DarkGray', linestyle='-', label='BB tot', linewidth=2.0)
-        ax.loglog(ell, Cl_fid['BuBu']*r , color='DarkGray', linestyle='--', label='primordial BB for r='+str(r), linewidth=2.0)
+        #ax.loglog(ell, Cl_fid['BuBu']*r , color='DarkGray', linestyle='--', label='primordial BB for r='+str(r), linewidth=2.0)
         ax.loglog(ell, res.stat, 'DarkOrange', label='statistical residuals', linewidth=2.0)
         ax.loglog(ell, res.bias, 'DarkOrange', linestyle='--', label='systematic residuals', linewidth=2.0)
         ax.loglog(ell, res.noise, 'DarkBlue', linestyle='--', label='noise after component separation', linewidth=2.0)
-        ax.legend()
+        ax.legend(loc='upper right', prop={'size':15})
         ax.set_xlabel('$\ell$', fontsize=20)
-        ax.set_ylabel('$C_\ell$ [$\mu$K-arcmin]', fontsize=20)
+        ax.set_ylabel('$C_\ell$ [$\mu \mathrm{K}^{2}$]', fontsize=20)
         ax.set_xlim(lmin,lmax)
 
     ## 5.1. data 
@@ -601,6 +822,7 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
 
     if res_Lr['x'] != 0.0:
         sr_grid = np.logspace(np.log10(res_Lr['x']), 0, num=25)
+        #sr_grid = np.logspace(np.min(np.log10(res_Lr['x']), -3.0), np.max(np.log10(res_Lr['x']), 0), num=25)
     else:
         sr_grid = np.logspace(-5,0,num=25)
 
