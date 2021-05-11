@@ -627,6 +627,7 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     res.params = A.params
     res.s = res.s.T
 
+    res.A = A_ev(res.x)
     #print(res)
     
     if lite:
