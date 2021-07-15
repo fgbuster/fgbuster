@@ -900,13 +900,19 @@ def _get_Cl_noise(instrument, A, lmax):
     return inv_AtNA.swapaxes(-3, -1)
 
 #Added by Clement Leloup
-def harmonic_noise_cov(instrument, lmax):
+def harmonic_noise_cov(instrument, lmax, bl=None):
 
-    try:
-        bl = np.array([hp.gauss_beam(np.radians(b/60.), lmax=lmax)
-                       for b in instrument.fwhm])
-    except AttributeError:
-        bl = np.ones((len(instrument.frequency), lmax+1))
+    if bl is None:
+        try:
+            bl = np.array([hp.gauss_beam(np.radians(b/60.), lmax=lmax)
+                           for b in instrument.fwhm])
+        except AttributeError:
+            bl = np.ones((len(instrument.frequency), lmax+1))
+        #bl = np.repeat(bl[:,np.newaxis,:], 3, axis=1)
 
+    print(bl.shape)
+    exit()
+            
     nl = (np.array(bl) / np.radians(instrument.depth_p/60.)[:, np.newaxis])**2
     return nl
+                                                   
