@@ -585,7 +585,9 @@ def harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
     mm = MixingMatrix(*components)
     A = mm.eval(instrument.frequency)
 
+    res = OptimizeResult()
     cov = _empirical_harmonic_covariance(alms)
+    res.cov = cov
     if lbins is not None:
         for lmin, lmax in zip(lbins[:-1], lbins[1:]):
             # Average the covariances in the bin
@@ -595,10 +597,10 @@ def harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
                 (dof / dof.sum() * cov[..., lmin:lmax]).sum(-1)
                 )[..., np.newaxis]
     cov = _regularized_inverse(cov.swapaxes(-1, -3))
+    res.inv_cov = cov
     ilc_filter = np.linalg.inv(A.T @ cov @ A) @ A.T @ cov
     del cov, dof
 
-    res = OptimizeResult()
     res.s = _apply_harmonic_W(ilc_filter, alms)
 
     # Craft output
