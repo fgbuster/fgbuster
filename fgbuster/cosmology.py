@@ -582,8 +582,10 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     #Format the inverse noise matrix
     if invNl is None:
         invNl = harmonic_noise_cov(instrument, lmax)
-        invNl = np.array([np.diag(invNl[:,l]) for l in np.arange(invNl.shape[1])])
-    invNlm = np.array([invNl[l,:,:] for l in ell_em])[:,np.newaxis,:,:]
+        invNl = np.array([[np.diag(invNl[:,st,l]) for st in np.arange(invNl.shape[1])] for l in np.arange(invNl.shape[2])])
+        #invNl = np.array([np.diag(invNl[:,l]) for l in np.arange(invNl.shape[1])])
+    invNlm = np.array([invNl[l,1:,:,:] for l in ell_em]) # Here we take only polarization
+    #invNlm = np.array([invNl[l,:,:] for l in ell_em])[:,np.newaxis,:,:]
 
     if Nl is not None:
         Nlm = np.array([Nl[l,:,:] for l in ell_em])[:,np.newaxis,:,:]
@@ -908,9 +910,8 @@ def harmonic_noise_cov(instrument, lmax, bl=None):
                            for b in instrument.fwhm])
         except AttributeError:
             bl = np.ones((len(instrument.frequency), lmax+1))
-        #bl = np.repeat(bl[:,np.newaxis,:], 3, axis=1)
+        bl = np.repeat(bl[:,np.newaxis,:], 3, axis=1)
 
-    print(bl.shape)
-    exit()
-            
-    nl = (np.array(bl) / np.radians(instrument.depth_p/60.)[
+    nl = (np.array(bl) / np.radians(instrument.depth_p/60.)[:,np.newaxis,np.newaxis])**2
+
+    return nl
