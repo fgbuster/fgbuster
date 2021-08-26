@@ -29,6 +29,8 @@ from .observation_helpers import standardize_instrument
 
 
 __all__ = [
+    'get_statistical_information',
+    'get_post_comp_sep_power',
     'xForecast',
 ]
 
@@ -37,23 +39,78 @@ CMB_CL_FILE = op.join(
      op.dirname(__file__), 'templates/Cls_Planck2018_%s.fits')
 
 
-def _get_statistical_information(components, freqs,
-                                 var_t=None, var_p=None):
+def get_statistical_information(components, freqs, var_t=None, var_p=None,
+                                pol_angle=(0, 0, np.pi/4), pol_frac=(1, 1, 1)
+                                ):
+    """ Statistical information matrix
+
+    Parameters
+    ----------
+    components: list
+        List storing the :class:`Component` s of the mixing matrix
+    freqs: array
+        Frequencies
+    var_t: array_like
+        Variance of each temperature frequency. If ``None`` assume that
+        temperature is not involved in the component separation.
+    var_p: array_like
+        Variance of each polarization frequency. If ``None`` assume that
+        polarization is not involved in the component separation.
+    pol_angle: array_like
+        Polarization angle of each component.
+        Relevant only for the components that have non-linear parameters.
+        Relevant only if vat_p is not ``None``
+        (i.e., polarization is considered)
+    pol_frac: array_like
+        Polarization fraction of each component.
+        Relevant only for the components that have non-linear parameters.
+        Relevant only if vat_t and var_p are not ``None``
+        (i.e., both teperature and polarization are considered)
+
+    Returns
+    -------
+    result: ndarray
+        Square matrix with side ``(n_stokes * n_comp + n_par)``.
+        The information on the non-linear parameters should be scaled by the
+        amplitude of the corresponding component
+    """
     assert not (var_t is None and var_p is None), (
         "Both var_t and var_p are None")
-    mm = MixingMatrix(*components)
-    n_stokes = int(var_t is not None) + 2 * int(var_p is not None)
+    pol_angle = np.asarray(pol_angle)
+    pol_frac = np.asarray(pol_frac)
+    if var_t is None:
+        pol_frac[:] = 1
+
+    stokess = ''
+    n_stokes = 0
+    if var_t is not None:
+        stokess = stokess + 'T'
+        n_stokes = n_stokes + 1
+    if var_p is not None:
+        stokess = stokess + 'QU'
+        n_stokes = n_stokes + 2
+
     n_freq = freqs.size
     n_comp = len(components)
+    mm = MixingMatrix(*components)
     n_param = mm.n_param
     A = np.zeros((n_freq * n_stokes, n_comp * n_stokes + n_param))
     diff = np.hstack(mm.diff(freqs, *(mm.defaults)))
     A_single_stokes = mm.eval(freqs, *(mm.defaults))
-    for i in range(n_stokes):
+    for i, stokes in enumerate(stokess):
         i_row = n_freq * i
         i_col = n_comp * i
         A[i_row:i_row+n_freq, i_col:i_col+n_comp] = A_single_stokes
-        A[i_row:i_row+n_freq, -n_param:] = diff
+        diff_stokes = diff.copy()
+        if stokes == 'Q':
+            diff_stokes *= (pol_frac[mm.comp_of_dB]
+                            * np.cos(2 * pol_angle[mm.comp_of_dB])
+                            )
+        if stokes == 'U':
+            diff_stokes *= (pol_frac[mm.comp_of_dB]
+                            * np.sin(2 * pol_angle[mm.comp_of_dB])
+                            )
+        A[i_row:i_row+n_freq, -n_param:] = diff_stokes
 
     invN_diag = [var for var in [var_t, var_p, var_p] if var is not None]
     invN_diag = 1 / np.concatenate(invN_diag)
@@ -100,7 +157,9 @@ def _get_wn_shape(nside, nside_wn, path=op.join(op.dirname(__file__), 'cache')):
 
 def get_post_comp_sep_power(
         components, instrument, nside, nsides, nosum_and_white_noise=False,
-        temp=False, pol=False, target_comp='CMB'):
+        temp=False, pol=False, target_comp='CMB',
+        pol_angle=(0, 0, np.pi/2), pol_frac=(1, 1, 1)
+        ):
     """ Multi-resolution statistical noise and foregrounds
 
     Parameters
@@ -128,13 +187,23 @@ def get_post_comp_sep_power(
     target_comp: str
         Name of the component in ``components`` of which the power spectrum is
         computed
+    pol_angle: array_like
+        Polarization angle of each component.
+        Relevant only for the components that have non-linear parameters.
+        Relevant only if ``pol == true``
+        (i.e., polarization is considered)
+    pol_frac: array_like
+        Polarization fraction of each component.
+        Relevant only for the components that have non-linear parameters.
+        Relevant only if ``temp == pol == true``
+        (i.e., both polarization and temperature are considered)
 
     Returns
     -------
     result: array
         Power spectrum of the post-multiresolution component separation
         statistical noise and foregrounds.
-	The shape is (stokes, ell). The number of stokes can be 1, 2 or 3,
+    The shape is (stokes, ell). The number of stokes can be 1, 2 or 3,
         corresponding to ``temp``, ``pol`` or both being True.
         Note that the two polarization stokes are identical.
 
@@ -155,7 +224,8 @@ def get_post_comp_sep_power(
         var_p = np.radians(instrument.depth_p / 60)**2
     else:
         var_p = None
-    info = _get_statistical_information(components, freqs, var_t, var_p)
+    info = get_statistical_information(
+        components, freqs, var_t, var_p, pol_angle=pol_angle, pol_frac=pol_frac)
     mask = np.full(len(info), True)
     wn_levels = []
     noise_shapes = []
@@ -185,7 +255,7 @@ def get_post_comp_sep_power(
 
     if nosum_and_white_noise:
         return terms, wn_levels  # (stokes, nsides, ell)
-    return terms.sum(1)
+    return terms.sum(1)  # (stokes, ell)
 
 
 def xForecast(components, instrument, d_fgs, lmin, lmax,
