@@ -489,7 +489,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
     except (AttributeError, AssertionError):
         beams = None
     else:  # Deconvolve the beam
-        beams = instrument.Beams
+        beams = instrument.fwhm
 
     alms = _get_alms(data, beams, lmax, weights, iter=iter)
 
