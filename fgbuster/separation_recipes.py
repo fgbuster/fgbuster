@@ -485,7 +485,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
 
     logging.info('Computing alms')
     try:
-        assert np.any(instrument.Beams)
+        assert np.any(instrument.fwhm)
     except (AttributeError, AssertionError):
         beams = None
     else:  # Deconvolve the beam
