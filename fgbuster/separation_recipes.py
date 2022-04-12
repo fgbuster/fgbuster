@@ -421,7 +421,7 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     return res
 
 
-def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3, fwhm=10):
+def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3):
     """ Harmonic Internal Linear Combination
 
     Parameters
@@ -447,8 +447,6 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3,
 	will be assigned to it
     weights: array
         If provided data are multiplied by the weights map before computing alms
-    fwhm: float
-        arcmin fwhm of the output map
 
     Returns
     -------
@@ -487,7 +485,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3,
 
     logging.info('Computing alms')
     try:
-        assert np.any(instrument.Beams)
+        assert np.any(instrument.fwhm)
     except (AttributeError, AssertionError):
         beams = None
     else:  # Deconvolve the beam
@@ -502,7 +500,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3,
     alms = res.s
     res.s = np.empty((n_comp,) + data.shape[1:], dtype=data.dtype)
     for c in range(n_comp):
-        res.s[c] = hp.alm2map(alms[c], nside, fwhm=np.radians(fwhm/60))
+        res.s[c] = hp.alm2map(alms[c], nside)
 
     return res
 
