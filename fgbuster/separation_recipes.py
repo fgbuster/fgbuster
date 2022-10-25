@@ -34,6 +34,7 @@ __all__ = [
     'ilc',
     'harmonic_ilc',
     'harmonic_ilc_alm',
+    'harmonic_comp_sep',
     'adaptive_comp_sep',
     'multi_res_comp_sep',
 ]
@@ -307,30 +308,26 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask
     else:
         alms = alms_unmasked[:,1:,:] # Here we take only polarization
         
-    
     cl_in = np.array([hp.alm2cl(alm) for alm in alms])
     ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
     ell = np.stack((ell, ell), axis=-1).reshape(-1) # For transformation into real alms
     #mask_lmin = [l < lmin for l in ell]
 
-    #Add noise to data alms
-    if not noiseless:
-        #np.random.seed(5)
-        nlms_E = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
-        nlms_B = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
-        nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
-        alms += nlms
-        
-    #Produce alms from maps
-    alms = _format_alms(alms)
-
-    #Format the inverse noise matrix
     if invN is not None:
-        invNlm = np.array([invN[l,:,:] for l in ell])[:,np.newaxis,:,:]
-        #invNlm = invNlm[mask_lmin, ...]
+        ell_em = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
+        ell_em = np.stack((ell_em, ell_em), axis=-1).reshape(-1) # For transformation into real alms
+        invNlm = np.array([invN[l,1:,:,:] for l in ell_em]) # Here we take only polarization
+        if not noiseless:
+            nlms_E = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+            nlms_B = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
+            nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
+            alms += nlms
     else:
         invNlm = None
 
+    #Format alms to be used in comp sep
+    alms = _format_alms(alms)
+    
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components, instrument)
     if not len(x0):
         A_ev = A_ev()
