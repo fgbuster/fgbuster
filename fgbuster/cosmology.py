@@ -569,7 +569,7 @@ def residuals_from_dbeta(components, instrument, alms_fgs, lmin, lmax, x0, sigma
 
 #Added by Clement Leloup
 def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None, fsky=1.0, Alens=1.0, r=0.001, Nl=None, make_figure=False, lite=False, **minimize_kwargs):
-    
+
     # Preliminaries
     instrument = standardize_instrument(instrument) #_force_keys_as_attributes(instrument)
     
@@ -588,10 +588,12 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     #invNlm = np.array([invNl[l,:,:] for l in ell_em])[:,np.newaxis,:,:]
 
     if Nl is not None:
-        Nlm = np.array([Nl[l,:,:] for l in ell_em])[:,np.newaxis,:,:]
+        Nlm = np.array([Nl[l,1:,:,:] for l in ell_em])
     else:
         Nlm = None
 
+    print('3')
+        
     n_stokes = alms_fgs.shape[1]
     n_freqs = alms_fgs.shape[2]
     #invN = np.diag(hp.nside2resol(nside, arcmin=True) / (instrument.depth_p))**2
@@ -912,6 +914,4 @@ def harmonic_noise_cov(instrument, lmax, bl=None):
             bl = np.ones((len(instrument.frequency), lmax+1))
         bl = np.repeat(bl[:,np.newaxis,:], 3, axis=1)
 
-    nl = (np.array(bl) / np.radians(instrument.depth_p/60.)[:,np.newaxis,np.newaxis])**2
-
-    return nl
+    nl = (np.array(bl) / np.radians(instrument.depth_p/60.)[:,np.newaxis,np.newa

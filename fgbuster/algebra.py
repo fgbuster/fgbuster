@@ -570,6 +570,8 @@ def _mism_term_logL_dB_svd(u_e_v, N, A_dB):
     n_param = len(A_dB)
     mism_dB = np.empty(n_param)
     for i in range(n_param):
+        print(A_dB[i])
+        exit()
         H_dB = _mm(A_dB[i], _T(v)/e[..., np.newaxis, :])
         mism_dB[i] = np.sum(np.trace(_mmm(P, _mm(H_dB, _T(u)), N), axis1=-2, axis2=-1))
 
@@ -902,7 +904,7 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
                 _update_old(x)
             except np.linalg.linalg.LinAlgError:
                 print('SVD of A failed -> logL = -inf')
-                return np.inf
+                return np.inf            
             return - _logL_svd(u_e_v_old[0], pw_d[0]) - _mism_term_logL_svd(u_e_v_old[0], _mtmm(L[0], N_true, L[0]))
         
         if A_dB_ev is None:
@@ -1315,3 +1317,4 @@ def _get_from_caller(name):
     """
     caller = inspect.currentframe().f_back.f_back
     return caller.f_locals[name]
+      
