@@ -1243,6 +1243,24 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
     return res
 
 
+# Added by Clement Leloup
+def _format_A_dB(A_dB, x, size):
+    """ Format a mixing matrix derivative
+
+    The mixing matrix derivatives are stored as 1d array including only the column on which it acts.
+    This function reproduces the 2d shape of the derivatives.
+
+    """
+    
+    A_dB = np.asarray(A_dB)
+    A_dB_fmt = np.zeros((A_dB.shape[0], A_dB.shape[1], size+1))
+    x_ind = np.repeat(np.arange(1, size+1), x.shape[0]/size)
+
+    for i in np.arange(A_dB.shape[0]):
+        A_dB_fmt[i,:,x_ind[i]] = A_dB[i,:,0]
+
+    return A_dB_fmt
+
 def _indexed_matrix(matrix, data_shape, data_indexing):
     """ Indexing of a (possibly compressed) matrix
 
@@ -1317,4 +1335,4 @@ def _get_from_caller(name):
     """
     caller = inspect.currentframe().f_back.f_back
     return caller.f_locals[name]
-      
+                                                                                                                                                                                                                                 
