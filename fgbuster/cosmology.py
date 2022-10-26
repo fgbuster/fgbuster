@@ -914,4 +914,6 @@ def harmonic_noise_cov(instrument, lmax, bl=None):
             bl = np.ones((len(instrument.frequency), lmax+1))
         bl = np.repeat(bl[:,np.newaxis,:], 3, axis=1)
 
-    nl = (np.array(bl) / np.radians(instrument.depth_p/60.)[:,np.newaxis,np.newa
+    nl = (np.array(bl) / np.radians(instrument.depth_p/60.)[:,np.newaxis,np.newaxis])**2
+
+    return nl

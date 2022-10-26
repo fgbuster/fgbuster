@@ -858,6 +858,7 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
     x_old = [None]
     u_e_v_old = [None]
     A_dB_old = [None]
+    A_dB_big_old = [None]
     pw_d = [None]
 
     def _update_old(x):
@@ -867,8 +868,13 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
             if A_dB_ev is not None:
                 if L[0] is None:
                     A_dB_old[0] = A_dB_ev(x)
+                    A_dB_old[0] = _format_A_dB(A_dB_ev(x), x, A_ev(x).shape[-1])
                 else:
                     A_dB_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in A_dB_ev(x)]
+                    print(A_dB_ev(x))
+                    print(_format_A_dB(A_dB_ev(x), x, A_ev(x).shape[-1]))
+                    exit()
+                    A_dB_big_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in _format_A_dB(A_dB_ev, x, A_ev(x).shape[-1])]
             x_old[0] = x
             if pw_d[0] is None:  # If this is the first call, prewhiten d
                 if L[0] is None:
@@ -917,7 +923,7 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
                 except np.linalg.linalg.LinAlgError:
                     print('SVD of A failed -> logL_dB not updated')
                 return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
-                                      A_dB_old[0], comp_of_dB) - _mism_term_logL_dB_svd(u_e_v_old[0], _mtmm(L[0], N_true, L[0]), A_dB_old[0])
+                                      A_dB_old[0], comp_of_dB) - _mism_term_logL_dB_svd(u_e_v_old[0], _mtmm(L[0], N_true, L[0]), A_dB_big_old[0])
 
 
     return _inv_logL, _inv_logL_dB, (u_e_v_old, A_dB_old, x_old, pw_d)
@@ -1253,8 +1259,8 @@ def _format_A_dB(A_dB, x, size):
     """
     
     A_dB = np.asarray(A_dB)
-    A_dB_fmt = np.zeros((A_dB.shape[0], A_dB.shape[1], size+1))
-    x_ind = np.repeat(np.arange(1, size+1), x.shape[0]/size)
+    A_dB_fmt = np.zeros((A_dB.shape[0], A_dB.shape[1], size))
+    x_ind = np.repeat(np.arange(1, size), x.shape[0]/(size-1))
 
     for i in np.arange(A_dB.shape[0]):
         A_dB_fmt[i,:,x_ind[i]] = A_dB[i,:,0]
@@ -1335,4 +1341,3 @@ def _get_from_caller(name):
     """
     caller = inspect.currentframe().f_back.f_back
     return caller.f_locals[name]
-                                                                                                                                                                                                                                 
