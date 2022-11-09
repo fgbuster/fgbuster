@@ -573,6 +573,7 @@ def _mism_term_logL_dB_svd(u_e_v, N, A_dB):
         print(A_dB[i])
         exit()
         H_dB = _mm(A_dB[i], _T(v)/e[..., np.newaxis, :])
+        H_dB_2 = np.asarray([alg._mm(A_dB_x0[i], alg._T(vt_prime)) for i in np.arange(A_dB_x0.shape[0])])
         mism_dB[i] = np.sum(np.trace(_mmm(P, _mm(H_dB, _T(u)), N), axis1=-2, axis2=-1))
 
     return mism_dB
@@ -1324,9 +1325,4 @@ def verbose_callback():
             'Iter sec = %.2f' % (old_time - old_old_time[0]),
             'Cum sec = %.2f' % (old_time - start),
             ]
-        print('\t'.join(message))
-        old_old_fval[0] = old_fval
-        old_old_time[0] = old_time
-
-    print('Minimization started')
-    return callback
+  
