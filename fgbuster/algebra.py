@@ -1330,14 +1330,3 @@ def verbose_callback():
 
     print('Minimization started')
     return callback
-
-
-def _get_from_caller(name):
-    """ Get the *name* variable from the scope immediately above
-
-    NOTE
-    ----
-    Kludge for retrieving information from inside scipy.optimize.minimize
-    """
-    caller = inspect.currentframe().f_back.f_back
-    return caller.f_locals[name]

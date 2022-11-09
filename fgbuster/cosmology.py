@@ -591,8 +591,6 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
         Nlm = np.array([Nl[l,1:,:,:] for l in ell_em])
     else:
         Nlm = None
-
-    print('3')
         
     n_stokes = alms_fgs.shape[1]
     n_freqs = alms_fgs.shape[2]
