@@ -563,16 +563,19 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
 
 #Added by Clement Leloup
 def _mism_term_logL_dB_svd(u_e_v, N, A_dB):
+    
     u, e, v = u_e_v
-
+    vt_prime = _T(v)/e[..., np.newaxis, :]
+    
     P = np.eye(u.shape[-2])[np.newaxis, np.newaxis, ...] - _mm(u, _T(u))
     
     n_param = len(A_dB)
     mism_dB = np.empty(n_param)
     for i in range(n_param):
-        print(A_dB[i])
+        print(A_dB.shape, vt_prime)
         exit()
-        H_dB = _mm(A_dB[i], _T(v)/e[..., np.newaxis, :])
+        H_dB = alg._uvt(A_dB[i].reshape(A_dB.shape[1:-1]), alg._T(vt_prime)[..., comp_of_dB[i][0],:].reshape(alg._T(vt_prime).shape[:-1]))
+        #H_dB = _mm(A_dB[i], _T(v)/e[..., np.newaxis, :])
         mism_dB[i] = np.sum(np.trace(_mmm(P, _mm(H_dB, _T(u)), N), axis1=-2, axis2=-1))
 
     return mism_dB
@@ -868,13 +871,8 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
             if A_dB_ev is not None:
                 if L[0] is None:
                     A_dB_old[0] = A_dB_ev(x)
-                    A_dB_old[0] = _format_A_dB(A_dB_ev(x), x, A_ev(x).shape[-1])
                 else:
                     A_dB_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in A_dB_ev(x)]
-                    print(A_dB_ev(x))
-                    print(_format_A_dB(A_dB_ev(x), x, A_ev(x).shape[-1]))
-                    exit()
-                    A_dB_big_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in _format_A_dB(A_dB_ev, x, A_ev(x).shape[-1])]
             x_old[0] = x
             if pw_d[0] is None:  # If this is the first call, prewhiten d
                 if L[0] is None:
@@ -1341,3 +1339,4 @@ def _get_from_caller(name):
     """
     caller = inspect.currentframe().f_back.f_back
     return caller.f_locals[name]
+                                                       
