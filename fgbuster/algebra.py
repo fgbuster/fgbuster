@@ -82,6 +82,11 @@ def _inv(m):
     return result.reshape(m.shape)
 
 
+#Added by Clement Leloup
+def _uvt(u, v):
+    return np.einsum('...i,...j->...ij', u, v)
+
+
 def _mv(m, v):
     return np.einsum('...ij,...j->...i', m, v, optimize=OPTIMIZE)
 
@@ -562,18 +567,16 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
     return np.concatenate(diff)
 
 #Added by Clement Leloup
-def _mism_term_logL_dB_svd(u_e_v, N, A_dB):
+def _mism_term_logL_dB_svd(u_e_v, N, A_dB, comp_of_dB):
     u, e, v = u_e_v
-
+    vt_prime = _T(v)/e[..., np.newaxis, :]
+    
     P = np.eye(u.shape[-2])[np.newaxis, np.newaxis, ...] - _mm(u, _T(u))
     
     n_param = len(A_dB)
     mism_dB = np.empty(n_param)
     for i in range(n_param):
-        print(A_dB[i])
-        exit()
-        H_dB = _mm(A_dB[i], _T(v)/e[..., np.newaxis, :])
-        H_dB_2 = np.asarray([alg._mm(A_dB_x0[i], alg._T(vt_prime)) for i in np.arange(A_dB_x0.shape[0])])
+        H_dB = _uvt(A_dB[i].reshape(A_dB[i].shape[:-1]), _T(vt_prime)[..., comp_of_dB[i][0],:].reshape(_T(vt_prime).shape[:-1]))
         mism_dB[i] = np.sum(np.trace(_mmm(P, _mm(H_dB, _T(u)), N), axis1=-2, axis2=-1))
 
     return mism_dB
@@ -701,7 +704,7 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
         N = _mtmm(L, N, L)
     
     u, e, v = u_e_v
-    vprime = _T(v)/e[..., np.newaxis, :]
+    vt_prime = _T(v)/e[..., np.newaxis, :]
     P = np.eye(u.shape[-2])[np.newaxis, np.newaxis, ...] - _mm(u, _T(u))
 
     # if not _is_simple_comp_of_dB(comp_of_dB):
@@ -714,9 +717,9 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
 
         if N is not None:
             for j in range(len(A_dB)):
-                H_dB = _mm(A_dB[i], vprime)
-                H_dB_prime = _mm(A_dB[j], vprime)
-                H_dBdB = _mm(A_dBdB[i][j], vprime)
+                H_dB = _uvt(A_dB[i].reshape(A_dB[i].shape[:-1]), _T(vt_prime)[..., comp_of_dB[i][0],:].reshape(_T(vt_prime).shape[:-1]))
+                H_dB_prime = _uvt(A_dB[j].reshape(A_dB[j].shape[:-1]), _T(vt_prime)[..., comp_of_dB[j][0],:].reshape(_T(vt_prime).shape[:-1]))
+                H_dBdB = _uvt(A_dBdB[i][j].reshape(A_dBdB[i][j].shape[:-1]), _T(vt_prime)[..., comp_of_dB[i][0],:].reshape(_T(vt_prime).shape[:-1]))
 
                 m1 = _mmm(P, H_dBdB, _T(u))
                 m2 = - _mtmm(_mm(H_dB_prime, _T(u)), P, _mm(H_dB, _T(u)))
@@ -869,13 +872,8 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
             if A_dB_ev is not None:
                 if L[0] is None:
                     A_dB_old[0] = A_dB_ev(x)
-                    A_dB_old[0] = _format_A_dB(A_dB_ev(x), x, A_ev(x).shape[-1])
                 else:
                     A_dB_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in A_dB_ev(x)]
-                    print(A_dB_ev(x))
-                    print(_format_A_dB(A_dB_ev(x), x, A_ev(x).shape[-1]))
-                    exit()
-                    A_dB_big_old[0] = [_mtm(L[0], A_dB_i) for A_dB_i in _format_A_dB(A_dB_ev, x, A_ev(x).shape[-1])]
             x_old[0] = x
             if pw_d[0] is None:  # If this is the first call, prewhiten d
                 if L[0] is None:
@@ -924,7 +922,7 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
                 except np.linalg.linalg.LinAlgError:
                     print('SVD of A failed -> logL_dB not updated')
                 return - _logL_dB_svd(u_e_v_old[0], pw_d[0],
-                                      A_dB_old[0], comp_of_dB) - _mism_term_logL_dB_svd(u_e_v_old[0], _mtmm(L[0], N_true, L[0]), A_dB_big_old[0])
+                                      A_dB_old[0], comp_of_dB) - _mism_term_logL_dB_svd(u_e_v_old[0], _mtmm(L[0], N_true, L[0]), A_dB_old[0], comp_of_dB)
 
 
     return _inv_logL, _inv_logL_dB, (u_e_v_old, A_dB_old, x_old, pw_d)
