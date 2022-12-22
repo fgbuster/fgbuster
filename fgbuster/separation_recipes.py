@@ -296,7 +296,8 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask
     else:  # Deconvolve the beam
         beams = instrument.fwhm
 
-    alms_unmasked = _get_alms(data, beams, lmax=lmax)
+    #alms_unmasked = _get_alms(data, beams, lmax=lmax)
+    alms_unmasked = _get_alms(data, lmax=lmax)
     
     if mask is not None:
         data_masked = np.asarray([hp.alm2map(alms_unmasked[f], nside) for f in range(len(instrument.frequency))])
@@ -341,7 +342,8 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask
     res.params = params
     res.s = np.swapaxes(res.s, 0, 2)
     res.s[res.s == hp.UNSEEN] = 0.
-    res.s = np.asarray(res.s, order='C').view(np.complex128)
+    #res.s = np.asarray(res.s, order='C').view(np.complex128)
+    res.s = _r_to_c_alms(res.s)
     cl_out = np.array([hp.alm2cl(alm) for alm in res.s])
     res.cl_in = cl_in/fsky
     res.cl_out = cl_out/fsky
