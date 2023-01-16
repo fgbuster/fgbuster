@@ -586,7 +586,8 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
         #invNl = np.array([np.diag(invNl[:,l]) for l in np.arange(invNl.shape[1])])
     invNlm = np.array([invNl[l,1:,:,:] for l in ell_em]) # Here we take only polarization
     #invNlm = np.array([invNl[l,:,:] for l in ell_em])[:,np.newaxis,:,:]
-
+    invNl = invNl[:,2,:,:]
+    
     if Nl is not None:
         Nlm = np.array([Nl[l,1:,:,:] for l in ell_em])
     else:
@@ -653,12 +654,7 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
         Cl_noise = np.linalg.inv(_mtmm(A_maxL, invNl, A_maxL))[lmin:, i_cmb, i_cmb]
     else:
         Cl_noise = _mmm(AtNA, _mtmm(A_maxL, _mmm(invNl, Nl, invNl), A_maxL), AtNA)[lmin:, i_cmb, i_cmb]
-    '''
-    print(Cl_noise.shape)
-    print(Cl_noise_test.shape)
-    exit()
-    '''
-    
+
     ############################################################################
     # 3. Compute spectra of the input foregrounds maps
     ### TO DO: which size for Cl_fgs??? N_spec != 1 ? 
@@ -686,7 +682,6 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     # 4. Estimate the statistical and systematic foregrounds residuals
     print('======= ESTIMATION OF STAT AND SYS RESIDUALS =======')
 
-
     W_maxL = W(A_maxL, invN=invNl)[lmin:, i_cmb, :] #Careful, in this case, W depends on ell
     W_dB_maxL = W_dB(A_maxL, A_dB_maxL, A.comp_of_dB, invN=invNl)[..., lmin:, i_cmb, :]
     W_dBdB_maxL = W_dBdB(A_maxL, A_dB_maxL, A_dBdB_maxL, A.comp_of_dB, invN=invNl)[..., lmin:, i_cmb, :]
@@ -696,10 +691,10 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     #print((n_freqs,), W_maxL.shape, W_dB_maxL.shape, W_dBdB_maxL.shape, V_maxL.shape)
 
     # Check dimentions
-    assert ((n_freqs,) == W_maxL.shape[1:] == W_dB_maxL.shape[2:]
-                       == W_dBdB_maxL.shape[3:] == V_maxL.shape[1:])
+    assert ((n_freqs,) == W_maxL.shape[-1:] == W_dB_maxL.shape[-1:]
+            == W_dBdB_maxL.shape[-1:] == V_maxL.shape[-1:])
     assert (len(res.params) == W_dB_maxL.shape[0] 
-                            == W_dBdB_maxL.shape[0] == W_dBdB_maxL.shape[1])
+            == W_dBdB_maxL.shape[0] == W_dBdB_maxL.shape[1])
 
     # format in right shape
     W_dB_maxL = np.swapaxes(W_dB_maxL, 0, 1)
