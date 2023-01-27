@@ -282,6 +282,66 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
 #Added by Clement Leloup
 def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask=None, noiseless=False, **minimize_kwargs):
+
+    """ Basic component separation
+
+    Parameters
+    ----------
+    components: list
+        List storing the :class:`Component` s of the mixing matrix
+    instrument:
+        Object that provides the following as a key or an attribute.
+
+        - **frequency**
+        - **depth_i** or **depth_p** (optional, frequencies are inverse-noise
+          weighted according to these noise levels)
+
+        They can be anything that is convertible to a float numpy array.
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape *(n_freq, ..., n_pix).*
+        *...* can be
+
+        - absent or 1: temperature maps
+        - 2: polarization maps
+        - 3: temperature and polarization maps (see note)
+
+        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
+        neglected during the component separation process.
+    nside:
+        For each pixel of a HEALPix map with this nside, the non-linear
+        parameters are estimated independently
+
+    Returns
+    -------
+    result: dict
+        It includes
+
+        - **param**: *(list)* - Names of the parameters fitted
+        - **x**: *(ndarray)* - ``x[i]`` is the best-fit (map of) the *i*-th
+          parameter
+        - **Sigma**: *(ndarray)* - ``Sigma[i, j]`` is the (map of) the
+          semi-analytic covariance between the *i*-th and the *j*-th parameter.
+          It is meaningful only in the high signal-to-noise regime and when the
+          *cov* is the true covariance of the data
+        - **s**: *(ndarray)* - Component amplitude maps
+        - **mask_good**: *(ndarray)* - mask of the entries actually used in the
+          component separation
+
+    Note
+    ----
+
+    * During the component separation, a pixel is masked if at least one of
+      its frequencies is masked.
+    * If you provide temperature and polarization maps, they will constrain the
+      **same** set of parameters. In particular, separation is **not** done
+      independently for temperature and polarization. If you want an
+      independent fitting for temperature and polarization, please launch
+
+      >>> res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)
+      >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
+
+    """
+
     
     #instrument = standardize_instrument(instrument)
     #lmax = 3 * nside - 1
@@ -1263,27 +1323,4 @@ def _my_ud_grade(map_in, nside_out, **kwargs):
             #    the same nside 1 pixels
             # 3) Downgrade to nside 1
             # 4) pick the value of the pixel in which the 12 values were placed
-            map_in = hp.ud_grade(map_in, 1, **kwargs)
-            out = np.full(hp.nside2npix(4), hp.UNSEEN)
-            ids = hp.ud_grade(np.arange(12), 4, **kwargs)
-            out[np.where(ids == 0)[0][:12]] = map_in
-            kwargs['pess'] = False
-            res = hp.ud_grade(out, 1, **kwargs)
-            return res[:1]
-    try:
-        # Input has nside = 0 (or 1)
-        return hp.ud_grade(np.ones(12) * map_in,
-                           nside_out, **kwargs)
-    except ValueError:
-        # Fall back to standard healpy ud_grade
-        return hp.ud_grade(map_in, nside_out, **kwargs)
-
-
-def _intersect_mask(maps):
-    if hp.pixelfunc.is_ma(maps):
-        mask = maps.mask
-    else:
-        mask = maps == hp.UNSEEN
-
-    # Mask entire pixel if any of the frequencies in the pixel is masked
-    return np.any(mask, axis=tuple(range(maps.ndim-1)))
+            map_in = hp.
