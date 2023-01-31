@@ -281,9 +281,9 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
 
 #Added by Clement Leloup
-def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask=None, noiseless=False, **minimize_kwargs):
+def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask=None, **minimize_kwargs):
 
-    """ Basic component separation
+    """ Harmonic component separation
 
     Parameters
     ----------
@@ -304,12 +304,15 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask
         - absent or 1: temperature maps
         - 2: polarization maps
         - 3: temperature and polarization maps (see note)
-
-        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
-        neglected during the component separation process.
-    nside:
+    nside: int
         For each pixel of a HEALPix map with this nside, the non-linear
-        parameters are estimated independently
+        parameters are estimated independently        
+    lmax: int
+        maximum multipole to use in the likelihood
+    invN: ndarray
+        estimated noise inverse covariance matrix. Shape *(n_freq, ..., n_lm)*
+    mask: ndarray
+        mask to be applied before going to harmonic domain, if any.
 
     Returns
     -------
@@ -323,22 +326,14 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask
           semi-analytic covariance between the *i*-th and the *j*-th parameter.
           It is meaningful only in the high signal-to-noise regime and when the
           *cov* is the true covariance of the data
-        - **s**: *(ndarray)* - Component amplitude maps
+        - **s**: *(ndarray)* - Component amplitude alms
         - **mask_good**: *(ndarray)* - mask of the entries actually used in the
           component separation
 
     Note
     ----
 
-    * During the component separation, a pixel is masked if at least one of
-      its frequencies is masked.
-    * If you provide temperature and polarization maps, they will constrain the
-      **same** set of parameters. In particular, separation is **not** done
-      independently for temperature and polarization. If you want an
-      independent fitting for temperature and polarization, please launch
-
-      >>> res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)
-      >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
+    * At the moment, only work with polarization (E AND B modes)
 
     """
 
@@ -363,8 +358,6 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask
         data_masked = np.asarray([hp.alm2map(alms_unmasked[f], nside) for f in range(len(instrument.frequency))])
         data_masked *= mask
         fsky = float(mask.sum()) / mask.size
-        print(data.shape)
-        print(data_masked.shape)
         alms = _get_alms(data_masked, lmax=lmax)[:,1:,:] # Here we take only polarization
     else:
         alms = alms_unmasked[:,1:,:] # Here we take only polarization
@@ -376,13 +369,8 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask
 
     if invN is not None:
         ell_em = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
-        ell_em = np.stack((ell_em, ell_em), axis=-1).reshape(-1) # For transformation into real alms
+        ell_em = np.stack((ell_em, ell_em), axis=-1).reshape(-1) # Because we use real alms
         invNlm = np.array([invN[l,1:,:,:] for l in ell_em]) # Here we take only polarization
-        if not noiseless:
-            nlms_E = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
-            nlms_B = [hp.synalm(np.linalg.inv(invN)[:, f, f], lmax) for f in np.arange(invN.shape[1])]
-            nlms = np.concatenate((np.asarray(nlms_E)[:,np.newaxis,:], np.asarray(nlms_B)[:,np.newaxis,:]), axis=1)
-            alms += nlms
     else:
         invNlm = None
 
@@ -1323,4 +1311,27 @@ def _my_ud_grade(map_in, nside_out, **kwargs):
             #    the same nside 1 pixels
             # 3) Downgrade to nside 1
             # 4) pick the value of the pixel in which the 12 values were placed
-            map_in = hp.
+            map_in = hp.ud_grade(map_in, 1, **kwargs)
+            out = np.full(hp.nside2npix(4), hp.UNSEEN)
+            ids = hp.ud_grade(np.arange(12), 4, **kwargs)
+            out[np.where(ids == 0)[0][:12]] = map_in
+            kwargs['pess'] = False
+            res = hp.ud_grade(out, 1, **kwargs)
+            return res[:1]
+    try:
+        # Input has nside = 0 (or 1)
+        return hp.ud_grade(np.ones(12) * map_in,
+                           nside_out, **kwargs)
+    except ValueError:
+        # Fall back to standard healpy ud_grade
+        return hp.ud_grade(map_in, nside_out, **kwargs)
+
+
+def _intersect_mask(maps):
+    if hp.pixelfunc.is_ma(maps):
+        mask = maps.mask
+    else:
+        mask = maps == hp.UNSEEN
+
+    # Mask entire pixel if any of the frequencies in the pixel is masked
+    return np.any(mask, axis=tuple(range(maps.ndim-1)))
