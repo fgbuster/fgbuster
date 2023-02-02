@@ -145,6 +145,10 @@ def _svd_sqrt_invN_A(A, invN=None, L=None):
             L = np.linalg.cholesky(invN)
         except np.linalg.LinAlgError:
             L = np.zeros_like(invN)
+
+            print(invN.ndim)
+            exit()
+            
             mask = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
                                    axis=-1))
             if np.any(mask):
@@ -1338,5 +1342,4 @@ def _get_from_caller(name):
     ----
     Kludge for retrieving information from inside scipy.optimize.minimize
     """
-    caller = inspect.currentframe().f_back.f_back
-    return caller.f_locals[name]
+    caller = inspect.
