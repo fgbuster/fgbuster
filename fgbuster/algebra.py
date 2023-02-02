@@ -1342,4 +1342,5 @@ def _get_from_caller(name):
     ----
     Kludge for retrieving information from inside scipy.optimize.minimize
     """
-    caller = inspect.
+    caller = inspect.currentframe().f_back.f_back
+    return caller.f_locals[name]

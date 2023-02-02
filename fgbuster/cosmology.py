@@ -732,17 +732,6 @@ def _get_Cl_cmb(Alens=1., r=0.):
                                          %'unlensed_scalar_and_tensor_r1')[:,:4000]
     return power_spectrum
 
-"""
-def _get_Cl_noise(instrument, A, lmax):
-
-    #Modified by Clement Leloup
-    nl = harmonic_noise_cov(instrument, lmax)
-    
-    AtNA = np.einsum('fi, fl, fj -> lij', A, nl, A)
-    inv_AtNA = np.linalg.inv(AtNA)
-    return inv_AtNA.swapaxes(-3, -1)
-"""
-
 def _get_Cl_noise(instrument, A, lmax):
     try:
         bl = np.array([hp.gauss_beam(np.radians(b/60.), lmax=lmax)
