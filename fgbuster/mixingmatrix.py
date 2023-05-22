@@ -121,12 +121,32 @@ class MixingMatrix(tuple):
             res += [g[..., np.newaxis]
                     for g in c.diff(nu, *params[param_slice])]
         return res
+    
+    def diff_beam(self, nu,beam, *params):
+        if not params:
+            return None
+        res = []
+        for i_c, c in enumerate(self):
+            param_slice = slice(self.__first_param_of_comp[i_c],
+                                self.__first_param_of_comp[i_c] + c.n_param)
+            res += [g[..., np.newaxis]
+                    for g in c.diff(nu, *params[param_slice])]
+        return np.matmul(beam,res)
 
     def diff_evaluator(self, nu, unpack=(lambda x: x.reshape((-1,)))):
         if self.n_param:
             def f(param_array):
                 param_array = np.array(param_array)
                 return self.diff(nu, *[p for p in unpack(param_array)])
+        else:
+            return None
+        return f
+    
+    def diff_evaluator_beam(self, nu,beam, unpack=(lambda x: x.reshape((-1,)))):
+        if self.n_param:
+            def f(param_array):
+                param_array = np.array(param_array)
+                return self.diff_beam(nu,beam, *[p for p in unpack(param_array)])
         else:
             return None
         return f
@@ -147,8 +167,32 @@ class MixingMatrix(tuple):
                         comp_diff_diff[i - i_start][j - i_start].reshape(-1, 1))
         return res
     
+
+    def diff_diff_beam(self, nu,beam, *params):
+        if not params:
+            return None
+        res = [[np.zeros((1,1))
+                for i in range(self.n_param)] for i in range(self.n_param)]
+        for i_c, c in enumerate(self):
+            param_slice = slice(self.__first_param_of_comp[i_c],
+                                self.__first_param_of_comp[i_c] + c.n_param)
+            comp_diff_diff = c.diff_diff(nu, *params[param_slice])
+            i_start = param_slice.start
+            for i in range(i_start, param_slice.stop):
+                for j in range(param_slice.start, param_slice.stop):
+                    res[i][j] = (
+                        comp_diff_diff[i - i_start][j - i_start].reshape(-1, 1))
+        return np.matmul(beam,res)
+
     def diff_diff_evaluator(self, nu, unpack=(lambda x: x.reshape((-1,)))):
         def f(param_array):
             param_array = np.array(param_array)
             return self.diff_diff(nu, *[p for p in unpack(param_array)])
+        return f
+    
+
+    def diff_diff_evaluator_beam(self, nu,beam, unpack=(lambda x: x.reshape((-1,)))):
+        def f(param_array):
+            param_array = np.array(param_array)
+            return self.diff_diff_beam(nu, beam, *[p for p in unpack(param_array)])
         return f
