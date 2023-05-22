@@ -76,6 +76,18 @@ class MixingMatrix(tuple):
             res[..., i_c] += c.eval(nu, *params[i_fp: i_fp + c.n_param])
         return res
 
+    def eval_beam(self,nu,beam, *params):
+        if params:
+            shape = np.broadcast(*params).shape + (len(nu), len(self))
+        else:
+            shape = (len(nu), len(self))
+        res = np.zeros(shape)
+        for i_c, c in enumerate(self):
+            i_fp = self.__first_param_of_comp[i_c]
+            res[..., i_c] += c.eval(nu, *params[i_fp: i_fp + c.n_param])
+        return np.matmul(beam,res)
+
+
     def evaluator(self, nu, unpack=(lambda x: x.reshape((-1,)))):
         if self.n_param:
             def f(param_array):
@@ -83,6 +95,18 @@ class MixingMatrix(tuple):
                 return self.eval(nu, *[p for p in unpack(param_array)])
         else:
             A = self.eval(nu)
+            def f():
+                return A
+        return f
+    
+
+    def evaluator_beam(self, nu, unpack=(lambda x: x.reshape((-1,)))):
+        if self.n_param:
+            def f(param_array):
+                param_array = np.array(param_array)
+                return self.eval_beam(nu, *[p for p in unpack(param_array)])
+        else:
+            A = self.eval_beam(nu)
             def f():
                 return A
         return f
