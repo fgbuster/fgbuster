@@ -1105,7 +1105,7 @@ def verbose_callback():
     old_old_fval = [None]
     def callback(xk):
         k = _get_from_caller('k') + 1
-        func_calls = _get_from_caller('func_calls')[0]
+        func_calls = _get_from_caller('sf').nfev
         old_fval = _get_from_caller('old_fval')
         old_time = time()
         try:
