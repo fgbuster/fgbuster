@@ -26,6 +26,7 @@ setup(
         'setuptools_git',
         'pysm3',
         'cmbdb @ git+http://github.com/dpole/cmbdb.git@master#egg=cmbdb',
+        'tqdm',
     ],
     test_suite = 'fgbuster.test'
 )

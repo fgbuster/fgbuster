@@ -8,3 +8,4 @@ sympy>=1.1.1
 six
 pysm3
 parameterized
+tqdm
