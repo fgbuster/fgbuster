@@ -165,7 +165,7 @@ def weighted_comp_sep(components, instrument, data, cov, nside=0,
     return res
 
 
-def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
+def basic_comp_sep(components, instrument, data, known_band, nside=0, **minimize_kwargs):
     """ Basic component separation
 
     Parameters
@@ -237,10 +237,12 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         data_nside = 0
     prewhiten_factors = _get_prewhiten_factors(instrument, data.shape,
                                                data_nside)
-    A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(
-        components, instrument, prewhiten_factors=prewhiten_factors)
+    # A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(
+    #     components, instrument, prewhiten_factors=prewhiten_factors)
+    A_tilde_ev, A_tilde_dB_ev, comp_of_param_tilde, x0, params = _A_tilde_evaluator(
+        components, instrument, known_band, x0, prewhiten_factors=prewhiten_factors)
     if len(x0) == 0:
-        A_ev = A_ev()
+        A_tilde_ev = A_tilde_ev()
     if prewhiten_factors is None:
         prewhitened_data = data.T
     else:
@@ -251,10 +253,10 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
         patch_ids = hp.ud_grade(np.arange(hp.nside2npix(nside)),
                                 hp.npix2nside(data.shape[-1]))
         res = alg.multi_comp_sep(
-            A_ev, prewhitened_data, None, A_dB_ev, comp_of_param, patch_ids,
+            A_tilde_ev, prewhitened_data, None, A_tilde_dB_ev, comp_of_param_tilde, patch_ids,
             x0, **minimize_kwargs)
     else:
-        res = alg.comp_sep(A_ev, prewhitened_data, None, A_dB_ev, comp_of_param,
+        res = alg.comp_sep(A_tilde_ev, prewhitened_data, None, A_tilde_dB_ev, comp_of_param_tilde,
                            x0, **minimize_kwargs)
 
     # Craft output
