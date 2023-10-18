@@ -94,7 +94,7 @@ def get_instrument(tag=''):
                 f"Add your instrument to your local copy of cmbdb: {exp_file}\n"
                 f"Beware, you might lose changes when you update: "
                 f"push your new configuration to {github}")
-    return df.dropna(1, 'all')
+    return df.dropna(axis=1, how='all')
 
 
 def get_observation(instrument='', sky=None,
