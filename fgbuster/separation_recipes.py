@@ -916,6 +916,97 @@ def _A_evaluator(components, instrument, prewhiten_factors=None):
     return pw_A_ev, pw_A_dB_ev, comp_of_dB, x0, params
 
 
+def _G(gain_val_arr, n_freq, known_band):
+    """
+    Gain matrix G
+    """
+    assert len(gain_val_arr) == n_freq-1
+    gain_all = list(gain_val_arr)[:known_band]+[n_freq-np.sum(gain_val_arr)]+list(gain_val_arr)[known_band:]  # TODO: check
+    
+    return np.diag(gain_all)
+
+
+def _G_dB(gain_params, n_freq, known_band):
+    # this is mainly made of zeros
+    # TODO: could be replaced with operator just selecting 
+    # the good entries on the object it is applied on
+    G_dB = np.zeros([len(gain_params), n_freq, n_freq])
+    for gi, _ in enumerate(gain_params):
+        if gi >= known_band:
+            fi = gi + 1
+        else:
+            fi = gi
+        G_dB[gi, fi, fi] = 1
+        G_dB[gi, known_band, known_band] = -1
+    
+    return G_dB
+
+
+def _G_A_dB(G, A_dB):
+
+    return np.einsum('fe, pec -> pfc', G, A_dB)
+
+
+def _G_dB_A(G_dB, A):
+
+    return np.einsum('pef, ec -> pfc', G_dB, A)
+
+
+def _A_tilde_evaluator(components, instrument, known_band, x0=None, prewhiten_factors=None):
+    """
+    A_tilde = G A
+    """
+    A_ev, A_dB_ev, comp_of_param, sp0, params = _A_evaluator(components, instrument)
+    n_freq = len(instrument.frequency)
+    if not len(sp0):
+        A_ev = A_ev()
+    if not x0:
+        g0 = list(np.ones(21))
+        x0 = list(sp0) + g0
+    else:
+        sp0 = x0[:3]
+        g0 = x0[3:]
+
+    def A_tilde_ev(x):
+        x_sp = x[:3]
+        x_gain = x[3:]
+        A_x = A_ev(x_sp)
+        G_x = _G(x_gain, n_freq, known_band)
+        return np.einsum('fe, ec -> fc', G_x, A_x)
+    
+    def A_tilde_dB_ev(x):
+        x_sp = x[:len(sp0)]
+        x_gain = x[len(sp0):]
+        A_x = A_ev(x_sp)
+        G_x = _G(x_gain, n_freq, known_band)
+        G_dB_x = _G_dB(x_gain, n_freq, known_band)
+        G_dB_A_x = _G_dB_A(G_dB_x, A_x)
+        G_A_dB_x = _G_A_dB(G_x, A_dB_ev(x_sp))
+        A_tilde_dB = list(G_A_dB_x) + list(G_dB_A_x)
+
+        return A_tilde_dB
+
+    comp_of_param_tilde = comp_of_param + [slice(len(components))] * len(g0)
+
+    g_names = np.arange(n_freq)
+    g_names = list(g_names)[:known_band]+list(g_names)[known_band+1:]
+    g_names = ['g' + str(i) for i in g_names]
+    params = params + g_names
+    
+    if prewhiten_factors is None:
+        return A_tilde_ev, A_tilde_dB_ev, comp_of_param_tilde, x0, params
+
+    if len(g0):
+        pw_A_tilde_ev = lambda x: prewhiten_factors[..., np.newaxis] * A_tilde_ev(x)
+        pw_A_tilde_dB_ev = lambda x: [prewhiten_factors[..., np.newaxis] * A_tilde_dB_i
+                                for A_tilde_dB_i in A_tilde_dB_ev(x)]
+    else:
+        pw_A_tilde_ev = lambda: prewhiten_factors[..., np.newaxis] * A_tilde_dB_ev()
+        pw_A_tilde_dB_ev = None
+
+    return pw_A_tilde_ev,  pw_A_tilde_dB_ev,  comp_of_param_tilde, x0, params
+
+
 def _get_bounds(idss, bounds):
     res = []
     for ids, bound in zip(idss, bounds):
