@@ -280,7 +280,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
-def basic_comp_sep_gain(components, instrument, data, known_band, nside=0, x0=[1.54, 20., -3.], **minimize_kwargs):
+def basic_comp_sep_gain(components, instrument, data, nside=0, known_band=0, x0=None, **minimize_kwargs):
     """ Basic component separation
 
     Parameters
@@ -577,6 +577,185 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
     return res
 
 
+def adaptive_comp_sep_gain(components, instrument, data, patch_ids, known_band=0, x0=None,
+                      **minimize_kwargs):
+    """ Arbitrary clusters for each parameter
+
+    Parameters
+    ----------
+    components: list
+        List storing the :class:`Component` s of the mixing matrix
+    instrument:
+        Object that provides the following as a key or an attribute.
+
+        - **frequency**
+        - **depth_i** or **depth_p** (optional, frequencies are inverse-noise
+          weighted according to these noise levels)
+
+        They can be anything that is convertible to a float numpy array.
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape *(n_freq, ..., n_pix).*
+        *...* can be
+
+        - absent or 1: temperature maps
+        - 2: polarization maps
+        - 3: temperature and polarization maps (see note)
+
+        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
+        neglected during the component separation process.
+    patch_ids: list
+        The *i*-th element is the clusters map of the *i*-th parameter.
+        A cluster map is a map of integers that, for each pixel defines the
+        index of the cluster the pixel belongs to.
+    minimize_kwargs: dict
+        kwargs of `scipy.optimize.minimize`. In addition it allows for 
+        saving/restoring checkpoints. Add the following dictionary to 
+        `minimize_kwargs['checkpoint']`::
+
+            # The values are the defaults
+            {
+                'odir': './',  
+                # Save iteraton x to `odir/iter_x.npy`
+                'start': 0,  
+                # Start from this iteration, If not provided use that largest
+                # stored iteration
+                'delta': 1,
+                # Save a checkpoint every `delta` iterations
+            }
+        
+    Returns
+    -------
+    result: dict
+	It includes
+
+	- **param**: *(list)* - Names of the parameters fitted
+	- **x**: *(seq)* - ``x[i][j]`` is the best-fit values of the *j*-th
+          clusters of the *i*-th parameter.
+	- **x_map**: *(seq)* - ``x[i]`` is the map of the *i*-th parameter.
+        - **s**: *(ndarray)* - Component amplitude maps
+        - **mask_good**: *(ndarray)* - mask of the entries actually used in the
+          component separation
+
+    Note
+    ----
+
+    * During the component separation, a pixel is masked if at least one of
+      its frequencies is masked.
+    * If you provide temperature and polarization maps, they will constrain the
+      **same** set of parameters. In particular, separation is **not** done
+      independently for temperature and polarization. If you want an
+      independent fitting for temperature and polarization, please launch
+
+      >>> res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)
+      >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
+
+    """
+    instrument = standardize_instrument(instrument)
+
+    # Prepare mask and set to zero all the frequencies in the masked pixels:
+    # NOTE: mask are bad pixels
+    mask = _intersect_mask(data)
+    data = hp.pixelfunc.ma_to_array(data).copy()
+    data[..., mask] = 0  # Thus no contribution to the spectral likelihood
+
+    try:
+        data_nside = hp.get_nside(data[0])
+    except TypeError:
+        raise ValueError("data has to be a stack of healpix maps")
+
+    prewhiten_factors = _get_prewhiten_factors(instrument, data.shape, data_nside)
+    invN = np.zeros(prewhiten_factors.shape+prewhiten_factors.shape[-1:])
+    np.einsum('...ii->...i', invN)[:] = prewhiten_factors**2
+
+    for ids in patch_ids:
+        assert np.all(ids >= 0)
+        assert ids.dtype.kind in 'ui'
+    n_clusters = [ids.max()+1 for ids in patch_ids]
+
+    def array2maps(x):
+        i = 0
+        maps = []
+        for n_cluster, ids in zip(n_clusters, patch_ids):
+            maps.append(x[i:i+n_cluster][ids])
+            i += n_cluster
+        return maps
+
+    extra_dim = [1] * (data.ndim - 2)
+    unpack = lambda x: [m.reshape(-1, *extra_dim) for m in array2maps(x)]
+
+    try:
+        checkpoint_dir = minimize_kwargs['checkpoint'].get('odir', './')
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        try:
+            x0 = np.load(op.join(checkpoint_dir, f"iter_{minimize_kwargs['checkpoint']['start']}.npy"))
+            logging.warn(f"Iteration number {minimize_kwargs['checkpoint']['start']} loaded")
+        except (KeyError, IOError):  # Either start is not set, or the file is missing
+            iter_files = glob(op.join(checkpoint_dir, 'iter_*.npy'))
+            iter_ids = [int(op.splitext(op.basename(f))[0].split('_')[1])
+                        for f in iter_files]
+            i_iter = max(iter_ids+[0])
+            logging.warn(f'Highest iteration number found is {i_iter}')
+            x0 = np.load(iter_files[iter_ids.index(i_iter)])
+            minimize_kwargs['checkpoint']['start'] = i_iter
+        if 'options' in minimize_kwargs and 'maxiter' in minimize_kwargs['options']:
+            minimize_kwargs['options']['maxiter'] -= i_iter
+    except (KeyError, ValueError):
+        if x0 == None:
+            x0 = [x for c in components for x in c.defaults]
+        x0 = [np.full(n_cluster, px0) for n_cluster, px0 in zip(n_clusters, x0)]
+        x0 = np.concatenate(x0)
+    A_tilde_ev, A_tilde_dB_ev, comp_of_param_tilde, x0, params = _A_tilde_evaluator(  # TODO: add unpack for A_tilde_ev and A_tilde_dB_ev ??
+        components, instrument, known_band, x0, prewhiten_factors=prewhiten_factors)
+    assert len(params) == len(patch_ids), (
+        "%i free parameters but %i patch_ids"
+        % (len(params), len(patch_ids)))
+    end_w_last_checkpoint = (
+        'options' in minimize_kwargs
+        and 'maxiter' in minimize_kwargs['options']
+        and minimize_kwargs['options']['maxiter'] < 1
+    )
+    if end_w_last_checkpoint:
+        A_tilde_ev = A_tilde_dB_ev(x0)
+
+    comp_of_dB = list(zip(comp_of_param_tilde, patch_ids))
+    bounds = minimize_kwargs.get('bounds')
+    if bounds is not None:
+        minimize_kwargs['bounds'] = _get_bounds(patch_ids, bounds)
+
+    # Component separation
+    res = alg.comp_sep(A_tilde_ev, data.T, invN, A_tilde_dB_ev, comp_of_dB, x0,
+                       **minimize_kwargs)
+
+    if end_w_last_checkpoint:
+        res.x = x0
+    # Craft output
+    # 1) Apply the mask, if any
+    # 2) Restore the ordering of the input data (pixel dimension last)
+    def mask_transpose(x):
+        x[mask] = hp.UNSEEN
+        return x.T
+
+    res.params = params
+    res.s = mask_transpose(res.s)
+    res.chi = mask_transpose(res.chi)
+    res.x_map = array2maps(res.x)
+    for m in res.x_map:
+        m[mask] = hp.UNSEEN
+
+    res.x = [res.x[stop-n:stop]
+             for n, stop in zip(n_clusters, np.cumsum(n_clusters))]
+    for x, ids, n_cluster in zip(res.x, patch_ids, n_clusters):
+        # Clusters witn no valid pixels are set to UNSEEN
+        x[np.bincount(ids[~mask], minlength=n_cluster) == 0] = hp.UNSEEN
+
+    if 'chi_dB' in res:
+        for i in range(len(res.chi_dB)):
+            res.chi_dB[i] = mask_transpose(res.chi_dB[i])
+
+    res.mask_good = ~mask
+    return res
+
+
 def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
     """ Basic component separation
 
@@ -629,6 +808,61 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
         _my_ud_grade(np.arange(_my_nside2npix(nside)), nside_data).astype(int)
         for nside in nsides]
     return adaptive_comp_sep(components, instrument, data, patch_ids,
+                             **minimize_kwargs)
+
+
+def multi_res_comp_sep_gain(components, instrument, data, nsides, known_band=0, x0=None, **minimize_kwargs):
+    """ Basic component separation
+
+    Parameters
+    ----------
+    components: list
+        List storing the :class:`Component` s of the mixing matrix
+    instrument:
+        Object that provides the following as a key or an attribute.
+
+        - **frequency**
+        - **depth_i** or **depth_p** (optional, frequencies are inverse-noise
+          weighted according to these noise levels)
+
+        They can be anything that is convertible to a float numpy array.
+    data: ndarray or MaskedArray
+        Data vector to be separated. Shape *(n_freq, ..., n_pix).*
+        *...* can be
+
+        - absent or 1: temperature maps
+        - 2: polarization maps
+        - 3: temperature and polarization maps (see note)
+
+        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
+        neglected during the component separation process.
+    nsides: seq
+        Specify the ``nside`` for each free parameter of the components
+
+    Returns
+    -------
+    result: dict
+	See `adaptive_comp_sep`
+
+    Note
+    ----
+
+    * During the component separation, a pixel is masked if at least one of
+      its frequencies is masked.
+    * If you provide temperature and polarization maps, they will constrain the
+      **same** set of parameters. In particular, separation is **not** done
+      independently for temperature and polarization. If you want an
+      independent fitting for temperature and polarization, please launch
+
+      >>> res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)
+      >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
+
+    """
+    nside_data = hp.get_nside(data[0])
+    patch_ids = [
+        _my_ud_grade(np.arange(_my_nside2npix(nside)), nside_data).astype(int)
+        for nside in nsides]
+    return adaptive_comp_sep_gain(components, instrument, data, patch_ids, known_band, x0,
                              **minimize_kwargs)
 
 
@@ -1069,31 +1303,32 @@ def _G_dB_A(G_dB, A):
     return np.einsum('pef, ec -> pfc', G_dB, A)
 
 
-def _A_tilde_evaluator(components, instrument, known_band, x0=None, prewhiten_factors=None):
+def _A_tilde_evaluator(components, instrument, known_band, x0=None, prewhiten_factors=None, unpack=None):
     """
     A_tilde = G A
     """
     A_ev, A_dB_ev, comp_of_param, sp0, params = _A_evaluator(components, instrument)
     n_freq = len(instrument.frequency)
-    if not len(sp0):
+    n_sp = len(x0[:-n_freq+1])
+    if not n_sp:
         A_ev = A_ev()
-    if not x0:
-        g0 = list(np.ones(21))
+    if not list(x0):
+        g0 = list(np.ones(n_freq-1))
         x0 = list(sp0) + g0
     else:
-        sp0 = x0[:3]
-        g0 = x0[3:]
-
+        sp0 = x0[:n_sp]
+        g0 = x0[n_sp:]
+    
     def A_tilde_ev(x):
-        x_sp = x[:3]
-        x_gain = x[3:]
+        x_sp = x[:n_sp]
+        x_gain = x[n_sp:]
         A_x = A_ev(x_sp)
         G_x = _G(x_gain, n_freq, known_band)
         return np.einsum('fe, ec -> fc', G_x, A_x)
     
     def A_tilde_dB_ev(x):
-        x_sp = x[:len(sp0)]
-        x_gain = x[len(sp0):]
+        x_sp = x[:n_sp]
+        x_gain = x[n_sp:]
         A_x = A_ev(x_sp)
         G_x = _G(x_gain, n_freq, known_band)
         G_dB_x = _G_dB(x_gain, n_freq, known_band)
