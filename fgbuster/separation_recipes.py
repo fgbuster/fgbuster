@@ -280,7 +280,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
-def basic_comp_sep_gain(components, instrument, data, known_band, nside=0, **minimize_kwargs):
+def basic_comp_sep_gain(components, instrument, data, known_band, nside=0, x0=[1.54, 20., -3.], **minimize_kwargs):
     """ Basic component separation
 
     Parameters
