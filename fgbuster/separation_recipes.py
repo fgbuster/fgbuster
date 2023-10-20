@@ -651,6 +651,7 @@ def adaptive_comp_sep_gain(components, instrument, data, patch_ids, known_band=0
 
     """
     instrument = standardize_instrument(instrument)
+    n_gain_params = len(instrument.frequency) -1
 
     # Prepare mask and set to zero all the frequencies in the masked pixels:
     # NOTE: mask are bad pixels
@@ -675,7 +676,7 @@ def adaptive_comp_sep_gain(components, instrument, data, patch_ids, known_band=0
     def array2maps(x):
         i = 0
         maps = []
-        for n_cluster, ids in zip(n_clusters, patch_ids):
+        for n_cluster, ids in zip(n_clusters[:-n_gain_params], patch_ids[:-n_gain_params]):
             maps.append(x[i:i+n_cluster][ids])
             i += n_cluster
         return maps
@@ -700,12 +701,12 @@ def adaptive_comp_sep_gain(components, instrument, data, patch_ids, known_band=0
         if 'options' in minimize_kwargs and 'maxiter' in minimize_kwargs['options']:
             minimize_kwargs['options']['maxiter'] -= i_iter
     except (KeyError, ValueError):
-        if x0 == None:
+        if x0 == None:  
             x0 = [x for c in components for x in c.defaults]
         x0 = [np.full(n_cluster, px0) for n_cluster, px0 in zip(n_clusters, x0)]
         x0 = np.concatenate(x0)
-    A_tilde_ev, A_tilde_dB_ev, comp_of_param_tilde, x0, params = _A_tilde_evaluator(  # TODO: add unpack for A_tilde_ev and A_tilde_dB_ev ??
-        components, instrument, known_band, x0, prewhiten_factors=prewhiten_factors)
+    A_tilde_ev, A_tilde_dB_ev, comp_of_param_tilde, x0, params = _A_tilde_evaluator(
+        components, instrument, known_band, x0, unpack=unpack)
     assert len(params) == len(patch_ids), (
         "%i free parameters but %i patch_ids"
         % (len(params), len(patch_ids)))
@@ -1295,12 +1296,12 @@ def _G_dB(gain_params, n_freq, known_band):
 
 def _G_A_dB(G, A_dB):
 
-    return np.einsum('fe, pec -> pfc', G, A_dB)
+    return np.einsum('fe, p...ec -> p...fc', G, A_dB)
 
 
 def _G_dB_A(G_dB, A):
 
-    return np.einsum('pef, ec -> pfc', G_dB, A)
+    return np.einsum('pef, ...ec -> p...fc', G_dB, A)
 
 
 def _A_tilde_evaluator(components, instrument, known_band, x0=None, prewhiten_factors=None, unpack=None):
@@ -1308,6 +1309,10 @@ def _A_tilde_evaluator(components, instrument, known_band, x0=None, prewhiten_fa
     A_tilde = G A
     """
     A_ev, A_dB_ev, comp_of_param, sp0, params = _A_evaluator(components, instrument)
+    if unpack:
+        A = MixingMatrix(*components)
+        A_ev = A.evaluator(instrument.frequency, unpack)
+        A_dB_ev = A.diff_evaluator(instrument.frequency, unpack)
     n_freq = len(instrument.frequency)
     n_sp = len(x0[:-n_freq+1])
     if not n_sp:
@@ -1324,7 +1329,7 @@ def _A_tilde_evaluator(components, instrument, known_band, x0=None, prewhiten_fa
         x_gain = x[n_sp:]
         A_x = A_ev(x_sp)
         G_x = _G(x_gain, n_freq, known_band)
-        return np.einsum('fe, ec -> fc', G_x, A_x)
+        return np.einsum('fe, ...ec -> ...fc', G_x, A_x)
     
     def A_tilde_dB_ev(x):
         x_sp = x[:n_sp]
