@@ -4,8 +4,11 @@ travis-sphinx
 healpy
 scipy==1.2
 numpy
-sympy>=1.1.1
+sympy==1.11.1
 six
 pysm3
 parameterized
 tqdm
+corner
+setuptools_git
+cmbdb @ git+http://github.com/dpole/cmbdb.git@master#egg=cmbdb
