@@ -24,6 +24,7 @@ frequently used (e.g. power law, gray body, CMB) these are already
 prepared.
 """
 
+from ast import arg
 import os.path as op
 import numpy as np
 import sympy
@@ -31,7 +32,9 @@ from sympy.parsing.sympy_parser import parse_expr
 import scipy
 from scipy import constants
 from astropy.cosmology import Planck15
-
+import jax
+from jax import jacrev, jit,grad
+from .utils import bandpass_integration, Lambdify, make_broadcastable,broadcasted
 
 __all__ = [
     'Component',
@@ -46,8 +49,6 @@ __all__ = [
 ]
 
 
-lambdify = lambda x, y: sympy.lambdify(x, y, 'numpy')
-
 H_OVER_K = constants.h * 1e9 / constants.k
 
 # Conversion factor at frequency nu
@@ -60,69 +61,27 @@ K_RJ2K_CMB = K_RJ2K_CMB.replace('h_over_k', str(H_OVER_K))
 K_RJ2K_CMB_NU0 = K_RJ2K_CMB + ' / ' + K_RJ2K_CMB.replace('nu', 'nu0')
 
 
-def bandpass_integration(f):
-    ''' Decorator for bandpass integration
-
-    Parameters
-    ----------
-    f: callable
-        Function to evaluate an SED. Its first argument must be a frequency
-        array. The other positional or keyword arguments are arbitrary.
-
-    Returns
-    -------
-    f: callable
-        The function now accepts as the first argument
-
-        * array with the frequencies, as before (delta bandpasses)
-        * the list or tuple with the bandpasses. Each entry is a pair of arrays
-          (frequencies, transmittance). The SED is evaluated at these frequencies
-          multiplied by the transmittance and integrated with the trapezoid rule.
-
-        Note that the routine does not perform anything more that this. In
-        particular it does NOT:
-
-        * normalize the transmittance to 1 or any other value
-        * perform any unit conversion before integrating the SED
-
-        Make sure you normalize and "convert the units" of the
-        transmittance in such a way that you get the correct result.
-    '''
-    def integrated_f(nu, *params, **kwargs):
-        # It is user's responsibility to provide weights in the same units
-        # as the components
-        if isinstance(nu, (list, tuple)):
-            out_shape = f(np.array(100.), *params, **kwargs).shape[:-1]
-            res = np.empty(out_shape + (len(nu),))
-            for i, (band_nu, band_w) in enumerate(nu):
-                res[..., i] = np.trapz(
-                    f(band_nu, *params, **kwargs) * band_w,
-                    band_nu * 1e9)
-            return res
-        return f(nu, *params)
-
-    return integrated_f
-
-
 class Component(object):
     """ Abstract class for SED evaluation
 
     It defines the API.
     """
 
-    def _add_last_dimension_if_ndarray(self, param):
-        try:
-            # Lambdified expressions always output an ndarray with shape
-            # (param_dim_1, ..., param_dim_n, n_freq). However, parameters and
-            # frequencies are both symbols with (no special meaning). In order
-            # to impose the shape of the output, we append a dimension to the
-            # parameters and let the broadcasting inside the lambdified
-            # expressions do the rest
-            return param[..., np.newaxis]
-        except TypeError:
-            # param is an scalar value, no special treatment is required
-            return param
+    # to be removed replaced by make_broadcastable
+    # def _add_last_dimension_if_ndarray(self, param):
+    #     try:
+    #         # Lambdified expressions always output an ndarray with shape
+    #         # (param_dim_1, ..., param_dim_n, n_freq). However, parameters and
+    #         # frequencies are both symbols with (no special meaning). In order
+    #         # to impose the shape of the output, we append a dimension to the
+    #         # parameters and let the broadcasting inside the lambdified
+    #         # expressions do the rest
+    #         return param[..., np.newaxis]
+    #     except TypeError:
+    #         # param is an scalar value, no special treatment is required
+    #         return param
 
+    @broadcasted
     def eval(self, nu, *params):
         """ Evaluate the SED
 
@@ -145,17 +104,25 @@ class Component(object):
             `nu.shape`.
 
         """
-        assert len(params) == self.n_param
-        if params and np.broadcast(*params).ndim == 0:
-            # Parameters are all scalars.
-            # This case is frequent and easy, thus leave early
-            return self._lambda(nu, *params)
+        # to be removed replaced by make_broadcastable
+        # assert len(params) == self.n_param
+        # if params and np.broadcast(*params).ndim == 0:
+        #     # Parameters are all scalars.
+        #     # This case is frequent and easy, thus leave early
+        #     return self._lambda(nu, *params)
 
         # Make sure that broadcasting rules will apply correctly when passing
         # the parameters to the lambdified functions:
         # last axis has to be nu, but that axis is missing in the parameters
-        new_params = [self._add_last_dimension_if_ndarray(p) for p in params]
-        return self._lambda(nu, *new_params)
+        # new_params = [self._add_last_dimension_if_ndarray(p) for p in params]
+        # return self._lambda(nu, *new_params)
+
+        # Jaxify update : This type of contol flow is not jax friendly especially the call to np
+        # Even if we replace np by jnp (this is actually worse) it renders the function unjittable because we are conditionning on a TracedArray's shape
+        # Instead the user is obliged to call utils.make_broadcastable  .. this give the flexibiliy to jit comp.eval directy.
+        # use is expected to input jax numpy arrays and not regular numpy arrays
+        
+        return self._lambda(nu, *params)
 
     def diff(self, nu, *params):
         """ Evaluate the derivative of the SED
@@ -176,46 +143,50 @@ class Component(object):
             :meth:`eval` for more details about the format of the
             evaluated derivative
         """
-        assert len(params) == self.n_param
-        if not params:
-            return []
-        elif np.broadcast(*params).ndim == 0:
-            # Parameters are all scalars.
-            # This case is frequent and easy, thus leave early
-            return [self._lambda_diff[i_p](nu, *params)
-                    for i_p in range(self.n_param)]
+        # assert len(params) == self.n_param
+        # if not params:
+        #     return []
+        # elif np.broadcast(*params).ndim == 0:
+        #     # Parameters are all scalars.
+        #     # This case is frequent and easy, thus leave early
+        #     return [self._lambda_diff[i_p](nu, *params)
+        #             for i_p in range(self.n_param)]
 
-        # Make sure that broadcasting rules will apply correctly when passing
-        # the parameters to the lambdified functions:
-        # last axis has to be nu, but that axis is missing in the parameters
-        new_params = [self._add_last_dimension_if_ndarray(p) for p in params]
+        # # Make sure that broadcasting rules will apply correctly when passing
+        # # the parameters to the lambdified functions:
+        # # last axis has to be nu, but that axis is missing in the parameters
+        # new_params = [self._add_last_dimension_if_ndarray(p) for p in params]
 
-        res = []
-        for i_p in range(self.n_param):
-            res.append(self._lambda_diff[i_p](nu, *new_params))
-        return res
+        # res = []
+        # for i_p in range(self.n_param):
+        #     res.append(self._lambda_diff[i_p](nu, *new_params))
+        # return res
+        # self._lambda_diff(nu, *params)
+        argnums=tuple(range(1,len(params) + 1))
+        return jacrev(self.eval,argnums)(nu,*params)
 
     def diff_diff(self, nu, *params):
-        assert len(params) == self.n_param
-        if not params:
-            return [[]]
-        elif np.broadcast(*params).ndim == 0:
-            # Parameters are all scalars.
-            # This case is frequent and easy, thus leave early
-            return [[self._lambda_diff_diff[i_p][j_p](nu, *params)
-                     for i_p in range(self.n_param)]
-                    for j_p in range(self.n_param)]
+        # assert len(params) == self.n_param
+        # if not params:
+        #     return [[]]
+        # elif np.broadcast(*params).ndim == 0:
+        #     # Parameters are all scalars.
+        #     # This case is frequent and easy, thus leave early
+        #     return [[self._lambda_diff_diff[i_p][j_p](nu, *params)
+        #              for i_p in range(self.n_param)]
+        #             for j_p in range(self.n_param)]
 
-        # Make sure that broadcasting rules will apply correctly when passing
-        # the parameters to the lambdified functions:
-        # last axis has to be nu, but that axis is missing in the parameters
-        new_params = [self._add_last_dimension_if_ndarray(p) for p in params]
+        # # Make sure that broadcasting rules will apply correctly when passing
+        # # the parameters to the lambdified functions:
+        # # last axis has to be nu, but that axis is missing in the parameters
+        # new_params = [self._add_last_dimension_if_ndarray(p) for p in params]
 
-        res = []
-        for i_p in range(self.n_param):
-            res.append([self._lambda_diff[i_p][j_p](nu, *new_params)
-                        for j_p in range(self.n_param)])
-        return res
+        # res = []
+        # for i_p in range(self.n_param):
+        #     res.append([self._lambda_diff[i_p][j_p](nu, *new_params)
+        #                 for j_p in range(self.n_param)])
+        # return res
+        self._lambda_diff_diff(nu, *params)
 
     @property
     def params(self):
@@ -342,19 +313,9 @@ class AnalyticComponent(Component):
         self._params.pop(0)
 
         # Create lambda functions
-
-        _lambdify = lambda *args, **kwargs: bandpass_integration(
-            lambdify(*args, **kwargs))
-        self._lambda = _lambdify(symbols, self._expr)
-        lambdify_diff_param = lambda param: _lambdify(
-            symbols, self._expr.diff(param))
-        self._lambda_diff = [lambdify_diff_param(p) for p in self._params]
-        lambdify_diff_diff_params = lambda param1, param2: _lambdify(
-            symbols, self._expr.diff(param1, param2))
-        self._lambda_diff_diff = []
-        for p1 in self._params:
-            self._lambda_diff_diff.append(
-                [lambdify_diff_diff_params(p1, p2) for p2 in self._params])
+        # No longer return lambda_diff and lambda_diff_diff instead allow the user 
+        # to call grad (or the jacobien) on the lambda function directly
+        self._lambda           = Lambdify(symbols, self._expr)
 
     def __repr__(self):
         return repr(self._expr)

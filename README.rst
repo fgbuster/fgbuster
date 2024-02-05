@@ -1,6 +1,9 @@
 ****************
-ForeGroundBuster
+ForeGroundBuster (Jaxify branch)
 ****************
+
+Check design doc design.md
+
 Parametric component separation for Cosmic Microwave Background observations
 ############################################################################
 
