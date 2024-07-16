@@ -259,7 +259,7 @@ def get_post_comp_sep_power(
 
 
 def xForecast(components, instrument, d_fgs, lmin, lmax,
-              Alens=1.0, r=0.001, make_figure=False,
+              Alens=1.0, r=0.001, make_figure=False, multires=False, 
               **minimize_kwargs):
     """ xForecast
 
@@ -295,7 +295,11 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     Alens: float
         Amplitude of the lensing B-modes entering the likelihood on r
     r: float
-        tensor-to-scalar ratio assumed in the likelihood on r
+        tensor-to-scalar ratio assumed in the likelihood on r'
+    multires: boolean
+        If True, it estimates the statistical foreground residuals in 
+        the case of an multiresolution component separation, following 
+        what was done in LiteBIRD PTEP i.e. with nside = (64,8,0)
     minimize_kwargs: dict
         Keyword arguments to be passed to `scipy.optimize.minimize` during
         the fitting of the spectral parameters.
@@ -451,16 +455,30 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     Cl_obs = Cl_fid['BB'] + Cl_noise
     dof = (2 * ell + 1) * fsky
     YY = Cl_xF['YY']
-    tr_SigmaYY = np.einsum('ij, lji -> l', res.Sigma, YY)
+    if multires:
+        tr_SigmaYY = get_post_comp_sep_power(components, instrument, nside, [64,8,4], 
+                        nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
+                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,:lmax-1]
+        tr_SigmaYY_ = get_post_comp_sep_power(components, instrument, nside, [64,4,2], 
+                        nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
+                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,:lmax-1]
+        tr_SigmaYY__ = get_post_comp_sep_power(components, instrument, nside, [64,0,2], 
+                        nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
+                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,:lmax-1]
+         # the extra factor 2 is an ad-hoc correction to ~ match  the PTEP sigma(r) order of magnitude
+        tr_SigmaYY = (tr_SigmaYY + tr_SigmaYY_+tr_SigmaYY__)/3/2
+    else:
+        tr_SigmaYY = np.einsum('ij, lji -> l', res.Sigma, YY)
+        
 
     ## 5.2. modeling
     def cosmo_likelihood(r_):
         # S16, Appendix C
-        Cl_model = Cl_fid['BlBl'] * Alens + Cl_fid['BuBu'] * r_ + Cl_noise
-        dof_over_Cl = dof / Cl_model
+        Cl_model = Cl_fid['BlBl'] * Alens + Cl_fid['BuBu'] * r_ + Cl_noise + tr_SigmaYY
+        # dof_over_Cl = dof / Cl_model
         ## Eq. C3
+        '''
         U = np.linalg.inv(res.Sigma_inv + np.dot(YY.T, dof_over_Cl))
-        
         ## Eq. C9
         first_row = np.sum(dof_over_Cl * (
             Cl_obs * (1 - np.einsum('ij, lji -> l', U, YY) / Cl_model) 
@@ -469,7 +487,6 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
             'l, m, ij, mjk, kf, lfi',
             dof_over_Cl, dof_over_Cl, U, YY, res.Sigma, YY)
         trCinvC = first_row + second_row
-       
         ## Eq. C10
         first_row = np.sum(dof_over_Cl * (Cl_xF['yy'] + 2 * Cl_xF['yz']))
         ### Cyclicity + traspose of scalar + grouping terms -> trace becomes
@@ -481,16 +498,23 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
 
         ## Eq. C12
         logdetC = np.sum(dof * np.log(Cl_model)) - np.log(np.linalg.det(U))
-
+        '''
         # Cl_hat = Cl_obs + tr_SigmaYY
+        logdetC = np.sum(dof * np.log(Cl_model))
+        D =  Cl_obs + tr_SigmaYY + Cl_xF['yy'] + 2 * Cl_xF['yz']
+        trCinvD = np.sum(dof *  D / Cl_model ) 
 
         ## Bringing things together
-        return trCinvC + trECinvC + logdetC
+        # return trCinvC + trECinvC + logdetC
+        return logdetC + trCinvD
 
 
     # Likelihood maximization
     r_grid = np.logspace(-5,0,num=500)
     logL = np.array([cosmo_likelihood(r_loc) for r_loc in r_grid])
+    # pl.figure()
+    # pl.semilogx(r_grid, logL)
+    # pl.show()
     ind_r_min = np.argmin(logL)
     r0 = r_grid[ind_r_min]
     if ind_r_min == 0:
@@ -522,17 +546,17 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         return delta
 
     if res_Lr['x'] != 0.0:
-        sr_grid = np.logspace(np.log10(res_Lr['x']), 0, num=25)
+        sr_grid = np.logspace(np.log10(res_Lr['x']), 0, num=500)
     else:
-        sr_grid = np.logspace(-5,0,num=25)
+        sr_grid = np.logspace(-5,0,num=500)
 
     slogL = np.array([sigma_r_computation_from_logL(sr_loc) for sr_loc in sr_grid ])
     ind_sr_min = np.argmin(slogL)
     sr0 = sr_grid[ind_sr_min]
-    print('ind_sr_min = ', ind_sr_min)
-    print('sr_grid[ind_sr_min-1] = ', sr_grid[ind_sr_min-1])
-    print('sr_grid[ind_sr_min+1] = ', sr_grid[ind_sr_min+1])
-    print('sr_grid = ', sr_grid)
+    # print('ind_sr_min = ', ind_sr_min)
+    # print('sr_grid[ind_sr_min-1] = ', sr_grid[ind_sr_min-1])
+    # print('sr_grid[ind_sr_min+1] = ', sr_grid[ind_sr_min+1])
+    # print('sr_grid = ', sr_grid)
     if ind_sr_min == 0:
         print('case # 1')
         bound_0 = res_Lr['x']
