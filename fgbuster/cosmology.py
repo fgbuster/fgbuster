@@ -260,7 +260,7 @@ def get_post_comp_sep_power(
 
 def xForecast(components, instrument, d_fgs, lmin, lmax,
               Alens=1.0, r=0.001, make_figure=False, multires=False, 
-              **minimize_kwargs):
+              l_knee=0, alpha_knee=0, **minimize_kwargs):
     """ xForecast
 
     Run XForcast (Stompor et al, 2016) using the provided instrumental
@@ -470,7 +470,15 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     else:
         tr_SigmaYY = np.einsum('ij, lji -> l', res.Sigma, YY)
         
+    if l_knee !=0: 
+        print('adding a 1/ell contribution')
+        boost_factor = (1 + (l_knee*1.0/ell)**alpha_knee)
+        tr_SigmaYY *= boost_factor
+        Cl_noise *= boost_factor
 
+    Cl_obs = Cl_fid['BB'] + Cl_noise
+    D =  Cl_obs + tr_SigmaYY + Cl_xF['yy'] + 2 * Cl_xF['yz']
+    
     ## 5.2. modeling
     def cosmo_likelihood(r_):
         # S16, Appendix C
@@ -501,7 +509,6 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         '''
         # Cl_hat = Cl_obs + tr_SigmaYY
         logdetC = np.sum(dof * np.log(Cl_model))
-        D =  Cl_obs + tr_SigmaYY + Cl_xF['yy'] + 2 * Cl_xF['yz']
         trCinvD = np.sum(dof *  D / Cl_model ) 
 
         ## Bringing things together
