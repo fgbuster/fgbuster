@@ -260,7 +260,7 @@ def get_post_comp_sep_power(
 
 def xForecast(components, instrument, d_fgs, lmin, lmax,
               Alens=1.0, r=0.001, make_figure=False, multires=False, 
-              l_knee=0, alpha_knee=0, **minimize_kwargs):
+              l_knee=0, alpha_knee=0, gridding=False, sigma_r_68CL=False, **minimize_kwargs):
     """ xForecast
 
     Run XForcast (Stompor et al, 2016) using the provided instrumental
@@ -458,15 +458,16 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     if multires:
         tr_SigmaYY = get_post_comp_sep_power(components, instrument, nside, [64,8,4], 
                         nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
-                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,:lmax-1]
+                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,lmin-2:lmax-1]
         tr_SigmaYY_ = get_post_comp_sep_power(components, instrument, nside, [64,4,2], 
                         nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
-                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,:lmax-1]
+                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,lmin-2:lmax-1]
         tr_SigmaYY__ = get_post_comp_sep_power(components, instrument, nside, [64,0,2], 
                         nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
-                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,:lmax-1]
+                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,lmin-2:lmax-1]
          # the extra factor 2 is an ad-hoc correction to ~ match  the PTEP sigma(r) order of magnitude
         tr_SigmaYY = (tr_SigmaYY + tr_SigmaYY_+tr_SigmaYY__)/3/2
+        res.stat = tr_SigmaYY*1.0
     else:
         tr_SigmaYY = np.einsum('ij, lji -> l', res.Sigma, YY)
         
@@ -480,7 +481,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     D =  Cl_obs + tr_SigmaYY + Cl_xF['yy'] + 2 * Cl_xF['yz']
     
     ## 5.2. modeling
-    def cosmo_likelihood(r_):
+    def cosmo_likelihood(r_,):
         # S16, Appendix C
         Cl_model = Cl_fid['BlBl'] * Alens + Cl_fid['BuBu'] * r_ + Cl_noise + tr_SigmaYY
         # dof_over_Cl = dof / Cl_model
@@ -519,23 +520,14 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     # Likelihood maximization
     r_grid = np.logspace(-5,0,num=500)
     logL = np.array([cosmo_likelihood(r_loc) for r_loc in r_grid])
-    # pl.figure()
-    # pl.semilogx(r_grid, logL)
-    # pl.show()
     ind_r_min = np.argmin(logL)
     r0 = r_grid[ind_r_min]
     if ind_r_min == 0:
         bound_0 = 0.0
         bound_1 = r_grid[1]
-        # pl.figure()
-        # pl.semilogx(r_grid, logL, 'r-')
-        # pl.show()
     elif ind_r_min == len(r_grid)-1:
         bound_0 = r_grid[-2]
         bound_1 = 1.0
-        # pl.figure()
-        # pl.semilogx(r_grid, logL, 'r-')
-        # pl.show()
     else:
         bound_0 = r_grid[ind_r_min-1]
         bound_1 = r_grid[ind_r_min+1]
@@ -553,40 +545,75 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         return delta
 
     if res_Lr['x'] != 0.0:
-        sr_grid = np.logspace(np.log10(res_Lr['x']), 0, num=500)
+        sr_grid = np.logspace(np.log10(res_Lr['x']), 2, num=1000)
     else:
-        sr_grid = np.logspace(-5,0,num=500)
+        sr_grid = np.logspace(-5,2,num=1000)
 
-    slogL = np.array([sigma_r_computation_from_logL(sr_loc) for sr_loc in sr_grid ])
-    ind_sr_min = np.argmin(slogL)
-    sr0 = sr_grid[ind_sr_min]
-    # print('ind_sr_min = ', ind_sr_min)
-    # print('sr_grid[ind_sr_min-1] = ', sr_grid[ind_sr_min-1])
-    # print('sr_grid[ind_sr_min+1] = ', sr_grid[ind_sr_min+1])
-    # print('sr_grid = ', sr_grid)
-    if ind_sr_min == 0:
-        print('case # 1')
-        bound_0 = res_Lr['x']
-        bound_1 = sr_grid[1]
-    elif ind_sr_min == len(sr_grid)-1:
-        print('case # 2')
-        bound_0 = sr_grid[-2]
-        bound_1 = 1.0
+    if not sigma_r_68CL:
+        slogL = np.array([sigma_r_computation_from_logL(sr_loc) for sr_loc in sr_grid ])
+        ind_sr_min = np.argmin(slogL)
+        sr0 = sr_grid[ind_sr_min]
+        if ind_sr_min == 0:
+            print('case # 1')
+            bound_0 = res_Lr['x']
+            bound_1 = sr_grid[1]
+        elif ind_sr_min == len(sr_grid)-1:
+            print('case # 2')
+            bound_0 = sr_grid[-2]
+            bound_1 = sr_grid[-1]
+        else:
+            print('case # 3')
+            bound_0 = sr_grid[ind_sr_min-1]
+            bound_1 = sr_grid[ind_sr_min+1]
+        print('bounds on sigma(r) = ', bound_0, ' / ', bound_1)
+        print('starting point = ', sr0)
+        res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, sr0,
+                bounds=[(bound_0.item(),bound_1.item())],
+                # item required for test to pass but reason unclear. sr_grid has
+                # extra dimension?
+                **minimize_kwargs)
+        print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
+        sigma_r = res_sr['x']- res_Lr['x']
     else:
-        print('case # 3')
-        bound_0 = sr_grid[ind_sr_min-1]
-        bound_1 = sr_grid[ind_sr_min+1]
-    print('bounds on sigma(r) = ', bound_0, ' / ', bound_1)
-    print('starting point = ', sr0)
-    res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, sr0,
-            bounds=[(bound_0.item(),bound_1.item())],
-            # item required for test to pass but reason unclear. sr_grid has
-            # extra dimension?
-            **minimize_kwargs)
-    print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
+        L = np.exp(-(logL-np.min(logL)))
+        rs_pos = r_grid[r_grid > r_fit]
+        plike_pos = L[r_grid > 0]
+        cum = np.cumsum(plike_pos)
+        cum /= cum[-1]
+        sigma_r = rs_pos[np.argmin(np.abs(cum -  0.68))]
+        print ('    ===>> sigma(r) = ', sigma_r)
     res.cosmo_params = {}
-    res.cosmo_params['r'] = (res_Lr['x'], res_sr['x']- res_Lr['x'])
+    res.cosmo_params['r'] = (res_Lr['x'], sigma_r)
 
+    if gridding: 
+        r_grid = np.linspace(-0.05,0.1,num=10000)
+        logL = np.array([cosmo_likelihood(r_loc) for r_loc in r_grid])
+
+        good_indices = ~np.isnan(logL)
+        r_grid = r_grid[good_indices] 
+        logL = logL[good_indices] 
+
+        ind_r_fit = np.argmin(logL)
+        r_fit = r_grid[ind_r_fit]
+
+        L = np.exp(-(logL-np.min(logL)))
+
+        rs_pos = r_grid[r_grid > r_fit]
+        plike_pos = L[r_grid > r_fit]
+        cum = np.cumsum(plike_pos)
+        cum /= cum[-1]
+        sigma_r_pos = rs_pos[np.argmin(np.abs(cum -  0.68))] - r_fit
+
+        rs_neg = r_grid[r_grid < r_fit]
+        plike_neg = L[r_grid < r_fit]
+        cum_neg = np.cumsum(plike_neg[::-1])
+        cum_neg /= cum_neg[-1]
+        sigma_r_neg = r_fit-rs_neg[::-1][np.argmin(np.abs(cum_neg -  0.68))]
+
+        sigma_r_pos_5sigma = rs_pos[np.argmin(np.abs(cum -  0.999999))] - r_fit
+        sigma_r_neg_5sigma = r_fit-rs_neg[::-1][np.argmin(np.abs(cum_neg -  0.999999))]
+        
+        res.cosmo_params['bounds'] = (sigma_r_neg_5sigma,sigma_r_neg, sigma_r_pos, sigma_r_pos_5sigma)
 
     ###############################################################################
     # 6. Produce figures
