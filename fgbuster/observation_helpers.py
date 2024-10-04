@@ -240,7 +240,11 @@ def standardize_instrument(instrument):
                 # If frequency contains bandpasses, this step is needed to
                 # ensure that it can be converted to an array from a DataFrame
                 value = [x for x in value]
-                value = np.array(value, dtype=np.float64)
+                try:
+                    value = np.array(value, dtype=np.float64)
+                except ValueError:
+                    # This handles the case where bandpasses have different sample sizes
+                    value = np.array(value, dtype=object)
                 if value.ndim > 1:
                     value = [x.copy() for x in value]
                 else:
