@@ -21,7 +21,7 @@ setup(
         'parameterized',
         'corner',
         'numdifftools',
-        'sympy=1.11',
+        'sympy==1.11',
         'healpy',
         'setuptools_git',
         'pysm3',
