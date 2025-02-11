@@ -1144,7 +1144,7 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             shape_chi_dB = patch_ids.shape+res.patch_res[0].chi_dB[i].shape[1:]
             if i == 0:
                 res.chi_dB = []
-            res.chi_dB.append(np.full(shape_chi_dB, np.NaN)) # NaN for testing
+            res.chi_dB.append(np.full(shape_chi_dB, np.nan)) # NaN for testing
     #except (AttributeError, TypeError):  # No chi_dB (no A_dB_ev)
     except AttributeError:  # No chi_dB (no A_dB_ev)
         pass
