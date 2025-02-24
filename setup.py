@@ -25,7 +25,7 @@ setup(
         'healpy',
         'setuptools_git',
         'pysm3',
-        'cmbdb @ git+http://github.com/dpole/cmbdb.git@master#egg=cmbdb',
+        'cmbdb @ git+https://github.com/dpole/cmbdb.git',
     ],
     test_suite = 'fgbuster.test'
 )
