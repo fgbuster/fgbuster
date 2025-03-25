@@ -145,10 +145,6 @@ def _svd_sqrt_invN_A(A, invN=None, L=None):
             L = np.linalg.cholesky(invN)
         except np.linalg.LinAlgError:
             L = np.zeros_like(invN)
-
-            print(invN.ndim)
-            exit()
-            
             mask = np.where(np.all(np.diagonal(invN, axis1=-1, axis2=-2),
                                    axis=-1))
             if np.any(mask):
@@ -838,7 +834,6 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
 
         return fisher
     """        
-
 
 def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
     A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
