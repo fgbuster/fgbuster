@@ -280,7 +280,6 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
     return res
 
 
-<<<<<<< HEAD
 #Added by Clement Leloup
 def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask=None, **minimize_kwargs):
 
