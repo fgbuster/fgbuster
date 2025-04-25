@@ -281,7 +281,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
 
 #Added by Clement Leloup
-def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask=None, **minimize_kwargs):
+def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invNlm=None, mask=None, **minimize_kwargs):
 
     """ Harmonic component separation
 
@@ -310,7 +310,11 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask
     lmax: int
         maximum multipole to use in the likelihood
     invN: ndarray
-        estimated noise inverse covariance matrix. Shape *(n_freq, ..., n_lm)*
+        estimated noise inverse covariance matrix. Shape *(n_l, 3, n_freq, n_freq)*
+    invNlm: ndarray
+        estimated noise inverse covariance matrix. Shape *(n_lm, nstokes, n_freq, n_freq)*
+        Note that n_lm needs to be the number of real alms.
+        When invNlm is not None, invN is ignored.
     mask: ndarray
         mask to be applied before going to harmonic domain, if any.
 
@@ -367,7 +371,9 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, mask
     ell = np.stack((ell, ell), axis=-1).reshape(-1) # For transformation into real alms
     #mask_lmin = [l < lmin for l in ell]
 
-    if invN is not None:
+    if invNlm is not None:
+        assert invNlm.shape[0] == (lmax+1)*(lmax+2)
+    elif invN is not None:
         ell_em = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
         ell_em = np.stack((ell_em, ell_em), axis=-1).reshape(-1) # Because we use real alms
         invNlm = np.array([invN[l,1:,:,:] for l in ell_em]) # Here we take only polarization
