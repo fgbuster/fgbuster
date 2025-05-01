@@ -184,7 +184,13 @@ def logL(A, d, invN=None, return_svd=False):
 
 def _invAtNA_svd(u_e_v):
     _, e, v = u_e_v
-    return _mtm(v, v / e[..., np.newaxis]**2)
+
+    with np.errstate(divide='ignore'):
+        invAtNA = _mtm(v, v / e[..., np.newaxis]**2)
+    invAtNA[~np.isfinite(invAtNA)] = 0.
+
+    #return _mtm(v, v / e[..., np.newaxis]**2)
+    return invAtNA
 
 
 def invAtNA(A, invN=None, return_svd=False):
@@ -203,7 +209,13 @@ def _As_svd(u_e_v, s):
 def _Wd_svd(u_e_v, d):
     u, e, v = u_e_v
     utd = _mtv(u, d)
-    return _mtv(v, utd / e)
+
+    with np.errstate(divide='ignore'):
+        Wd = _mtv(v, utd / e)
+    Wd[~np.isfinite(Wd)] = 0.
+
+    #return _mtv(v, utd / e)
+    return Wd
 
 
 def Wd(A, d, invN=None, return_svd=False):
@@ -704,7 +716,10 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
         N = _mtmm(L, N, L)
     
     u, e, v = u_e_v
-    vt_prime = _T(v)/e[..., np.newaxis, :]
+    with np.errstate(divide='ignore'):
+        vt_prime = _T(v)/e[..., np.newaxis, :]
+    vt_prime[~np.isfinite(vt_prime)] = 0.
+    #vt_prime = _T(v)/e[..., np.newaxis, :]
     P = np.eye(u.shape[-2])[np.newaxis, np.newaxis, ...] - _mm(u, _T(u))
 
     # if not _is_simple_comp_of_dB(comp_of_dB):
