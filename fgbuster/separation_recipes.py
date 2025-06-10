@@ -281,7 +281,8 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
 
 #Added by Clement Leloup
-def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invNlm=None, mask=None, **minimize_kwargs):
+def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invNlm=None, mask=None, 
+                      data_is_alm=False, **minimize_kwargs):
 
     """ Harmonic component separation
 
@@ -304,6 +305,8 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
         - absent or 1: temperature maps
         - 2: polarization maps
         - 3: temperature and polarization maps (see note)
+        If `data_is_alm` is True, then `data` is already in harmonic domain.
+        npix is the number of alms, i.e. (lmax+1)*(lmax+2)/2.
     nside: int
         For each pixel of a HEALPix map with this nside, the non-linear
         parameters are estimated independently        
@@ -317,7 +320,9 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
         When invNlm is not None, invN is ignored.
     mask: ndarray
         mask to be applied before going to harmonic domain, if any.
-
+    data_is_alm: bool
+        If True, the data is already in harmonic domain (alms), otherwise it is in map domain.
+        
     Returns
     -------
     result: dict
@@ -347,7 +352,6 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
     n_comp = len(components)
     fsky = 1.0
     
-    print('Computing alms')
     try:
         assert np.any(instrument.fwhm)
     except (KeyError, AssertionError):
@@ -355,16 +359,20 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
     else:  # Deconvolve the beam
         beams = instrument.fwhm
 
-    #alms_unmasked = _get_alms(data, beams, lmax=lmax)
-    alms_unmasked = _get_alms(data, lmax=lmax)
-    
-    if mask is not None:
-        data_masked = np.asarray([hp.alm2map(alms_unmasked[f], nside) for f in range(len(instrument.frequency))])
-        data_masked *= mask
-        fsky = float(mask.sum()) / mask.size
-        alms = _get_alms(data_masked, lmax=lmax)[:,1:,:] # Here we take only polarization
+    if data_is_alm:
+        alms = data
     else:
-        alms = alms_unmasked[:,1:,:] # Here we take only polarization
+        print('Computing alms')
+        # Data is in map domain, we need to compute alms
+        alms_unmasked = _get_alms(data, lmax=lmax)
+        
+        if mask is not None:
+            data_masked = np.asarray([hp.alm2map(alms_unmasked[f], nside) for f in range(len(instrument.frequency))])
+            data_masked *= mask
+            fsky = float(mask.sum()) / mask.size
+            alms = _get_alms(data_masked, lmax=lmax)[:,1:,:] # Here we take only polarization
+        else:
+            alms = alms_unmasked[:,1:,:] # Here we take only polarization
         
     cl_in = np.array([hp.alm2cl(alm) for alm in alms])
     ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
