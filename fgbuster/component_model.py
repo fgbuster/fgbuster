@@ -95,7 +95,7 @@ def bandpass_integration(f):
             out_shape = f(np.array(100.), *params, **kwargs).shape[:-1]
             res = np.empty(out_shape + (len(nu),))
             for i, (band_nu, band_w) in enumerate(nu):
-                res[..., i] = np.trapz(
+                res[..., i] = np.trapezoid(
                     f(band_nu, *params, **kwargs) * band_w,
                     band_nu * 1e9)
             return res
