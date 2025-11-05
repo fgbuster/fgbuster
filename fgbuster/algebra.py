@@ -1105,9 +1105,9 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
 
     # Collect results
     n_comp = next(r for r in res.patch_res if r is not None).s.shape[-1]
-    res.s = np.full((d.shape[:-1]+(n_comp,)), np.NaN) # NaN for testing
-    res.invAtNA = np.full((d.shape[:-1]+(n_comp, n_comp)), np.NaN) # NaN for testing
-    res.chi = np.full(d.shape, np.NaN) # NaN for testing
+    res.s = np.full((d.shape[:-1]+(n_comp,)), np.nan) # NaN for testing
+    res.invAtNA = np.full((d.shape[:-1]+(n_comp, n_comp)), np.nan) # NaN for testing
+    res.chi = np.full(d.shape, np.nan) # NaN for testing
 
     for patch_id in range(max_id+1):
         mask = patch_ids == patch_id
@@ -1219,7 +1219,7 @@ def verbose_callback():
     old_old_fval = [None]
     def callback(xk):
         k = _get_from_caller('k') + 1
-        func_calls = _get_from_caller('func_calls')[0]
+        func_calls = _get_from_caller('sf').nfev
         old_fval = _get_from_caller('old_fval')
         old_time = time()
         try:
