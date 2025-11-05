@@ -13,10 +13,10 @@ dependencies = [
     'corner',
     'healpy',
     'numdifftools',
-    'numpy',
+    'numpy>=2',
     'parameterized',
     'pysm3',
-    'scipy==1.2',
+    'scipy',
     'six',
     'sympy==1.11',
     'tqdm',
@@ -47,3 +47,11 @@ doc = [
 [project.urls]
 Documentation = 'https://fgbuster.github.io/fgbuster/'
 Repository = 'https://github.com/fgbuster/fgbuster'
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    'NPY201',
+]
