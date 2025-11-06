@@ -18,7 +18,7 @@ dependencies = [
     'pysm3',
     'scipy',
     'six',
-    'sympy==1.11',
+    'sympy',
     'tqdm',
 ]
 requires-python = '>=3.10'

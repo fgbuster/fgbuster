@@ -131,7 +131,7 @@ class Component(object):
         nu: array, tuple or list
             Frequencies or banpasses for the SED evaluation
             See the result of :func:`bandpass_integration`.
-                
+
         *params: float or ndarray
             Value of each of the free parameters. They can be arrays and, in
             this case, they should be broadcastable to a common shape.
@@ -330,7 +330,9 @@ class AnalyticComponent(Component):
 
     def __init__(self, analytic_expr, **fixed_params):
         self._fixed_params = fixed_params
-        self._expr = parse_expr(analytic_expr).subs(fixed_params)
+        self._expr = parse_expr(analytic_expr).subs(
+            {k:v for k,v in fixed_params.items() if v is not None}
+        )
         self._params = sorted([str(s) for s in self._expr.free_symbols])
         self._defaults = []
 
