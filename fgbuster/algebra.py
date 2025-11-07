@@ -1086,7 +1086,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, N_true=None, A_
             #Modified by Clement Leloup
             fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
                                             A_dB_last[0], comp_of_dB, N_true, L, A_dBdB_last)
-            As_dB = (_mv(A_dB_i, res.s[comp_of_dB_i])
+            As_dB = (_mv(A_dB_i, res.s[(Ellipsis,) + comp_of_dB_i])
                      for A_dB_i, comp_of_dB_i in zip(A_dB_last[0], comp_of_dB))
             res.chi_dB = []
             for comp_of_dB_i, As_dB_i in zip(comp_of_dB, As_dB):
