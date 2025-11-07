@@ -1192,8 +1192,8 @@ def _indexed_matrix(matrix, data_shape, data_indexing):
 
 
 def checkpoint_callback(start=0, delta=1, odir='./'):
-    logging.warn(f'Checkpoint callback active: starting from iteration {start}')
-    logging.warn('[The logs of the minimizer always start from 0]')
+    logging.warning(f'Checkpoint callback active: starting from iteration {start}')
+    logging.warning('[The logs of the minimizer always start from 0]')
     i_iter = [start]
 
     def callback(xk):
@@ -1201,7 +1201,7 @@ def checkpoint_callback(start=0, delta=1, odir='./'):
         if i_iter[0] % delta == 0:
             fn = f'{odir}/iter_{i_iter[0]}'
             np.save(fn, xk)
-            logging.warn(fn)
+            logging.warning(fn)
 
     return callback
 

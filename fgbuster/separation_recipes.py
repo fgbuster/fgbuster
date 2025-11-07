@@ -311,21 +311,21 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
         A cluster map is a map of integers that, for each pixel defines the
         index of the cluster the pixel belongs to.
     minimize_kwargs: dict
-        kwargs of `scipy.optimize.minimize`. In addition it allows for 
-        saving/restoring checkpoints. Add the following dictionary to 
+        kwargs of `scipy.optimize.minimize`. In addition it allows for
+        saving/restoring checkpoints. Add the following dictionary to
         `minimize_kwargs['checkpoint']`::
 
             # The values are the defaults
             {
-                'odir': './',  
+                'odir': './',
                 # Save iteraton x to `odir/iter_x.npy`
-                'start': 0,  
+                'start': 0,
                 # Start from this iteration, If not provided use that largest
                 # stored iteration
                 'delta': 1,
                 # Save a checkpoint every `delta` iterations
             }
-        
+
     Returns
     -------
     result: dict
@@ -391,13 +391,13 @@ def adaptive_comp_sep(components, instrument, data, patch_ids,
         os.makedirs(checkpoint_dir, exist_ok=True)
         try:
             x0 = np.load(op.join(checkpoint_dir, f"iter_{minimize_kwargs['checkpoint']['start']}.npy"))
-            logging.warn(f"Iteration number {minimize_kwargs['checkpoint']['start']} loaded")
-        except (KeyError, IOError):  # Either start is not set, or the file is missing
+            logging.warning(f"Iteration number {minimize_kwargs['checkpoint']['start']} loaded")
+        except (OSError, KeyError):  # Either start is not set, or the file is missing
             iter_files = glob(op.join(checkpoint_dir, 'iter_*.npy'))
             iter_ids = [int(op.splitext(op.basename(f))[0].split('_')[1])
                         for f in iter_files]
             i_iter = max(iter_ids+[0])
-            logging.warn(f'Highest iteration number found is {i_iter}')
+            logging.warning(f'Highest iteration number found is {i_iter}')
             x0 = np.load(iter_files[iter_ids.index(i_iter)])
             minimize_kwargs['checkpoint']['start'] = i_iter
         if 'options' in minimize_kwargs and 'maxiter' in minimize_kwargs['options']:
@@ -552,7 +552,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
         - **s**: *(ndarray)* - Component maps
         - **cl_in**: *(ndarray)* - Spectra of the input alm
         - **cl_out**: *(ndarray)* - Spectra of the output alm
-        - **fsky**: *(ndarray)* - The input fsky used to correct the cls 
+        - **fsky**: *(ndarray)* - The input fsky used to correct the cls
 
     Note
     ----

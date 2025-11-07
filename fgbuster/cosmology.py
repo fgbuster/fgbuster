@@ -137,7 +137,7 @@ def _get_wn_shape(nside, nside_wn, path=op.join(op.dirname(__file__), 'cache')):
         filename = f'{path}/wn_{nside}_{nside_wn}.npy'
         _get_wn_shape.cache[nside, nside_wn] = np.load(filename)
         return _get_wn_shape(nside, nside_wn)
-    except IOError:
+    except OSError:
         pass
 
     # Calculation
