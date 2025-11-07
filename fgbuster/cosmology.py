@@ -447,8 +447,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         ax.loglog(ell, res.bias, 'DarkOrange', linestyle='--', label='systematic residuals', linewidth=2.0)
         ax.loglog(ell, res.noise, 'DarkBlue', linestyle='--', label='noise after component separation', linewidth=2.0)
         ax.legend()
-        ax.set_xlabel('$\ell$', fontsize=20)
-        ax.set_ylabel('$C_\ell$ [$\mu$K-arcmin]', fontsize=20)
+        ax.set_xlabel(r'$\ell$', fontsize=20)
+        ax.set_ylabel(r'$C_\ell$ [$\mu$K-arcmin]', fontsize=20)
         ax.set_xlim(lmin,lmax)
 
     ## 5.1. data
