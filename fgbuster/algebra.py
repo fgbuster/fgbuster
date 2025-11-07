@@ -50,7 +50,6 @@ In that case, you have two options
 import logging
 import inspect
 from time import time
-import six
 import numpy as np
 import scipy as sp
 import numdifftools
@@ -533,7 +532,7 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
 
     diff = []
     # Iterate over the parameter types (i.e. over A_dB), compute log_dB
-    # and append it to diff        
+    # and append it to diff
     for par_comp_of_dB, par_A_dB in zip(comp_of_dB, A_dB):
         # A_dB is compressed: it contains only the column that acts
         # on the following slice of s
@@ -548,7 +547,7 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
             # -> do the sum and produce only one value
             diff.append(np.array([dt_D_A_dB_s.sum()]))
         else:
-            # comp_of_dB specified the domains over which the sky 
+            # comp_of_dB specified the domains over which the sky
             # is partitioned. They are indexed by ids.
             # Accumulate dt_D_A_dB_s for the entries that share the same id.
             # The size of the output vector is the number of domains.
@@ -630,7 +629,7 @@ def _turn_into_slice_if_integer(index_expression):
     if not isinstance(index_expression, tuple):
         index_expression = (index_expression,)
     for i in index_expression:
-        if isinstance(i, six.integer_types):
+        if isinstance(i, int):
             res.append(slice(i, i+1, None))
         else:
             res.append(i)
@@ -736,10 +735,10 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
                     for pixj in range(npix_beta_j):
 
                         if npix_beta_j != npix_beta_i:
-                            # the two spectral indices have different 
-                            # resolutions. Only the pixels which are 
+                            # the two spectral indices have different
+                            # resolutions. Only the pixels which are
                             # overlapping can have non-zero contribution
-                            # case 1. npix_i > npix_j 
+                            # case 1. npix_i > npix_j
                             if npix_beta_i > npix_beta_j:
                                 map_one = np.zeros(npix_beta_j)
                                 map_one[pixj] = 1.0
@@ -747,10 +746,10 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
                                     # in case nside=0 for the largest resolution
                                     pix_within_pix = range(npix_beta_i)
                                 else:
-                                    pix_within_pix = np.where( hp.ud_grade(map_one, 
+                                    pix_within_pix = np.where( hp.ud_grade(map_one,
                                         nside_out=hp.npix2nside(npix_beta_i)) == 1)[0]
                                 fisher[ind,ind_] += np.sum(D_A_dB_s[i][pix_within_pix]*D_A_dB_s[j][pixj])
-                            # case 2. npix_j > npix_i 
+                            # case 2. npix_j > npix_i
                             else:
                                 map_one = np.zeros(npix_beta_i)
                                 map_one[pixi] = 1.0
@@ -758,7 +757,7 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
                                     # in case nside=0 for the largest resolution
                                     pix_within_pix = range(npix_beta_j)
                                 else:
-                                    pix_within_pix = np.where( hp.ud_grade(map_one, 
+                                    pix_within_pix = np.where( hp.ud_grade(map_one,
                                         nside_out=hp.npix2nside(npix_beta_j)) == 1)[0]
                                 fisher[ind,ind_] += np.sum(D_A_dB_s[i][pixi]*D_A_dB_s[j][pix_within_pix])
                         else:
@@ -766,7 +765,7 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
                                 fisher[ind,ind_] += D_A_dB_s[i][pixi]*D_A_dB_s[j][pixj]
                         ind_ += 1
                 ind += 1
-        
+
         print fisher
         import pylab as pl
         pl.figure()
@@ -779,7 +778,7 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB):
         exit()
 
         return fisher
-    """        
+    """
 
 def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
     A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
@@ -959,12 +958,12 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB,
     res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
     res.chi = pw_d[0] - _As_svd(u_e_v_last[0], res.s)
-    
+
     """
     fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
                             A_dB_last[0], comp_of_dB)
     print np.shape(fisher)
-    print 'fisher = ', fisher 
+    print 'fisher = ', fisher
     import pylab as pl
     pl.figure()
     # pl.matshow(np.log10(np.abs(fisher)))

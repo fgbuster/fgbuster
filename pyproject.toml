@@ -19,7 +19,6 @@ dependencies = [
     'parameterized',
     'pysm3',
     'scipy',
-    'six',
     'sympy',
     'tqdm',
 ]
