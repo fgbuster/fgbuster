@@ -230,9 +230,9 @@ def standardize_instrument(instrument):
     for attr in INSTRUMENT_STD_ATTR:
         try:
             try:
-                value = getattr(instrument, attr)
+                value = np.asarray(getattr(instrument, attr), dtype=float)
             except AttributeError:
-                value = instrument[attr]
+                value = np.asarray(instrument[attr], dtype=float)
         except (TypeError, KeyError):  # Not subscriptable or missing key
             pass
         else:
