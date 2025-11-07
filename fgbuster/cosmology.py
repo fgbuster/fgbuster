@@ -259,7 +259,7 @@ def get_post_comp_sep_power(
 
 
 def xForecast(components, instrument, d_fgs, lmin, lmax,
-              Alens=1.0, r=0.001, make_figure=False, multires=False, 
+              Alens=1.0, r=0.001, make_figure=False, multires=False,
               l_knee=0, alpha_knee=0, gridding=False, sigma_r_68CL=False, **minimize_kwargs):
     """ xForecast
 
@@ -297,8 +297,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     r: float
         tensor-to-scalar ratio assumed in the likelihood on r'
     multires: boolean
-        If True, it estimates the statistical foreground residuals in 
-        the case of an multiresolution component separation, following 
+        If True, it estimates the statistical foreground residuals in
+        the case of an multiresolution component separation, following
         what was done in LiteBIRD PTEP i.e. with nside = (64,8,0)
     minimize_kwargs: dict
         Keyword arguments to be passed to `scipy.optimize.minimize` during
@@ -370,9 +370,9 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
 
     ############################################################################
     # 3. Compute spectra of the input foregrounds maps
-    ### TO DO: which size for Cl_fgs??? N_spec != 1 ? 
+    ### TO DO: which size for Cl_fgs??? N_spec != 1 ?
     print ('======= COMPUTATION OF CL_FGS =======')
-    if n_stokes == 3:  
+    if n_stokes == 3:
         d_spectra = d_fgs
     else:  # Only P is provided, add T for map2alm
         d_spectra = np.zeros((n_freqs, 3, d_fgs.shape[2]), dtype=d_fgs.dtype)
@@ -403,7 +403,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     # Check dimentions
     assert ((n_freqs,) == W_maxL.shape == W_dB_maxL.shape[1:]
                        == W_dBdB_maxL.shape[2:] == V_maxL.shape)
-    assert (len(res.params) == W_dB_maxL.shape[0] 
+    assert (len(res.params) == W_dB_maxL.shape[0]
                             == W_dBdB_maxL.shape[0] == W_dBdB_maxL.shape[1])
 
     # elementary quantities defined in Stompor, Errard, Poletti (2016)
@@ -451,18 +451,18 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         ax.set_ylabel('$C_\ell$ [$\mu$K-arcmin]', fontsize=20)
         ax.set_xlim(lmin,lmax)
 
-    ## 5.1. data 
+    ## 5.1. data
     Cl_obs = Cl_fid['BB'] + Cl_noise
     dof = (2 * ell + 1) * fsky
     YY = Cl_xF['YY']
     if multires:
-        tr_SigmaYY = get_post_comp_sep_power(components, instrument, nside, [64,8,4], 
+        tr_SigmaYY = get_post_comp_sep_power(components, instrument, nside, [64,8,4],
                         nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
                         pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,lmin-2:lmax-1]
-        tr_SigmaYY_ = get_post_comp_sep_power(components, instrument, nside, [64,4,2], 
+        tr_SigmaYY_ = get_post_comp_sep_power(components, instrument, nside, [64,4,2],
                         nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
                         pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,lmin-2:lmax-1]
-        tr_SigmaYY__ = get_post_comp_sep_power(components, instrument, nside, [64,0,2], 
+        tr_SigmaYY__ = get_post_comp_sep_power(components, instrument, nside, [64,0,2],
                         nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
                         pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,lmin-2:lmax-1]
          # the extra factor 2 is an ad-hoc correction to ~ match  the PTEP sigma(r) order of magnitude
@@ -470,8 +470,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         res.stat = tr_SigmaYY*1.0
     else:
         tr_SigmaYY = np.einsum('ij, lji -> l', res.Sigma, YY)
-        
-    if l_knee !=0: 
+
+    if l_knee !=0:
         print('adding a 1/ell contribution')
         boost_factor = (1 + (l_knee*1.0/ell)**alpha_knee)
         tr_SigmaYY *= boost_factor
@@ -479,7 +479,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
 
     Cl_obs = Cl_fid['BB'] + Cl_noise
     D =  Cl_obs + tr_SigmaYY + Cl_xF['yy'] + 2 * Cl_xF['yz']
-    
+
     ## 5.2. modeling
     def cosmo_likelihood(r_,):
         # S16, Appendix C
@@ -490,7 +490,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         U = np.linalg.inv(res.Sigma_inv + np.dot(YY.T, dof_over_Cl))
         ## Eq. C9
         first_row = np.sum(dof_over_Cl * (
-            Cl_obs * (1 - np.einsum('ij, lji -> l', U, YY) / Cl_model) 
+            Cl_obs * (1 - np.einsum('ij, lji -> l', U, YY) / Cl_model)
             + tr_SigmaYY))
         second_row = - np.einsum(
             'l, m, ij, mjk, kf, lfi',
@@ -510,7 +510,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         '''
         # Cl_hat = Cl_obs + tr_SigmaYY
         logdetC = np.sum(dof * np.log(Cl_model))
-        trCinvD = np.sum(dof *  D / Cl_model ) 
+        trCinvD = np.sum(dof *  D / Cl_model )
 
         ## Bringing things together
         # return trCinvC + trECinvC + logdetC
@@ -533,6 +533,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         bound_1 = r_grid[ind_r_min+1]
     print('bounds on r = ', bound_0, ' / ', bound_1)
     print('starting point = ', r0)
+    if 'bounds' in minimize_kwargs:
+        del minimize_kwargs['bounds']
     res_Lr = sp.optimize.minimize(cosmo_likelihood, [r0], bounds=[(bound_0,bound_1)], **minimize_kwargs)
     print ('    ===>> fitted r = ', res_Lr['x'])
 
@@ -585,13 +587,13 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     res.cosmo_params = {}
     res.cosmo_params['r'] = (res_Lr['x'], sigma_r)
 
-    if gridding: 
+    if gridding:
         r_grid = np.linspace(-0.05,0.1,num=10000)
         logL = np.array([cosmo_likelihood(r_loc) for r_loc in r_grid])
 
         good_indices = ~np.isnan(logL)
-        r_grid = r_grid[good_indices] 
-        logL = logL[good_indices] 
+        r_grid = r_grid[good_indices]
+        logL = logL[good_indices]
 
         ind_r_fit = np.argmin(logL)
         r_fit = r_grid[ind_r_fit]
@@ -612,7 +614,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
 
         sigma_r_pos_5sigma = rs_pos[np.argmin(np.abs(cum -  0.999999))] - r_fit
         sigma_r_neg_5sigma = r_fit-rs_neg[::-1][np.argmin(np.abs(cum_neg -  0.999999))]
-        
+
         res.cosmo_params['bounds'] = (sigma_r_neg_5sigma,sigma_r_neg, sigma_r_pos, sigma_r_pos_5sigma)
 
     ###############################################################################
