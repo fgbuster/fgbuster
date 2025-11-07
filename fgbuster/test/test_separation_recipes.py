@@ -312,13 +312,13 @@ class TestWeightedCompSep(unittest.TestCase):
                 shape += (1,)
             shape += (hp.nside2npix(nside),)
             if stokes == 'P':
-                return (instrument.depth_p[:, np.newaxis, np.newaxis]
+                return (np.asarray(instrument.depth_p)[:, np.newaxis, np.newaxis]
                         * np.full(shape, 1./hp.nside2resol(nside, True)**2))
             elif stokes == 'I':
-                return (instrument.depth_i[:, np.newaxis, np.newaxis]
+                return (np.asarray(instrument.depth_i)[:, np.newaxis, np.newaxis]
                         * np.full(shape, 1./hp.nside2resol(nside, True)**2))
             elif stokes == 'N':
-                return (instrument.depth_i[:, np.newaxis]
+                return (np.asarray(instrument.depth_i)[:, np.newaxis]
                         * np.full(shape, 1./hp.nside2resol(nside, True)**2))
             else:
                 raise ValueError(stokes)

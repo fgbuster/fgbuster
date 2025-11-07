@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-""" 
+"""
 Handy access to instrument configuration, map generation
 and other pysm3 functionalities
 """
@@ -209,7 +209,7 @@ def get_noise_realization(nside, instrument, unit='uK_CMB'):
 
 
 def standardize_instrument(instrument):
-    f"""Handle different input instruments
+    """Handle different input instruments
 
     Parameters
     ----------
@@ -230,14 +230,27 @@ def standardize_instrument(instrument):
     for attr in INSTRUMENT_STD_ATTR:
         try:
             try:
-                value = np.array(getattr(instrument, attr), dtype=np.float64)
+                value = np.asarray(getattr(instrument, attr), dtype=float)
             except AttributeError:
-                value = np.array(instrument[attr], dtype=np.float64)
-            setattr(std_instr, attr, value.copy())
+                value = np.asarray(instrument[attr], dtype=float)
         except (TypeError, KeyError):  # Not subscriptable or missing key
             pass
-        if attr == 'frequency' and std_instr.frequency.ndim == 3:
-            std_instr.frequency = [tuple(x) for x in std_instr.frequency]
+        else:
+            if attr == 'frequency':
+                # If frequency contains bandpasses, this step is needed to
+                # ensure that it can be converted to an array from a DataFrame
+                value = [x for x in value]
+                try:
+                    value = np.array(value, dtype=np.float64)
+                except ValueError:
+                    # This handles the case where bandpasses have different sample sizes
+                    value = np.array(value, dtype=object)
+                if value.ndim > 1:
+                    value = [x.copy() for x in value]
+                else:
+                    value = value.copy()
+
+            setattr(std_instr, attr, value)
 
     return std_instr
 
