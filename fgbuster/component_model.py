@@ -104,7 +104,7 @@ def bandpass_integration(f):
     return integrated_f
 
 
-class Component(object):
+class Component:
     """ Abstract class for SED evaluation
 
     It defines the API.
@@ -131,7 +131,7 @@ class Component(object):
         nu: array, tuple or list
             Frequencies or banpasses for the SED evaluation
             See the result of :func:`bandpass_integration`.
-                
+
         *params: float or ndarray
             Value of each of the free parameters. They can be arrays and, in
             this case, they should be broadcastable to a common shape.
@@ -330,7 +330,9 @@ class AnalyticComponent(Component):
 
     def __init__(self, analytic_expr, **fixed_params):
         self._fixed_params = fixed_params
-        self._expr = parse_expr(analytic_expr).subs(fixed_params)
+        self._expr = parse_expr(analytic_expr).subs(
+            {k:v for k,v in fixed_params.items() if v is not None}
+        )
         self._params = sorted([str(s) for s in self._expr.free_symbols])
         self._defaults = []
 
@@ -398,7 +400,7 @@ class ModifiedBlackBody(AnalyticComponent):
             'nu0': nu0, 'beta_d': beta_d, 'temp': temp, 'h_over_k': H_OVER_K
         }
 
-        super(ModifiedBlackBody, self).__init__(analytic_expr, **kwargs)
+        super().__init__(analytic_expr, **kwargs)
 
         self._set_default_of_free_symbols(
             beta_d=self._REF_BETA, temp=self._REF_TEMP)
@@ -442,7 +444,7 @@ class PowerLaw(AnalyticComponent):
         kwargs = {'nu0': nu0, 'nu_pivot': nu_pivot,
                   'beta_pl': beta_pl, 'running': running}
 
-        super(PowerLaw, self).__init__(analytic_expr, **kwargs)
+        super().__init__(analytic_expr, **kwargs)
 
         self._set_default_of_free_symbols(
             beta_pl=self._REF_BETA, running=self._REF_RUN, nu_pivot=self._REF_NU_PIVOT)
@@ -467,7 +469,7 @@ class CMB(AnalyticComponent):
         else:
             raise ValueError("Unsupported units: %s"%units)
 
-        super(CMB, self).__init__(analytic_expr)
+        super().__init__(analytic_expr)
 
         if 'K_CMB' in units:
             self.eval = bandpass_integration(lambda nu: np.ones_like(nu))
@@ -500,7 +502,7 @@ class ThermalSZ(AnalyticComponent):
 
 
         kwargs = dict(Tcmb=Planck15.Tcmb(0).value, h_over_k=H_OVER_K)
-        super(ThermalSZ, self).__init__(analytic_expr, **kwargs)
+        super().__init__(analytic_expr, **kwargs)
 
 
 class FreeFree(AnalyticComponent):
@@ -542,7 +544,7 @@ class FreeFree(AnalyticComponent):
 
         kwargs = dict(logEM=logEM, Te=Te, tau=tau, gff=gff, T4=T4)
 
-        super(FreeFree, self).__init__(analytic_expr, **kwargs)
+        super().__init__(analytic_expr, **kwargs)
 
         self._set_default_of_free_symbols(
             logEM=self._REF_LOGEM, Te=self._REF_TE)

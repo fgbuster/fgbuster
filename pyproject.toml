@@ -18,7 +18,7 @@ dependencies = [
     'pysm3',
     'scipy',
     'six',
-    'sympy==1.11',
+    'sympy',
     'tqdm',
 ]
 requires-python = '>=3.10'
@@ -54,4 +54,8 @@ line-length = 100
 [tool.ruff.lint]
 select = [
     'NPY201',
+    'UP',
+]
+ignore = [
+    'UP031',  # percent format
 ]
