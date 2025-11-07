@@ -352,8 +352,8 @@ class TestMultiResCompSep(unittest.TestCase):
                                                   masks[:1], instruments[:])]
 
 
-    tags_multires = [_make_tag(*args) 
-                     for args in product(stokess, nsides, [[2, 1, 0]], 
+    tags_multires = [_make_tag(*args)
+                     for args in product(stokess, nsides, [[2, 1, 0]],
                                          componentss[:1], masks,
                                          instruments[:1])]
 
@@ -594,8 +594,8 @@ class TestHILC(unittest.TestCase):
         self.nside = 2**int(np.log2((self.LMAX + 1) / 3))
         self.npix = hp.nside2npix(self.nside)
 
-        self.s = hp.synfast(self.cl, self.nside, new=True, verbose=False)
-        noise = [hp.synfast(self.cl_noise, self.nside, new=True, verbose=False)
+        self.s = hp.synfast(self.cl, self.nside, new=True)
+        noise = [hp.synfast(self.cl_noise, self.nside, new=True)
                  for i in range(N_FREQ)]
         noise = np.array(noise)
 

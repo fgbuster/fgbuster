@@ -47,9 +47,9 @@ In that case, you have two options
 #     - _foo_svd doesn't perform all the checks that foo is required to do
 #     - foo can return the SVD, which can then be reused in _bar_svd(...)
 
+import logging
 import inspect
 from time import time
-import six
 import numpy as np
 import scipy as sp
 import numdifftools
@@ -554,7 +554,7 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
 
     diff = []
     # Iterate over the parameter types (i.e. over A_dB), compute log_dB
-    # and append it to diff        
+    # and append it to diff
     for par_comp_of_dB, par_A_dB in zip(comp_of_dB, A_dB):
         # A_dB is compressed: it contains only the column that acts
         # on the following slice of s
@@ -569,7 +569,7 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
             # -> do the sum and produce only one value
             diff.append(np.array([dt_D_A_dB_s.sum()]))
         else:
-            # comp_of_dB specified the domains over which the sky 
+            # comp_of_dB specified the domains over which the sky
             # is partitioned. They are indexed by ids.
             # Accumulate dt_D_A_dB_s for the entries that share the same id.
             # The size of the output vector is the number of domains.
@@ -582,9 +582,9 @@ def _logL_dB_svd(u_e_v, d, A_dB, comp_of_dB):
 def _mism_term_logL_dB_svd(u_e_v, N, A_dB, comp_of_dB):
     u, e, v = u_e_v
     vt_prime = _T(v)/e[..., np.newaxis, :]
-    
+
     P = np.eye(u.shape[-2])[np.newaxis, np.newaxis, ...] - _mm(u, _T(u))
-    
+
     n_param = len(A_dB)
     mism_dB = np.empty(n_param)
     for i in range(n_param):
@@ -666,7 +666,7 @@ def _turn_into_slice_if_integer(index_expression):
     if not isinstance(index_expression, tuple):
         index_expression = (index_expression,)
     for i in index_expression:
-        if isinstance(i, six.integer_types):
+        if isinstance(i, int):
             res.append(slice(i, i+1, None))
         else:
             res.append(i)
@@ -707,14 +707,14 @@ def _raise_if_not_simple_comp_of_dB(comp_of_dB):
 
 #Modified by Clement Leloup
 def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=None):
-    
+
     _raise_if_not_simple_comp_of_dB(comp_of_dB)
 
     if N is not None:
         assert L is not None
         assert A_dBdB is not None
         N = _mtmm(L, N, L)
-    
+
     u, e, v = u_e_v
     with np.errstate(divide='ignore'):
         vt_prime = _T(v)/e[..., np.newaxis, :]
@@ -745,7 +745,7 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
                 mism_term[i, j] = np.sum(np.trace(_mm(m1+m2+m3+m4+m5, N), axis1=-2, axis2=-1))
 
     L_dB_dB = np.array([[np.sum(i*j) for i in D_A_dB_s] for j in D_A_dB_s])
-        
+
     if N is None:
         return L_dB_dB
     else:
@@ -805,10 +805,10 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
                     for pixj in range(npix_beta_j):
 
                         if npix_beta_j != npix_beta_i:
-                            # the two spectral indices have different 
-                            # resolutions. Only the pixels which are 
+                            # the two spectral indices have different
+                            # resolutions. Only the pixels which are
                             # overlapping can have non-zero contribution
-                            # case 1. npix_i > npix_j 
+                            # case 1. npix_i > npix_j
                             if npix_beta_i > npix_beta_j:
                                 map_one = np.zeros(npix_beta_j)
                                 map_one[pixj] = 1.0
@@ -816,10 +816,10 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
                                     # in case nside=0 for the largest resolution
                                     pix_within_pix = range(npix_beta_i)
                                 else:
-                                    pix_within_pix = np.where( hp.ud_grade(map_one, 
+                                    pix_within_pix = np.where( hp.ud_grade(map_one,
                                         nside_out=hp.npix2nside(npix_beta_i)) == 1)[0]
                                 fisher[ind,ind_] += np.sum(D_A_dB_s[i][pix_within_pix]*D_A_dB_s[j][pixj])
-                            # case 2. npix_j > npix_i 
+                            # case 2. npix_j > npix_i
                             else:
                                 map_one = np.zeros(npix_beta_i)
                                 map_one[pixi] = 1.0
@@ -827,7 +827,7 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
                                     # in case nside=0 for the largest resolution
                                     pix_within_pix = range(npix_beta_j)
                                 else:
-                                    pix_within_pix = np.where( hp.ud_grade(map_one, 
+                                    pix_within_pix = np.where( hp.ud_grade(map_one,
                                         nside_out=hp.npix2nside(npix_beta_j)) == 1)[0]
                                 fisher[ind,ind_] += np.sum(D_A_dB_s[i][pixi]*D_A_dB_s[j][pix_within_pix])
                         else:
@@ -835,7 +835,7 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
                                 fisher[ind,ind_] += D_A_dB_s[i][pixi]*D_A_dB_s[j][pixj]
                         ind_ += 1
                 ind += 1
-        
+
         print fisher
         import pylab as pl
         pl.figure()
@@ -848,7 +848,7 @@ def _fisher_logL_dB_dB_svd(u_e_v, s, A_dB, comp_of_dB, N=None, L=None, A_dBdB=No
         exit()
 
         return fisher
-    """        
+    """
 
 def fisher_logL_dB_dB(A, s, A_dB, comp_of_dB, invN=None, return_svd=False):
     A_dB, comp_of_dB = _A_dB_and_comp_of_dB_as_compatible_list(A_dB, comp_of_dB)
@@ -923,9 +923,9 @@ def _build_bound_inv_logL_and_logL_dB(A_ev, d, invN,
                 _update_old(x)
             except np.linalg.linalg.LinAlgError:
                 print('SVD of A failed -> logL = -inf')
-                return np.inf            
+                return np.inf
             return - _logL_svd(u_e_v_old[0], pw_d[0]) - _mism_term_logL_svd(u_e_v_old[0], _mtmm(L[0], N_true, L[0]))
-        
+
         if A_dB_ev is None:
             def _inv_logL_dB(x):
                 return sp.optimize.approx_fprime(x, _inv_logL, _EPSILON_LOGL_DB)
@@ -1038,7 +1038,11 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, N_true=None, A_
 
     # Gather minmize arguments
     if disp and 'callback' not in minimize_kwargs:
-        minimize_kwargs['callback'] = verbose_callback()
+        if 'checkpoint' in minimize_kwargs:
+            minimize_kwargs['callback'] = checkpoint_callback(**minimize_kwargs['checkpoint'])
+            del minimize_kwargs['checkpoint']
+        else:
+            minimize_kwargs['callback'] = verbose_callback()
 
     # Likelihood maximization
     res = sp.optimize.minimize(fun, *minimize_args, **minimize_kwargs)
@@ -1047,7 +1051,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, N_true=None, A_
     u_e_v_last, A_dB_last, x_last, pw_d = last_values
     _, L = _svd_sqrt_invN_A(A_ev(x_last), invN)
     if not np.all(x_last[0] == res.x):
-        fun(res.x) #  Make sure that last_values refer to the minimum
+        fun(res.x)  # Make sure that last_values refer to the minimum
 
     #Modified by Clement Leloup
     if A_dBdB_ev is not None:
@@ -1058,12 +1062,12 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, N_true=None, A_
     res.s = _Wd_svd(u_e_v_last[0], pw_d[0])
     res.invAtNA = _invAtNA_svd(u_e_v_last[0])
     res.chi = pw_d[0] - _As_svd(u_e_v_last[0], res.s)
-    
+
     """
     fisher = _fisher_logL_dB_dB_svd(u_e_v_last[0], res.s,
                             A_dB_last[0], comp_of_dB)
     print np.shape(fisher)
-    print 'fisher = ', fisher 
+    print 'fisher = ', fisher
     import pylab as pl
     pl.figure()
     # pl.matshow(np.log10(np.abs(fisher)))
@@ -1205,9 +1209,9 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
 
     # Collect results
     n_comp = next(r for r in res.patch_res if r is not None).s.shape[-1]
-    res.s = np.full((d.shape[:-1]+(n_comp,)), np.NaN) # NaN for testing
-    res.invAtNA = np.full((d.shape[:-1]+(n_comp, n_comp)), np.NaN) # NaN for testing
-    res.chi = np.full(d.shape, np.NaN) # NaN for testing
+    res.s = np.full((d.shape[:-1]+(n_comp,)), np.nan) # NaN for testing
+    res.invAtNA = np.full((d.shape[:-1]+(n_comp, n_comp)), np.nan) # NaN for testing
+    res.chi = np.full(d.shape, np.nan) # NaN for testing
 
     for patch_id in range(max_id+1):
         mask = patch_ids == patch_id
@@ -1244,7 +1248,7 @@ def multi_comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, patch_ids,
             shape_chi_dB = patch_ids.shape+res.patch_res[0].chi_dB[i].shape[1:]
             if i == 0:
                 res.chi_dB = []
-            res.chi_dB.append(np.full(shape_chi_dB, np.NaN)) # NaN for testing
+            res.chi_dB.append(np.full(shape_chi_dB, np.nan)) # NaN for testing
     #except (AttributeError, TypeError):  # No chi_dB (no A_dB_ev)
     except AttributeError:  # No chi_dB (no A_dB_ev)
         pass
@@ -1270,7 +1274,7 @@ def _format_A_dB(A_dB, x, size):
     This function reproduces the 2d shape of the derivatives.
 
     """
-    
+
     A_dB = np.asarray(A_dB)
     A_dB_fmt = np.zeros((A_dB.shape[0], A_dB.shape[1], size))
     x_ind = np.repeat(np.arange(1, size), x.shape[0]/(size-1))
@@ -1309,6 +1313,21 @@ def _indexed_matrix(matrix, data_shape, data_indexing):
     return matrix[tuple(matrix_indexing)]
 
 
+def checkpoint_callback(start=0, delta=1, odir='./'):
+    logging.warning(f'Checkpoint callback active: starting from iteration {start}')
+    logging.warning('[The logs of the minimizer always start from 0]')
+    i_iter = [start]
+
+    def callback(xk):
+        i_iter[0] += 1
+        if i_iter[0] % delta == 0:
+            fn = f'{odir}/iter_{i_iter[0]}'
+            np.save(fn, xk)
+            logging.warning(fn)
+
+    return callback
+
+
 def verbose_callback():
     """ Provide a verbose callback function
 
@@ -1322,7 +1341,7 @@ def verbose_callback():
     old_old_fval = [None]
     def callback(xk):
         k = _get_from_caller('k') + 1
-        func_calls = _get_from_caller('func_calls')[0]
+        func_calls = _get_from_caller('sf').nfev
         old_fval = _get_from_caller('old_fval')
         old_time = time()
         try:

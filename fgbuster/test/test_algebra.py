@@ -8,7 +8,7 @@ import fgbuster.component_model as cm
 from fgbuster.mixingmatrix import MixingMatrix
 from fgbuster.algebra import (W, Wd, invAtNA, W_dB, W_dBdB, _mv, _mtm, _mm, _T,
                               _mmm, D, comp_sep, multi_comp_sep, _mtmm, P,
-                              P_dBdB)
+                              P_dBdB, logL, logL_dB)
 
 class TestAlgebraRandom(unittest.TestCase):
 
@@ -99,6 +99,7 @@ class TestAlgebraPhysical(unittest.TestCase):
         self.params = [1.54, 20, -3]
         self.A = self.mm.eval(self.nu, *(self.params))
         self.A_dB = self.mm.diff(self.nu, *(self.params))
+        self.comp_of_dB = self.mm.comp_of_dB
         self.A_dBdB = self.mm.diff_diff(self.nu, *(self.params))
         self.invN = uniform(
             size=(self.n_pixels, self.n_stokes, self.n_freq, self.n_freq))
@@ -224,6 +225,19 @@ class TestAlgebraPhysical(unittest.TestCase):
                         (Wdx(1, 1) - Wdx(+1, -1) - Wdx(-1, 1) + Wdx(-1, -1))
                         / (4 * self.DX**2))
                 aac(W_dBdB_numerical, W_dBdB_analytic[i][j], rtol=2.5e-1)
+
+    def test_logL_dB(self):
+        d = (self.A @ np.random.normal(
+             size=(self.n_pixels, self.n_stokes, 3, 1)))[..., 0]
+        a_logL_dB = logL_dB(self.A, d, self.invN, self.A_dB, self.comp_of_dB)
+        aac(0, a_logL_dB, atol=1e-7)
+
+    def test_logL_dB_ids(self):
+        d = (self.A @ np.random.normal(
+             size=(self.n_pixels, self.n_stokes, 3, 1)))[..., 0]
+        comp_of_dB = [(c, np.arange(2)) for c in self.comp_of_dB]
+        a_logL_dB = logL_dB(self.A, d, self.invN, self.A_dB, comp_of_dB)
+        aac(0, a_logL_dB, atol=1e-7)
 
 
 if __name__ == '__main__':

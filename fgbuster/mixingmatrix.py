@@ -94,7 +94,7 @@ class MixingMatrix(tuple):
         for i_c, c in enumerate(self):
             param_slice = slice(self.__first_param_of_comp[i_c],
                                 self.__first_param_of_comp[i_c] + c.n_param)
-            res += [g[..., np.newaxis]
+            res += [np.asarray(g)[..., np.newaxis]
                     for g in c.diff(nu, *params[param_slice])]
         return res
 
@@ -120,7 +120,7 @@ class MixingMatrix(tuple):
             for i in range(i_start, param_slice.stop):
                 for j in range(param_slice.start, param_slice.stop):
                     res[i][j] = (
-                        comp_diff_diff[i - i_start][j - i_start].reshape(-1, 1))
+                        np.asarray(comp_diff_diff[i - i_start][j - i_start]).reshape(-1, 1))
         return res
     
     def diff_diff_evaluator(self, nu, unpack=(lambda x: x.reshape((-1,)))):

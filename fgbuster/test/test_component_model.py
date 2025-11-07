@@ -53,7 +53,7 @@ class TestAnalyticComponent(unittest.TestCase):
             nu = nu.flatten()
             res = nu * param0 + nu**param1 + 100.
             res *= weight.flatten()
-            return np.trapz(res.reshape(res.shape[:-1] + nu_shape),
+            return np.trapezoid(res.reshape(res.shape[:-1] + nu_shape),
                             nu.reshape(nu_shape) * 1e9, -1)
         raise
 
@@ -70,8 +70,8 @@ class TestAnalyticComponent(unittest.TestCase):
             res = nu**param1 * np.log(nu)
             res *= weight.flatten()
             nu = nu.reshape(nu_shape)
-            res = np.trapz(res.reshape(res.shape[:-1] + nu_shape), nu * 1e9, -1)
-            return [np.trapz(nu*weight, nu * 1e9, -1), res]
+            res = np.trapezoid(res.reshape(res.shape[:-1] + nu_shape), nu * 1e9, -1)
+            return [np.trapezoid(nu*weight, nu * 1e9, -1), res]
         raise
 
     def _add_dim_if_ndarray(self, param):
@@ -139,7 +139,7 @@ class TestAnalyticComponent(unittest.TestCase):
         pysm_map = sky.get_emission(freqs * u.GHz, weights)[1].value  # Select Q
 
         weights = weights / _jysr2rj(freqs)
-        weights /= np.trapz(weights, freqs * 1e9)
+        weights /= np.trapezoid(weights, freqs * 1e9)
         dust = sky.components[0]
         fgb_map = Dust(dust.freq_ref_P.value, units='uK_RJ').eval(
             [(freqs, weights)], dust.mbb_index.value, dust.mbb_temperature.value)

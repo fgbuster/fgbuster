@@ -20,6 +20,9 @@
 
 from six import string_types
 import logging
+from glob import glob
+import os.path as op
+import os
 import numpy as np
 from scipy.optimize import OptimizeResult
 import healpy as hp
@@ -281,7 +284,7 @@ def basic_comp_sep(components, instrument, data, nside=0, **minimize_kwargs):
 
 
 #Added by Clement Leloup
-def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invNlm=None, mask=None, 
+def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invNlm=None, mask=None,
                       data_is_alm=False, **minimize_kwargs):
 
     """ Harmonic component separation
@@ -309,7 +312,7 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
         npix is the number of alms, i.e. (lmax+1)*(lmax+2)/2.
     nside: int
         For each pixel of a HEALPix map with this nside, the non-linear
-        parameters are estimated independently        
+        parameters are estimated independently
     lmax: int
         maximum multipole to use in the likelihood
     invN: ndarray
@@ -322,7 +325,7 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
         mask to be applied before going to harmonic domain, if any.
     data_is_alm: bool
         If True, the data is already in harmonic domain (alms), otherwise it is in map domain.
-        
+
     Returns
     -------
     result: dict
@@ -346,12 +349,12 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
 
     """
 
-    
+
     #instrument = standardize_instrument(instrument)
     #lmax = 3 * nside - 1
     n_comp = len(components)
     fsky = 1.0
-    
+
     try:
         assert np.any(instrument.fwhm)
     except (KeyError, AssertionError):
@@ -365,7 +368,7 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
         print('Computing alms')
         # Data is in map domain, we need to compute alms
         alms_unmasked = _get_alms(data, lmax=lmax)
-        
+
         if mask is not None:
             data_masked = np.asarray([hp.alm2map(alms_unmasked[f], nside) for f in range(len(instrument.frequency))])
             data_masked *= mask
@@ -373,7 +376,7 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
             alms = _get_alms(data_masked, lmax=lmax)[:,1:,:] # Here we take only polarization
         else:
             alms = alms_unmasked[:,1:,:] # Here we take only polarization
-        
+
     cl_in = np.array([hp.alm2cl(alm) for alm in alms])
     ell = hp.Alm.getlm(lmax, np.arange(alms.shape[-1]))[0]
     ell = np.stack((ell, ell), axis=-1).reshape(-1) # For transformation into real alms
@@ -390,7 +393,7 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
 
     #Format alms to be used in comp sep
     alms = _format_alms(alms)
-    
+
     A_ev, A_dB_ev, comp_of_param, x0, params = _A_evaluator(components, instrument)
     if not len(x0):
         A_ev = A_ev()
@@ -418,144 +421,6 @@ def harmonic_comp_sep(components, instrument, data, nside, lmax, invN=None, invN
         res.x = res.x.T
         res.Sigma = res.Sigma.T
 
-    return res
-
-
-def adaptive_comp_sep(components, instrument, data, patch_ids,
-                      **minimize_kwargs):
-    """ Arbitrary clusters for each parameter
-
-    Parameters
-    ----------
-    components: list
-        List storing the :class:`Component` s of the mixing matrix
-    instrument:
-        Object that provides the following as a key or an attribute.
-
-        - **frequency**
-        - **depth_i** or **depth_p** (optional, frequencies are inverse-noise
-          weighted according to these noise levels)
-
-        They can be anything that is convertible to a float numpy array.
-    data: ndarray or MaskedArray
-        Data vector to be separated. Shape *(n_freq, ..., n_pix).*
-        *...* can be
-
-        - absent or 1: temperature maps
-        - 2: polarization maps
-        - 3: temperature and polarization maps (see note)
-
-        Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
-        neglected during the component separation process.
-    patch_ids: list
-        The *i*-th element is the clusters map of the *i*-th parameter.
-        A cluster map is a map of integers that, for each pixel defines the
-        index of the cluster the pixel belongs to.
-        
-    Returns
-    -------
-    result: dict
-	It includes
-
-	- **param**: *(list)* - Names of the parameters fitted
-	- **x**: *(seq)* - ``x[i][j]`` is the best-fit values of the *j*-th
-          clusters of the *i*-th parameter.
-	- **x_map**: *(seq)* - ``x[i]`` is the map of the *i*-th parameter.
-        - **s**: *(ndarray)* - Component amplitude maps
-        - **mask_good**: *(ndarray)* - mask of the entries actually used in the
-          component separation
-
-    Note
-    ----
-
-    * During the component separation, a pixel is masked if at least one of
-      its frequencies is masked.
-    * If you provide temperature and polarization maps, they will constrain the
-      **same** set of parameters. In particular, separation is **not** done
-      independently for temperature and polarization. If you want an
-      independent fitting for temperature and polarization, please launch
-
-      >>> res_T = basic_comp_sep(component_T, instrument, data[:, 0], **kwargs)
-      >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
-
-    """
-    instrument = standardize_instrument(instrument)
-
-    # Prepare mask and set to zero all the frequencies in the masked pixels:
-    # NOTE: mask are bad pixels
-    mask = _intersect_mask(data)
-    data = hp.pixelfunc.ma_to_array(data).copy()
-    data[..., mask] = 0  # Thus no contribution to the spectral likelihood
-
-    try:
-        data_nside = hp.get_nside(data[0])
-    except TypeError:
-        raise ValueError("data has to be a stack of healpix maps")
-
-    prewhiten_factors = _get_prewhiten_factors(instrument, data.shape, data_nside)
-    invN = np.zeros(prewhiten_factors.shape+prewhiten_factors.shape[-1:])
-    np.einsum('...ii->...i', invN)[:] = prewhiten_factors**2
-
-    for ids in patch_ids:
-        assert np.all(ids >= 0)
-        assert ids.dtype.kind in 'ui'
-    n_clusters = [ids.max()+1 for ids in patch_ids]
-
-    def array2maps(x):
-        i = 0
-        maps = []
-        for n_cluster, ids in zip(n_clusters, patch_ids):
-            maps.append(x[i:i+n_cluster][ids])
-            i += n_cluster
-        return maps
-
-    extra_dim = [1] * (data.ndim - 2)
-    unpack = lambda x: [m.reshape(-1, *extra_dim) for m in array2maps(x)]
-
-    x0 = [x for c in components for x in c.defaults]
-    x0 = [np.full(n_cluster, px0) for n_cluster, px0 in zip(n_clusters, x0)]
-    x0 = np.concatenate(x0)
-
-    A = MixingMatrix(*components)
-    assert A.n_param == len(patch_ids), (
-        "%i free parameters but %i patch_ids"
-        % (len(A.defaults), len(patch_ids)))
-    A_ev = A.evaluator(instrument.frequency, unpack)
-    A_dB_ev = A.diff_evaluator(instrument.frequency, unpack)
-
-    comp_of_dB = list(zip(A.comp_of_dB, patch_ids))
-    bounds = minimize_kwargs.get('bounds')
-    if bounds is not None:
-        minimize_kwargs['bounds'] = _get_bounds(patch_ids, bounds)
-
-    # Component separation
-    res = alg.comp_sep(A_ev, data.T, invN, A_dB_ev, comp_of_dB, x0,
-                       **minimize_kwargs)
-    # Craft output
-    # 1) Apply the mask, if any
-    # 2) Restore the ordering of the input data (pixel dimension last)
-    def mask_transpose(x):
-        x[mask] = hp.UNSEEN
-        return x.T
-
-    res.params = A.params
-    res.s = mask_transpose(res.s)
-    res.chi = mask_transpose(res.chi)
-    res.x_map = array2maps(res.x)
-    for m in res.x_map:
-        m[mask] = hp.UNSEEN
-
-    res.x = [res.x[stop-n:stop]
-             for n, stop in zip(n_clusters, np.cumsum(n_clusters))]
-    for x, ids, n_cluster in zip(res.x, patch_ids, n_clusters):
-        # Clusters witn no valid pixels are set to UNSEEN
-        x[np.bincount(ids[~mask], minlength=n_cluster) == 0] = hp.UNSEEN
-
-    if 'chi_dB' in res:
-        for i in range(len(res.chi_dB)):
-            res.chi_dB[i] = mask_transpose(res.chi_dB[i])
-
-    res.mask_good = ~mask
     return res
 
 def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3):
@@ -825,12 +690,11 @@ def ilc(components, instrument, data, patch_ids=None):
 
     res.s = res.s.T
     res.components = mm.components
-
     return res
 
-
-def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
-    """ Basic component separation
+def adaptive_comp_sep(components, instrument, data, patch_ids,
+                      **minimize_kwargs):
+    """ Arbitrary clusters for each parameter
 
     Parameters
     ----------
@@ -854,13 +718,38 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
 
         Values equal to `hp.UNSEEN` or, if `MaskedArray`, masked values are
         neglected during the component separation process.
-    nsides: seq
-        Specify the ``nside`` for each free parameter of the components
+    patch_ids: list
+        The *i*-th element is the clusters map of the *i*-th parameter.
+        A cluster map is a map of integers that, for each pixel defines the
+        index of the cluster the pixel belongs to.
+    minimize_kwargs: dict
+        kwargs of `scipy.optimize.minimize`. In addition it allows for
+        saving/restoring checkpoints. Add the following dictionary to
+        `minimize_kwargs['checkpoint']`::
+
+            # The values are the defaults
+            {
+                'odir': './',
+                # Save iteraton x to `odir/iter_x.npy`
+                'start': 0,
+                # Start from this iteration, If not provided use that largest
+                # stored iteration
+                'delta': 1,
+                # Save a checkpoint every `delta` iterations
+            }
 
     Returns
     -------
     result: dict
-	See `adaptive_comp_sep`
+	It includes
+
+	- **param**: *(list)* - Names of the parameters fitted
+	- **x**: *(seq)* - ``x[i][j]`` is the best-fit values of the *j*-th
+          clusters of the *i*-th parameter.
+	- **x_map**: *(seq)* - ``x[i]`` is the map of the *i*-th parameter.
+        - **s**: *(ndarray)* - Component amplitude maps
+        - **mask_good**: *(ndarray)* - mask of the entries actually used in the
+          component separation
 
     Note
     ----
@@ -876,12 +765,112 @@ def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
       >>> res_P = basic_comp_sep(component_P, instrument, data[:, 1:], **kwargs)
 
     """
-    nside_data = hp.get_nside(data[0])
-    patch_ids = [
-        _my_ud_grade(np.arange(_my_nside2npix(nside)), nside_data).astype(int)
-        for nside in nsides]
-    return adaptive_comp_sep(components, instrument, data, patch_ids,
-                             **minimize_kwargs)
+    instrument = standardize_instrument(instrument)
+
+    # Prepare mask and set to zero all the frequencies in the masked pixels:
+    # NOTE: mask are bad pixels
+    mask = _intersect_mask(data)
+    data = hp.pixelfunc.ma_to_array(data).copy()
+    data[..., mask] = 0  # Thus no contribution to the spectral likelihood
+
+    try:
+        data_nside = hp.get_nside(data[0])
+    except TypeError:
+        raise ValueError("data has to be a stack of healpix maps")
+
+    prewhiten_factors = _get_prewhiten_factors(instrument, data.shape, data_nside)
+    invN = np.zeros(prewhiten_factors.shape+prewhiten_factors.shape[-1:])
+    np.einsum('...ii->...i', invN)[:] = prewhiten_factors**2
+
+    for ids in patch_ids:
+        assert np.all(ids >= 0)
+        assert ids.dtype.kind in 'ui'
+    n_clusters = [ids.max()+1 for ids in patch_ids]
+
+    def array2maps(x):
+        i = 0
+        maps = []
+        for n_cluster, ids in zip(n_clusters, patch_ids):
+            maps.append(x[i:i+n_cluster][ids])
+            i += n_cluster
+        return maps
+
+    extra_dim = [1] * (data.ndim - 2)
+    unpack = lambda x: [m.reshape(-1, *extra_dim) for m in array2maps(x)]
+
+    try:
+        checkpoint_dir = minimize_kwargs['checkpoint'].get('odir', './')
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        try:
+            x0 = np.load(op.join(checkpoint_dir, f"iter_{minimize_kwargs['checkpoint']['start']}.npy"))
+            logging.warning(f"Iteration number {minimize_kwargs['checkpoint']['start']} loaded")
+        except (OSError, KeyError):  # Either start is not set, or the file is missing
+            iter_files = glob(op.join(checkpoint_dir, 'iter_*.npy'))
+            iter_ids = [int(op.splitext(op.basename(f))[0].split('_')[1])
+                        for f in iter_files]
+            i_iter = max(iter_ids+[0])
+            logging.warning(f'Highest iteration number found is {i_iter}')
+            x0 = np.load(iter_files[iter_ids.index(i_iter)])
+            minimize_kwargs['checkpoint']['start'] = i_iter
+        if 'options' in minimize_kwargs and 'maxiter' in minimize_kwargs['options']:
+            minimize_kwargs['options']['maxiter'] -= i_iter
+    except (KeyError, ValueError):
+        x0 = [x for c in components for x in c.defaults]
+        x0 = [np.full(n_cluster, px0) for n_cluster, px0 in zip(n_clusters, x0)]
+        x0 = np.concatenate(x0)
+
+    A = MixingMatrix(*components)
+    assert A.n_param == len(patch_ids), (
+        "%i free parameters but %i patch_ids"
+        % (len(A.defaults), len(patch_ids)))
+    A_ev = A.evaluator(instrument.frequency, unpack)
+    A_dB_ev = A.diff_evaluator(instrument.frequency, unpack)
+    end_w_last_checkpoint = (
+        'options' in minimize_kwargs
+        and 'maxiter' in minimize_kwargs['options']
+        and minimize_kwargs['options']['maxiter'] < 1
+    )
+    if end_w_last_checkpoint:
+        A_ev = A_ev(x0)
+
+    comp_of_dB = list(zip(A.comp_of_dB, patch_ids))
+    bounds = minimize_kwargs.get('bounds')
+    if bounds is not None:
+        minimize_kwargs['bounds'] = _get_bounds(patch_ids, bounds)
+
+    # Component separation
+    res = alg.comp_sep(A_ev, data.T, invN, A_dB_ev, comp_of_dB, x0,
+                       **minimize_kwargs)
+
+    if end_w_last_checkpoint:
+        res.x = x0
+    # Craft output
+    # 1) Apply the mask, if any
+    # 2) Restore the ordering of the input data (pixel dimension last)
+    def mask_transpose(x):
+        x[mask] = hp.UNSEEN
+        return x.T
+
+    res.params = A.params
+    res.s = mask_transpose(res.s)
+    res.chi = mask_transpose(res.chi)
+    res.x_map = array2maps(res.x)
+    for m in res.x_map:
+        m[mask] = hp.UNSEEN
+
+    res.x = [res.x[stop-n:stop]
+             for n, stop in zip(n_clusters, np.cumsum(n_clusters))]
+    for x, ids, n_cluster in zip(res.x, patch_ids, n_clusters):
+        # Clusters witn no valid pixels are set to UNSEEN
+        x[np.bincount(ids[~mask], minlength=n_cluster) == 0] = hp.UNSEEN
+
+    if 'chi_dB' in res:
+        for i in range(len(res.chi_dB)):
+            res.chi_dB[i] = mask_transpose(res.chi_dB[i])
+
+    res.mask_good = ~mask
+    return res
+
 
 
 def multi_res_comp_sep(components, instrument, data, nsides, **minimize_kwargs):
@@ -976,7 +965,7 @@ def harmonic_ilc(components, instrument, data, lbins=None, weights=None, iter=3)
         - **s**: *(ndarray)* - Component maps
         - **cl_in**: *(ndarray)* - Spectra of the input alm
         - **cl_out**: *(ndarray)* - Spectra of the output alm
-        - **fsky**: *(ndarray)* - The input fsky used to correct the cls 
+        - **fsky**: *(ndarray)* - The input fsky used to correct the cls
 
     Note
     ----
@@ -1038,7 +1027,7 @@ def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
         logging.info('Correcting alms for the beams')
         for f in np.arange(alms.shape[0]):
             alm = alms[f]
-        
+
             #for fwhm, alm in zip(beams, alms):
 
             if beams.ndim == 1:
@@ -1046,14 +1035,14 @@ def _get_alms(data, beams=None, lmax=None, weights=None, iter=3):
                 bl = hp.gauss_beam(np.radians(fwhm/60.0), lmax, pol=(alm.ndim==2))
             else:
                 bl = beams[f].T
-                
+
             if alm.ndim == 1:
                 alm = [alm]
                 bl = [bl]
 
             for i_alm, i_bl in zip(alm, bl.T):
                 hp.almxfl(i_alm, 1.0/i_bl, inplace=True)
-                    
+
     return alms
 
 
@@ -1144,7 +1133,7 @@ def harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
 
 
 def _empirical_harmonic_covariance(alms):
-    alms = np.array(alms, copy=False, order='C')
+    alms = np.asarray(alms, order='C')
     alms = alms.view(np.float64).reshape(alms.shape+(2,))
     if alms.ndim > 3:  # Shape has to be ([Stokes], freq, lm, ri)
         alms = alms.transpose(1, 0, 2, 3)

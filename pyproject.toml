@@ -1,0 +1,62 @@
+[build-system]
+requires = ['hatchling']
+build-backend = 'hatchling.build'
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[project]
+name = 'fgbuster'
+version = '2.0.0'
+dependencies = [
+    'astropy',
+    'cmbdb @ git+https://github.com/dpole/cmbdb.git',
+    'corner',
+    'healpy',
+    'numdifftools',
+    'numpy>=2',
+    'pandas',
+    'parameterized',
+    'pysm3',
+    'scipy',
+    'sympy',
+    'tqdm',
+]
+requires-python = '>=3.10'
+authors = [
+    {name = 'Davide Poletti', email = 'davide.pole@gmail.com'},
+    {name = 'Josquin Errard', email = 'josquin@apc.in2p3.fr'},
+]
+description = 'Parametric CMB component separation tools'
+readme = 'README.rst'
+license = 'GPL-3.0'
+license-files = ['LICENSE.md']
+keywords = ['statistics', 'cosmology', 'CMB', 'foregrounds']
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+doc = [
+    'sphinx',
+    'travis-sphinx',
+]
+
+[project.urls]
+Documentation = 'https://fgbuster.github.io/fgbuster/'
+Repository = 'https://github.com/fgbuster/fgbuster'
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    'NPY201',
+    'UP',
+]
+ignore = [
+    'UP031',  # percent format
+]

@@ -16,11 +16,13 @@
 
 """ Forecasting toolbox
 """
+import os
 import os.path as op
 import numpy as np
 import pylab as pl
 import healpy as hp
 import scipy as sp
+from tqdm import tqdm
 from .algebra import comp_sep, W_dBdB, W_dB, W, _mmm, _utmv, _mmv, _mv, _T, _mtmm
 from .mixingmatrix import MixingMatrix
 from .separation_recipes import _format_alms, _r_to_c_alms
@@ -29,6 +31,8 @@ import sys
 import matplotlib.colors as col
 
 __all__ = [
+    'get_statistical_information',
+    'get_post_comp_sep_power',
     'xForecast',
     'harmonic_xForecast',
 ]
@@ -38,9 +42,228 @@ CMB_CL_FILE = op.join(
      op.dirname(__file__), 'templates/Cls_Planck2018_%s.fits')
 
 
+def get_statistical_information(components, freqs, var_t=None, var_p=None,
+                                pol_angle=(0, 0, np.pi/4), pol_frac=(1, 1, 1)
+                                ):
+    """ Statistical information matrix
+
+    Parameters
+    ----------
+    components: list
+        List storing the :class:`Component` s of the mixing matrix
+    freqs: array
+        Frequencies
+    var_t: array_like
+        Variance of each temperature frequency. If ``None`` assume that
+        temperature is not involved in the component separation.
+    var_p: array_like
+        Variance of each polarization frequency. If ``None`` assume that
+        polarization is not involved in the component separation.
+    pol_angle: array_like
+        Polarization angle of each component.
+        Relevant only for the components that have non-linear parameters.
+        Relevant only if vat_p is not ``None``
+        (i.e., polarization is considered)
+    pol_frac: array_like
+        Polarization fraction of each component.
+        Relevant only for the components that have non-linear parameters.
+        Relevant only if vat_t and var_p are not ``None``
+        (i.e., both teperature and polarization are considered)
+
+    Returns
+    -------
+    result: ndarray
+        Square matrix with side ``(n_stokes * n_comp + n_par)``.
+        The information on the non-linear parameters should be scaled by the
+        amplitude of the corresponding component
+    """
+    assert not (var_t is None and var_p is None), (
+        "Both var_t and var_p are None")
+    pol_angle = np.asarray(pol_angle)
+    pol_frac = np.asarray(pol_frac)
+    if var_t is None:
+        pol_frac[:] = 1
+
+    stokess = ''
+    n_stokes = 0
+    if var_t is not None:
+        stokess = stokess + 'T'
+        n_stokes = n_stokes + 1
+    if var_p is not None:
+        stokess = stokess + 'QU'
+        n_stokes = n_stokes + 2
+
+    n_freq = freqs.size
+    n_comp = len(components)
+    mm = MixingMatrix(*components)
+    n_param = mm.n_param
+    A = np.zeros((n_freq * n_stokes, n_comp * n_stokes + n_param))
+    diff = np.hstack(mm.diff(freqs, *(mm.defaults)))
+    A_single_stokes = mm.eval(freqs, *(mm.defaults))
+    for i, stokes in enumerate(stokess):
+        i_row = n_freq * i
+        i_col = n_comp * i
+        A[i_row:i_row+n_freq, i_col:i_col+n_comp] = A_single_stokes
+        diff_stokes = diff.copy()
+        if stokes == 'Q':
+            diff_stokes *= (pol_frac[mm.comp_of_dB]
+                            * np.cos(2 * pol_angle[mm.comp_of_dB])
+                            )
+        if stokes == 'U':
+            diff_stokes *= (pol_frac[mm.comp_of_dB]
+                            * np.sin(2 * pol_angle[mm.comp_of_dB])
+                            )
+        A[i_row:i_row+n_freq, -n_param:] = diff_stokes
+
+    invN_diag = [var for var in [var_t, var_p, var_p] if var is not None]
+    invN_diag = 1 / np.concatenate(invN_diag)
+
+    return np.einsum('fc,f,fk->ck', A, invN_diag, A)
+
+
+def _get_wn_shape(nside, nside_wn, path=op.join(op.dirname(__file__), 'cache')):
+    if nside == nside_wn:
+        return np.ones(3*nside)
+    elif nside_wn == 0:
+        res = np.zeros(3*nside)
+        res[0] = 1
+        return res
+
+    try:  # Return the cached value
+        return _get_wn_shape.cache[nside, nside_wn]
+    except KeyError:
+        pass
+    except AttributeError:
+        _get_wn_shape.cache = {}
+
+    try:  # Load cached value from file
+        filename = f'{path}/wn_{nside}_{nside_wn}.npy'
+        _get_wn_shape.cache[nside, nside_wn] = np.load(filename)
+        return _get_wn_shape(nside, nside_wn)
+    except OSError:
+        pass
+
+    # Calculation
+    NSIM = 10000
+    sims = []
+    for i in tqdm(range(NSIM), f'{nside}-{nside_wn}'):
+        wn = np.random.normal(size=hp.nside2npix(nside))
+        wn = hp.ud_grade(wn, nside_wn)
+        wn = hp.ud_grade(wn, nside)
+        sims.append(hp.anafast(wn))
+    mean = np.array(sims).mean(0)
+    mean /= np.radians(hp.nside2resol(nside, arcmin=True) / 60.)**2
+    os.makedirs(path, exist_ok=True)
+    np.save(filename, mean)
+    return _get_wn_shape(nside, nside_wn)
+
+
+def get_post_comp_sep_power(
+        components, instrument, nside, nsides, nosum_and_white_noise=False,
+        temp=False, pol=False, target_comp='CMB',
+        pol_angle=(0, 0, np.pi/2), pol_frac=(1, 1, 1)
+        ):
+    """ Multi-resolution statistical noise and foregrounds
+
+    Parameters
+    ----------
+    components: list
+        List storing the :class:`Component` s of the mixing matrix
+    instrument:
+        Object that provides the following as a key or an attribute.
+
+        - **frequency**
+        - **depth_i** or **depth_p** in uK CMB
+
+        They can be anything that is convertible to a float numpy array.
+    nside: nside of the data map. The output spectra will have
+        ``lmax = 3 * nside - 1``
+    nsides: seq
+        Specify the ``nside`` for each free parameter of the components
+    nosum_and_white_noise: bool
+        If True, return the contribution from each of the nsides instead of
+        their sum
+    temp: bool
+        If True, assume temperature in the component separation.
+    pol: bool
+        If True, assume polarization in the component separation.
+    target_comp: str
+        Name of the component in ``components`` of which the power spectrum is
+        computed
+    pol_angle: array_like
+        Polarization angle of each component.
+        Relevant only for the components that have non-linear parameters.
+        Relevant only if ``pol == true``
+        (i.e., polarization is considered)
+    pol_frac: array_like
+        Polarization fraction of each component.
+        Relevant only for the components that have non-linear parameters.
+        Relevant only if ``temp == pol == true``
+        (i.e., both polarization and temperature are considered)
+
+    Returns
+    -------
+    result: array
+        Power spectrum of the post-multiresolution component separation
+        statistical noise and foregrounds.
+    The shape is (stokes, ell). The number of stokes can be 1, 2 or 3,
+        corresponding to ``temp``, ``pol`` or both being True.
+        Note that the two polarization stokes are identical.
+
+        If ``nosum_and_white_noise`` is True return the contributions from the
+        individual *unique* nsides, together with the corresponding white noise
+        levels.
+
+    """
+    assert temp or pol, "At least one of temp and pol has to be True"
+    nsides = np.array(nsides)
+    instrument = standardize_instrument(instrument)
+    freqs = instrument.frequency
+    if temp:
+        var_t = np.radians(instrument.depth_i / 60)**2
+    else:
+        var_t = None
+    if pol:
+        var_p = np.radians(instrument.depth_p / 60)**2
+    else:
+        var_p = None
+    info = get_statistical_information(
+        components, freqs, var_t, var_p, pol_angle=pol_angle, pol_frac=pol_frac)
+    mask = np.full(len(info), True)
+    wn_levels = []
+    noise_shapes = []
+
+    n_stokes = temp + 2 * pol
+    cmb_idx = np.arange(n_stokes) * len(components)
+    cmb_idx += [type(c).__name__ for c in components].index(target_comp)
+
+    def cmb_noise(mask):
+        inv_info = np.linalg.inv(info[mask][:, mask])
+        return np.diag(inv_info)[cmb_idx]
+
+    for n in np.unique(nsides):
+        mask[-len(nsides):] = nsides >= n
+        wn_levels.append(cmb_noise(mask))
+        noise_shapes.append(_get_wn_shape(nside, n))
+
+    mask[-len(nsides):] = False
+    wn_levels.append(cmb_noise(mask))
+    wn_levels = np.array(wn_levels)  # (nside, stokes)
+    noise_shapes.append(_get_wn_shape(nside, nside))
+    wn_shapes = np.array(noise_shapes)  # (nside, ell)
+
+    wn_shapes[1:] -= wn_shapes[:-1]
+
+    terms = np.einsum('ns,nl->snl', wn_levels, wn_shapes)
+
+    if nosum_and_white_noise:
+        return terms, wn_levels  # (stokes, nsides, ell)
+    return terms.sum(1)  # (stokes, ell)
+
+
 def xForecast(components, instrument, d_fgs, lmin, lmax,
-              Alens=1.0, r=0.001, make_figure=False,
-              **minimize_kwargs):
+              Alens=1.0, r=0.001, make_figure=False, multires=False,
+              l_knee=0, alpha_knee=0, gridding=False, sigma_r_68CL=False, **minimize_kwargs):
     """ xForecast
 
     Run XForcast (Stompor et al, 2016) using the provided instrumental
@@ -75,7 +298,11 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     Alens: float
         Amplitude of the lensing B-modes entering the likelihood on r
     r: float
-        tensor-to-scalar ratio assumed in the likelihood on r
+        tensor-to-scalar ratio assumed in the likelihood on r'
+    multires: boolean
+        If True, it estimates the statistical foreground residuals in
+        the case of an multiresolution component separation, following
+        what was done in LiteBIRD PTEP i.e. with nside = (64,8,0)
     minimize_kwargs: dict
         Keyword arguments to be passed to `scipy.optimize.minimize` during
         the fitting of the spectral parameters.
@@ -145,9 +372,9 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
 
     ############################################################################
     # 3. Compute spectra of the input foregrounds maps
-    ### TO DO: which size for Cl_fgs??? N_spec != 1 ? 
+    ### TO DO: which size for Cl_fgs??? N_spec != 1 ?
     print ('======= COMPUTATION OF CL_FGS =======')
-    if n_stokes == 3:  
+    if n_stokes == 3:
         d_spectra = d_fgs
     else:  # Only P is provided, add T for map2alm
         d_spectra = np.zeros((n_freqs, 3, d_fgs.shape[2]), dtype=d_fgs.dtype)
@@ -178,7 +405,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     # Check dimentions
     assert ((n_freqs,) == W_maxL.shape == W_dB_maxL.shape[1:]
                        == W_dBdB_maxL.shape[2:] == V_maxL.shape)
-    assert (len(res.params) == W_dB_maxL.shape[0] 
+    assert (len(res.params) == W_dB_maxL.shape[0]
                             == W_dBdB_maxL.shape[0] == W_dBdB_maxL.shape[1])
 
     # elementary quantities defined in Stompor, Errard, Poletti (2016)
@@ -222,33 +449,55 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         ax.loglog(ell, res.bias, 'DarkOrange', linestyle='--', label='systematic residuals', linewidth=2.0)
         ax.loglog(ell, res.noise, 'DarkBlue', linestyle='--', label='noise after component separation', linewidth=2.0)
         ax.legend(loc='upper right', prop={'size':15})
-        ax.set_xlabel('$\ell$', fontsize=20)
-        ax.set_ylabel('$C_\ell$ [$\mu \mathrm{K}^{2}$]', fontsize=20)
+        ax.set_xlabel(r'$\ell$', fontsize=20)
+        ax.set_ylabel(r'$C_\ell$ [$\mu \mathrm{K}^{2}$]', fontsize=20)
         ax.set_xlim(lmin,lmax)
 
-    ## 5.1. data 
+    ## 5.1. data
     Cl_obs = Cl_fid['BB'] + Cl_noise
     dof = (2 * ell + 1) * fsky
     YY = Cl_xF['YY']
-    tr_SigmaYY = np.einsum('ij, lji -> l', res.Sigma, YY)
+    if multires:
+        tr_SigmaYY = get_post_comp_sep_power(components, instrument, nside, [64,8,4],
+                        nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
+                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,lmin-2:lmax-1]
+        tr_SigmaYY_ = get_post_comp_sep_power(components, instrument, nside, [64,4,2],
+                        nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
+                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,lmin-2:lmax-1]
+        tr_SigmaYY__ = get_post_comp_sep_power(components, instrument, nside, [64,0,2],
+                        nosum_and_white_noise=False, temp=False, pol=True, target_comp='CMB',
+                        pol_angle=(0, 0, 0), pol_frac=(1, 1, 1))[0,lmin-2:lmax-1]
+         # the extra factor 2 is an ad-hoc correction to ~ match  the PTEP sigma(r) order of magnitude
+        tr_SigmaYY = (tr_SigmaYY + tr_SigmaYY_+tr_SigmaYY__)/3/2
+        res.stat = tr_SigmaYY*1.0
+    else:
+        tr_SigmaYY = np.einsum('ij, lji -> l', res.Sigma, YY)
+
+    if l_knee !=0:
+        print('adding a 1/ell contribution')
+        boost_factor = (1 + (l_knee*1.0/ell)**alpha_knee)
+        tr_SigmaYY *= boost_factor
+        Cl_noise *= boost_factor
+
+    Cl_obs = Cl_fid['BB'] + Cl_noise
+    D =  Cl_obs + tr_SigmaYY + Cl_xF['yy'] + 2 * Cl_xF['yz']
 
     ## 5.2. modeling
-    def cosmo_likelihood(r_):
+    def cosmo_likelihood(r_,):
         # S16, Appendix C
-        Cl_model = Cl_fid['BlBl'] * Alens + Cl_fid['BuBu'] * r_ + Cl_noise
-        dof_over_Cl = dof / Cl_model
+        Cl_model = Cl_fid['BlBl'] * Alens + Cl_fid['BuBu'] * r_ + Cl_noise + tr_SigmaYY
+        # dof_over_Cl = dof / Cl_model
         ## Eq. C3
+        '''
         U = np.linalg.inv(res.Sigma_inv + np.dot(YY.T, dof_over_Cl))
-        
         ## Eq. C9
         first_row = np.sum(dof_over_Cl * (
-            Cl_obs * (1 - np.einsum('ij, lji -> l', U, YY) / Cl_model) 
+            Cl_obs * (1 - np.einsum('ij, lji -> l', U, YY) / Cl_model)
             + tr_SigmaYY))
         second_row = - np.einsum(
             'l, m, ij, mjk, kf, lfi',
             dof_over_Cl, dof_over_Cl, U, YY, res.Sigma, YY)
         trCinvC = first_row + second_row
-       
         ## Eq. C10
         first_row = np.sum(dof_over_Cl * (Cl_xF['yy'] + 2 * Cl_xF['yz']))
         ### Cyclicity + traspose of scalar + grouping terms -> trace becomes
@@ -260,11 +509,14 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
 
         ## Eq. C12
         logdetC = np.sum(dof * np.log(Cl_model)) - np.log(np.linalg.det(U))
-
+        '''
         # Cl_hat = Cl_obs + tr_SigmaYY
+        logdetC = np.sum(dof * np.log(Cl_model))
+        trCinvD = np.sum(dof *  D / Cl_model )
 
         ## Bringing things together
-        return trCinvC + trECinvC + logdetC
+        # return trCinvC + trECinvC + logdetC
+        return logdetC + trCinvD
 
 
     # Likelihood maximization
@@ -275,20 +527,16 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     if ind_r_min == 0:
         bound_0 = 0.0
         bound_1 = r_grid[1]
-        # pl.figure()
-        # pl.semilogx(r_grid, logL, 'r-')
-        # pl.show()
     elif ind_r_min == len(r_grid)-1:
         bound_0 = r_grid[-2]
         bound_1 = 1.0
-        # pl.figure()
-        # pl.semilogx(r_grid, logL, 'r-')
-        # pl.show()
     else:
         bound_0 = r_grid[ind_r_min-1]
         bound_1 = r_grid[ind_r_min+1]
     print('bounds on r = ', bound_0, ' / ', bound_1)
     print('starting point = ', r0)
+    if 'bounds' in minimize_kwargs:
+        del minimize_kwargs['bounds']
     res_Lr = sp.optimize.minimize(cosmo_likelihood, [r0], bounds=[(bound_0,bound_1)], **minimize_kwargs)
     print ('    ===>> fitted r = ', res_Lr['x'])
 
@@ -301,40 +549,75 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         return delta
 
     if res_Lr['x'] != 0.0:
-        sr_grid = np.logspace(np.log10(res_Lr['x']), 0, num=25)
+        sr_grid = np.logspace(np.log10(res_Lr['x']), 2, num=1000)
     else:
-        sr_grid = np.logspace(-5,0,num=25)
+        sr_grid = np.logspace(-5,2,num=1000)
 
-    slogL = np.array([sigma_r_computation_from_logL(sr_loc) for sr_loc in sr_grid ])
-    ind_sr_min = np.argmin(slogL)
-    sr0 = sr_grid[ind_sr_min]
-    print('ind_sr_min = ', ind_sr_min)
-    print('sr_grid[ind_sr_min-1] = ', sr_grid[ind_sr_min-1])
-    print('sr_grid[ind_sr_min+1] = ', sr_grid[ind_sr_min+1])
-    print('sr_grid = ', sr_grid)
-    if ind_sr_min == 0:
-        print('case # 1')
-        bound_0 = res_Lr['x']
-        bound_1 = sr_grid[1]
-    elif ind_sr_min == len(sr_grid)-1:
-        print('case # 2')
-        bound_0 = sr_grid[-2]
-        bound_1 = 1.0
+    if not sigma_r_68CL:
+        slogL = np.array([sigma_r_computation_from_logL(sr_loc) for sr_loc in sr_grid ])
+        ind_sr_min = np.argmin(slogL)
+        sr0 = sr_grid[ind_sr_min]
+        if ind_sr_min == 0:
+            print('case # 1')
+            bound_0 = res_Lr['x']
+            bound_1 = sr_grid[1]
+        elif ind_sr_min == len(sr_grid)-1:
+            print('case # 2')
+            bound_0 = sr_grid[-2]
+            bound_1 = sr_grid[-1]
+        else:
+            print('case # 3')
+            bound_0 = sr_grid[ind_sr_min-1]
+            bound_1 = sr_grid[ind_sr_min+1]
+        print('bounds on sigma(r) = ', bound_0, ' / ', bound_1)
+        print('starting point = ', sr0)
+        res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, sr0,
+                bounds=[(bound_0.item(),bound_1.item())],
+                # item required for test to pass but reason unclear. sr_grid has
+                # extra dimension?
+                **minimize_kwargs)
+        print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
+        sigma_r = res_sr['x']- res_Lr['x']
     else:
-        print('case # 3')
-        bound_0 = sr_grid[ind_sr_min-1]
-        bound_1 = sr_grid[ind_sr_min+1]
-    print('bounds on sigma(r) = ', bound_0, ' / ', bound_1)
-    print('starting point = ', sr0)
-    res_sr = sp.optimize.minimize(sigma_r_computation_from_logL, sr0,
-            bounds=[(bound_0.item(),bound_1.item())],
-            # item required for test to pass but reason unclear. sr_grid has
-            # extra dimension?
-            **minimize_kwargs)
-    print ('    ===>> sigma(r) = ', res_sr['x'] -  res_Lr['x'])
+        L = np.exp(-(logL-np.min(logL)))
+        rs_pos = r_grid[r_grid > r_fit]
+        plike_pos = L[r_grid > 0]
+        cum = np.cumsum(plike_pos)
+        cum /= cum[-1]
+        sigma_r = rs_pos[np.argmin(np.abs(cum -  0.68))]
+        print ('    ===>> sigma(r) = ', sigma_r)
     res.cosmo_params = {}
-    res.cosmo_params['r'] = (res_Lr['x'], res_sr['x']- res_Lr['x'])
+    res.cosmo_params['r'] = (res_Lr['x'], sigma_r)
 
+    if gridding:
+        r_grid = np.linspace(-0.05,0.1,num=10000)
+        logL = np.array([cosmo_likelihood(r_loc) for r_loc in r_grid])
+
+        good_indices = ~np.isnan(logL)
+        r_grid = r_grid[good_indices]
+        logL = logL[good_indices]
+
+        ind_r_fit = np.argmin(logL)
+        r_fit = r_grid[ind_r_fit]
+
+        L = np.exp(-(logL-np.min(logL)))
+
+        rs_pos = r_grid[r_grid > r_fit]
+        plike_pos = L[r_grid > r_fit]
+        cum = np.cumsum(plike_pos)
+        cum /= cum[-1]
+        sigma_r_pos = rs_pos[np.argmin(np.abs(cum -  0.68))] - r_fit
+
+        rs_neg = r_grid[r_grid < r_fit]
+        plike_neg = L[r_grid < r_fit]
+        cum_neg = np.cumsum(plike_neg[::-1])
+        cum_neg /= cum_neg[-1]
+        sigma_r_neg = r_fit-rs_neg[::-1][np.argmin(np.abs(cum_neg -  0.68))]
+
+        sigma_r_pos_5sigma = rs_pos[np.argmin(np.abs(cum -  0.999999))] - r_fit
+        sigma_r_neg_5sigma = r_fit-rs_neg[::-1][np.argmin(np.abs(cum_neg -  0.999999))]
+
+        res.cosmo_params['bounds'] = (sigma_r_neg_5sigma,sigma_r_neg, sigma_r_pos, sigma_r_pos_5sigma)
 
     ###############################################################################
     # 6. Produce figures
@@ -425,10 +708,10 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
 
 
     """
-    
+
     # Preliminaries
     instrument = standardize_instrument(instrument) #_force_keys_as_attributes(instrument)
-    
+
     ell_em = hp.Alm.getlm(lmax, np.arange(alms_fgs.shape[-1]))[0]
     ell_em = np.stack((ell_em, ell_em), axis=-1).reshape(-1) # For transformation into real alms
 
@@ -447,7 +730,7 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
         Nlm = np.array([Nl[l,1:,:,:] for l in ell_em])
     else:
         Nlm = None
-        
+
     n_stokes = alms_fgs.shape[1]
     n_freqs = alms_fgs.shape[2]
     ell = np.arange(lmin, lmax+1)
@@ -478,13 +761,13 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
 
     res.params = A.params
     res.s = res.s.T
-    res.s = _r_to_c_alms(res.s)                                                                                                                                                                               
+    res.s = _r_to_c_alms(res.s)
     res.A = A_ev(res.x)
     #print(res)
-    
+
     if lite: # stop here if only want component separation
         return res
-        
+
     A_maxL = A_ev(res.x)
     A_dB_maxL = A_dB_ev(res.x)
     A_dBdB_maxL = A.diff_diff_evaluator(instrument.frequency)(res.x)
@@ -502,9 +785,9 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
 
     ############################################################################
     # 3. Compute spectra of the input foregrounds maps
-    ### TO DO: which size for Cl_fgs??? N_spec != 1 ? 
+    ### TO DO: which size for Cl_fgs??? N_spec != 1 ?
     print ('======= COMPUTATION OF CL_FGS =======')
-    if n_stokes == 3:  
+    if n_stokes == 3:
         d_spectra = alms_fgs
     else:  # Only P is provided, add T for map2alm
         d_spectra = np.zeros((alms_fgs.shape[0], 3, n_freqs), dtype=alms_fgs.dtype)
@@ -539,13 +822,13 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
     # Check dimentions
     assert ((n_freqs,) == W_maxL.shape[-1:] == W_dB_maxL.shape[-1:]
             == W_dBdB_maxL.shape[-1:] == V_maxL.shape[-1:])
-    assert (len(res.params) == W_dB_maxL.shape[0] 
+    assert (len(res.params) == W_dB_maxL.shape[0]
             == W_dBdB_maxL.shape[0] == W_dBdB_maxL.shape[1])
 
     # format in right shape
     W_dB_maxL = np.swapaxes(W_dB_maxL, 0, 1)
     W_dBdB_maxL = np.swapaxes(W_dBdB_maxL, 0, 2)
-    
+
     # elementary quantities defined in Stompor, Errard, Poletti (2016)
     Cl_xF = {}
     Cl_xF['yy'] = _utmv(W_maxL, Cl_fgs.T, W_maxL)  # (ell,)
@@ -590,7 +873,7 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
         ax.set_ylabel('$C_\ell$ [$\mu \mathrm{K}^{2}$]', fontsize=20)
         ax.set_xlim(lmin,lmax)
 
-    ## 5.1. data 
+    ## 5.1. data
     Cl_obs = Cl_fid['BB'] + Cl_noise
     dof = (2 * ell + 1) * fsky
     YY = Cl_xF['YY']
@@ -603,16 +886,16 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
         dof_over_Cl = dof / Cl_model
         ## Eq. C3
         U = np.linalg.inv(res.Sigma_inv + np.dot(YY.T, dof_over_Cl))
-        
+
         ## Eq. C9
         first_row = np.sum(dof_over_Cl * (
-            Cl_obs * (1 - np.einsum('ij, lji -> l', U, YY) / Cl_model) 
+            Cl_obs * (1 - np.einsum('ij, lji -> l', U, YY) / Cl_model)
             + tr_SigmaYY))
         second_row = - np.einsum(
             'l, m, ij, mjk, kf, lfi',
             dof_over_Cl, dof_over_Cl, U, YY, res.Sigma, YY)
         trCinvC = first_row + second_row
-       
+
         ## Eq. C10
         first_row = np.sum(dof_over_Cl * (Cl_xF['yy'] + 2 * Cl_xF['yz']))
         ### Cyclicity + traspose of scalar + grouping terms -> trace becomes

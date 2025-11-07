@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-""" 
+"""
 Handy access to instrument configuration, map generation
 and other pysm3 functionalities
 """
@@ -94,7 +94,7 @@ def get_instrument(tag=''):
                 f"Add your instrument to your local copy of cmbdb: {exp_file}\n"
                 f"Beware, you might lose changes when you update: "
                 f"push your new configuration to {github}")
-    return df.dropna(1, 'all')
+    return df.dropna(axis=1, how='all')
 
 
 def get_observation(instrument='', sky=None,
