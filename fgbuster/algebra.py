@@ -1049,7 +1049,7 @@ def comp_sep(A_ev, d, invN, A_dB_ev, comp_of_dB, *minimize_args, N_true=None, A_
 
     # Gather results
     u_e_v_last, A_dB_last, x_last, pw_d = last_values
-    _, L = _svd_sqrt_invN_A(A_ev(x_last), invN)
+    _, L = _svd_sqrt_invN_A(A_ev(x_last[0]), invN)
     if not np.all(x_last[0] == res.x):
         fun(res.x)  # Make sure that last_values refer to the minimum
 

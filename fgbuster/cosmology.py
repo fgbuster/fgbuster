@@ -869,8 +869,8 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
         ax.loglog(ell, res.bias, 'DarkOrange', linestyle='--', label='systematic residuals', linewidth=2.0)
         ax.loglog(ell, res.noise, 'DarkBlue', linestyle='--', label='noise after component separation', linewidth=2.0)
         ax.legend(loc='upper right', prop={'size':15})
-        ax.set_xlabel('$\ell$', fontsize=20)
-        ax.set_ylabel('$C_\ell$ [$\mu \mathrm{K}^{2}$]', fontsize=20)
+        ax.set_xlabel(r'$\ell$', fontsize=20)
+        ax.set_ylabel(r'$C_\ell$ [$\mu \mathrm{K}^{2}$]', fontsize=20)
         ax.set_xlim(lmin,lmax)
 
     ## 5.1. data
@@ -1022,7 +1022,7 @@ def _get_Cl_noise(instrument, A, lmax):
     except AttributeError:
         bl = np.ones((len(instrument.frequency), lmax+1))
 
-    nl = (bl / np.radians(instrument.depth_p/60.)[:, np.newaxis])**2
+    nl = (bl / np.radians(np.asarray(instrument.depth_p)/60.)[:, np.newaxis])**2
     AtNA = np.einsum('fi, fl, fj -> lij', A, nl, A)
     inv_AtNA = np.linalg.inv(AtNA)
     return inv_AtNA.swapaxes(-3, -1)
