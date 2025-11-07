@@ -710,7 +710,7 @@ def harmonic_ilc_alm(components, instrument, alms, lbins=None, fsky=None):
 
 
 def _empirical_harmonic_covariance(alms):
-    alms = np.array(alms, copy=False, order='C')
+    alms = np.asarray(alms, order='C')
     alms = alms.view(np.float64).reshape(alms.shape+(2,))
     if alms.ndim > 3:  # Shape has to be ([Stokes], freq, lm, ri)
         alms = alms.transpose(1, 0, 2, 3)
