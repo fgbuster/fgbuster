@@ -194,11 +194,6 @@ def get_noise_realization(nside, instrument, unit='uK_CMB'):
         Shape is ``(n_freq, 3, n_pix)``.
     """
     instrument = standardize_instrument(instrument)
-    if not hasattr(instrument, 'depth_i'):
-        instrument.depth_i = instrument.depth_p / np.sqrt(2)
-    if not hasattr(instrument, 'depth_p'):
-        instrument.depth_p = instrument.depth_i * np.sqrt(2)
-
 
     n_freq = len(instrument.frequency)
     n_pix = hp.nside2npix(nside)
@@ -241,6 +236,8 @@ def standardize_instrument(instrument):
             setattr(std_instr, attr, value.copy())
         except (TypeError, KeyError):  # Not subscriptable or missing key
             pass
+        if attr == 'frequency' and std_instr.frequency.ndim == 3:
+            std_instr.frequency = [tuple(x) for x in std_instr.frequency]
 
     return std_instr
 

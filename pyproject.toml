@@ -9,15 +9,16 @@ allow-direct-references = true
 name = 'fgbuster'
 version = '2.0.0'
 dependencies = [
+    'astropy',
     'cmbdb @ git+https://github.com/dpole/cmbdb.git',
     'corner',
     'healpy',
     'numdifftools',
     'numpy>=2',
+    'pandas',
     'parameterized',
     'pysm3',
     'scipy',
-    'six',
     'sympy',
     'tqdm',
 ]

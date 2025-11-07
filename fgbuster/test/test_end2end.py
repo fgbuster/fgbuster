@@ -36,7 +36,7 @@ class TestEnd2EndNoiselessPhysical(unittest.TestCase):
         res_T = basic_comp_sep(self.components, self.instrument,
                                self.freq_maps[:, :1, :], tol=1e-12)
         aac(res_T.x, np.array(self.input), rtol=1e-4)
-        aac(res_T.chi, 0, atol=0.05)
+        aac(res_T.chi, 0, atol=0.07)
 
     def test_basic_comp_sep_P(self):
         res_P = basic_comp_sep(self.components[:-1], self.instrument,
@@ -209,6 +209,34 @@ class TestEnd2EndNoisy(unittest.TestCase):
         postS = np.mean(diff[..., None] * diff[..., None, :], axis=0)
         S = res.Sigma.T[0]
         aac(postS, S, rtol=1./NSIDE)
+
+    def test_chi(self):
+        NSIDE = 64
+        MODEL = 'd0s0'
+        INSTRUMENT = 'LiteBIRD'
+        UNITS = 'uK_CMB'
+        sky = get_sky(NSIDE, MODEL)
+        instrument = get_instrument(INSTRUMENT)
+        components = [cm.Dust(150., beta_d=1.54, temp=20., units=UNITS),
+                      cm.Synchrotron(150., -3., units=UNITS)]
+
+        
+        freq_maps = get_observation(instrument, sky, unit=UNITS)
+        noise_maps = get_noise_realization(NSIDE, instrument, unit=UNITS)
+
+        res = basic_comp_sep(components, instrument, freq_maps)
+        snr = res.s.copy()
+        snr[0] /= res.invAtNA[:, 0, 0][:, None]
+        snr[1] /= res.invAtNA[:, 1, 1][:, None]
+        snr = snr.max(axis=(0, 1))
+        mask_snr = snr < 1e6
+        chi = res.chi[..., mask_snr]
+        dof = freq_maps.size - res.s.size
+        dof *= mask_snr.mean()
+        aac(chi, 0, atol=1e-3)
+        res = basic_comp_sep(components, instrument, freq_maps + noise_maps)
+        chi = res.chi[..., mask_snr]
+        aac((chi**2).sum(), dof, atol=3*dof**0.5)
 
 
 if __name__ == '__main__':

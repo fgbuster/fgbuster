@@ -213,7 +213,7 @@ class Component:
 
         res = []
         for i_p in range(self.n_param):
-            res.append([self._lambda_diff[i_p][j_p](nu, *new_params)
+            res.append([self._lambda_diff_diff[i_p][j_p](nu, *new_params)
                         for j_p in range(self.n_param)])
         return res
 
@@ -256,7 +256,7 @@ class Component:
         self._defaults = new_defaults
 
     def __getattr__(self, attr):
-        # Helpful messages when virtual attribute are not defined
+        # Helpful messages when virtual attributes are not defined
         message = ("Attempt to either use a bare 'Component' object or to"
                    "use an incomplete child class.")
         if attr == '_lambda':
