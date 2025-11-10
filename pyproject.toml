@@ -14,7 +14,7 @@ dependencies = [
     'corner',
     'healpy',
     'numdifftools',
-    'numpy>=2',
+    'numpy>=1.26.4',
     'pandas',
     'parameterized',
     'pysm3',
