@@ -9,6 +9,13 @@ from fgbuster.observation_helpers import get_sky, get_instrument, _jysr2rj
 import pysm3
 import pysm3.units as u
 
+try:
+    from numpy import trapezoid
+except ImportError:
+    # numpy version < 2
+    from numpy import trapz as trapezoid
+
+
 class TestModifiedBlackBody(unittest.TestCase):
 
     def setUp(self):
@@ -19,7 +26,7 @@ class TestModifiedBlackBody(unittest.TestCase):
         self.dust_b = Dust(150., temp=self.temp)
         self.dust_t = Dust(150., beta_d=self.beta_d)
         self.dust = Dust(150., temp=self.temp, beta_d=self.beta_d)
-    
+
     def test_init_and_evaluation_parameters(self):
         x = self.dust_t_b.eval(self.freqs, self.beta_d, self.temp)
         np.testing.assert_array_almost_equal(
@@ -31,7 +38,7 @@ class TestModifiedBlackBody(unittest.TestCase):
 
 
 class TestAnalyticComponent(unittest.TestCase):
-    
+
     funcs = ['eval', 'diff']
     vals = ['float', 'scal', 'vec', 'vecbcast']
     bands = ['centers', 'bandpass']
@@ -53,7 +60,7 @@ class TestAnalyticComponent(unittest.TestCase):
             nu = nu.flatten()
             res = nu * param0 + nu**param1 + 100.
             res *= weight.flatten()
-            return np.trapezoid(res.reshape(res.shape[:-1] + nu_shape),
+            return trapezoid(res.reshape(res.shape[:-1] + nu_shape),
                             nu.reshape(nu_shape) * 1e9, -1)
         raise
 
@@ -70,8 +77,8 @@ class TestAnalyticComponent(unittest.TestCase):
             res = nu**param1 * np.log(nu)
             res *= weight.flatten()
             nu = nu.reshape(nu_shape)
-            res = np.trapezoid(res.reshape(res.shape[:-1] + nu_shape), nu * 1e9, -1)
-            return [np.trapezoid(nu*weight, nu * 1e9, -1), res]
+            res = trapezoid(res.reshape(res.shape[:-1] + nu_shape), nu * 1e9, -1)
+            return [trapezoid(nu*weight, nu * 1e9, -1), res]
         raise
 
     def _add_dim_if_ndarray(self, param):

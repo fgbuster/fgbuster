@@ -32,6 +32,12 @@ import scipy
 from scipy import constants
 from astropy.cosmology import Planck15
 
+try:
+    from numpy import trapezoid
+except ImportError:
+    # numpy version < 2
+    from numpy import trapz as trapezoid
+
 
 __all__ = [
     'Component',
@@ -95,7 +101,7 @@ def bandpass_integration(f):
             out_shape = f(np.array(100.), *params, **kwargs).shape[:-1]
             res = np.empty(out_shape + (len(nu),))
             for i, (band_nu, band_w) in enumerate(nu):
-                res[..., i] = np.trapezoid(
+                res[..., i] = trapezoid(
                     f(band_nu, *params, **kwargs) * band_w,
                     band_nu * 1e9)
             return res
