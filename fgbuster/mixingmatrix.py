@@ -128,3 +128,59 @@ class MixingMatrix(tuple):
             param_array = np.array(param_array)
             return self.diff_diff(nu, *[p for p in unpack(param_array)])
         return f
+
+
+def get_mixing_matrix_evaluator_all_pix(A, frequencies, patch_ids):
+    """
+    Mixing matrix and its derivatives for pixel dependent case
+    
+    Parameters
+    ----------
+    A: MixingMatrix object (the pixel independent one)
+    frequencies: array of frequencies of the instrument considered
+    patch_ids: list of arrays of patches ids (one array per spectral parameter)
+        shape: n_beta_types x n_pix
+    
+    Returns
+    -------
+    A_ev: the pixel dependent mixing matrix evaluator
+        To be evaluated on the concatenated spectral parameters
+        shape: pix x freq x comp
+    A_dB_ev: the pixel dependent mixing matrix derivative evaluator
+        To be evaluated on the concatenated spectral parameters
+        shape: sp param type x pix x freq x 1 (-> 1 for the only non-zero component)
+    A_dB_dB_ev: the pixel dependent mixing matrix 2nd derivative evaluator
+        To be evaluated on the concatenated spectral parameters
+        shape: sp param type x sp param type x (pix x freq) or (0) x 1 
+        (-> 0 if the two params wrt which we take the derivatives are of different comps,
+         -> 1 for the only non-zero component)
+    comp_of_dB: list of non-zero components of the mixing matrix derivative
+    """
+    # get the number of patches for each spectral parameter
+    n_patches = [ids.max()+1 for ids in patch_ids]
+
+    # unpack the patches: takes the full array of sp parameters
+    # (with those corresponding to Bd, then to Td then to Bs all concatenated)
+    # and returns a list of arrays (one per sp param type) of sp param values in each pixel
+    def array2maps(x):
+        i = 0
+        maps = []
+        for n_cluster, ids in zip(n_patches, patch_ids):
+            maps.append(x[i:i+n_cluster][ids])
+            i += n_cluster
+        return maps
+    
+    assert A.n_param == len(patch_ids), (
+        "%i free parameters but %i patch_ids"
+        % (len(A.defaults), len(patch_ids)))
+    
+    unpack = lambda x: [m.reshape(-1) for m in array2maps(x)]
+    
+    # Get pixel dep mixing matrix and its derivative
+    A_ev = A.evaluator(frequencies, unpack)
+    A_dB_ev = A.diff_evaluator(frequencies, unpack)
+    A_dB_dB_ev = A.diff_diff_evaluator(frequencies, unpack)
+    
+    comp_of_dB = list(zip(A.comp_of_dB, patch_ids))
+    
+    return A_ev, A_dB_ev, A_dB_dB_ev, comp_of_dB

@@ -44,6 +44,9 @@ doc = [
     'sphinx',
     'travis-sphinx',
 ]
+full = [
+    'scikit-sparse',
+]
 
 [project.urls]
 Documentation = 'https://fgbuster.github.io/fgbuster/'

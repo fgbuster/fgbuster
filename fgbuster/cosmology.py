@@ -16,10 +16,12 @@
 
 """ Forecasting toolbox
 """
+import time
 import os
 import os.path as op
 import numpy as np
 import pylab as pl
+import matplotlib.pyplot as plt
 import healpy as hp
 import scipy as sp
 from tqdm import tqdm
@@ -27,14 +29,16 @@ from .algebra import comp_sep, W_dBdB, W_dB, W, _mmm, _utmv, _mmv, _mv, _T, _mtm
 from .mixingmatrix import MixingMatrix
 from .separation_recipes import _format_alms, _r_to_c_alms
 from .observation_helpers import standardize_instrument
-import sys
-import matplotlib.colors as col
+from .separation_recipes import (basic_comp_sep, 
+                                 multi_res_comp_sep, 
+                                 adaptive_comp_sep)
 
 __all__ = [
     'get_statistical_information',
     'get_post_comp_sep_power',
     'xForecast',
     'harmonic_xForecast',
+    'xForecast_pix_dep'
 ]
 
 
@@ -303,6 +307,8 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
         If True, it estimates the statistical foreground residuals in
         the case of an multiresolution component separation, following
         what was done in LiteBIRD PTEP i.e. with nside = (64,8,0)
+        Note: this is an approximation, for a proper treatment of multiresolution,
+        use the `xForecast_pix_dep` routine.
     minimize_kwargs: dict
         Keyword arguments to be passed to `scipy.optimize.minimize` during
         the fitting of the spectral parameters.
@@ -340,7 +346,7 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     #print('fsky = ', fsky)
 
     ############################################################################
-    # 1. Component separation using the noise-free foregrounds templare
+    # 1. Component separation using the noise-free foregrounds template
     # grab the max-L spectra parameters with the associated error bars
     print('======= ESTIMATION OF SPECTRAL PARAMETERS =======')
     A = MixingMatrix(*components)
@@ -637,7 +643,9 @@ def xForecast(components, instrument, d_fgs, lmin, lmax,
     return res
 
 #Added by Clement Leloup
-def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None, fsky=1.0, Alens=1.0, r=0.001, Nl=None, lite=False, make_figure=False, **minimize_kwargs):
+def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None, 
+                       fsky=1.0, Alens=1.0, r=0.001, Nl=None, lite=False, make_figure=False, 
+                       **minimize_kwargs):
 
     """ xForecast
 
@@ -1005,6 +1013,182 @@ def harmonic_xForecast(components, instrument, alms_fgs, lmin, lmax, invNl=None,
 
     return res
 
+
+def xForecast_pix_dep(components, 
+                      instrument, 
+                      d_fgs, 
+                      compsep_type, 
+                      basic_compsep_nside=None, 
+                      multires_compsep_nsides=None, 
+                      patch_ids=None, 
+                      nreal=500,
+                      precomputed_compsep_result=None,
+                      **minimize_kwargs):
+    """
+    xForecast with pixel dependence, 
+    based on the FGBuster xForecast routine,
+    extended to handle a pixel dependent mixing matrix 
+    (see Rizzieri et al, 2510.08534).
+
+    Parameters
+    ----------
+    components: list
+         `Components` of the mixing matrix
+    instrument:
+        Object that provides the following as a key or an attribute.
+
+        - **frequency**
+        - **depth_p** (optional, frequencies are inverse-noise
+          weighted according to these noise levels)
+        - **fwhm** (optional)
+
+        They can be anything that is convertible to a float numpy array.
+    d_fgs: ndarray
+        The foreground maps. No CMB. Shape `(n_freq, n_stokes, n_pix)`.
+        If some pixels have to be masked, set them to zero.
+        Since (cross-)spectra of the maps will be computed, you might want to
+        apodize your mask (use the same apodization for all the frequency).
+    compsep_type: str
+        Type of component separation to perform. It can be either 'basic', 
+        'multires' or 'adaptive'. 'basic' gives the same as 'xForecast'.
+    basic_compsep_nside: int
+        optional, nside to be used for the basic component separation.
+    multires_compsep_nsides: list of int
+        optional, list of nsides to be used for the multi-resolution component separation.
+    patch_ids: ndarray
+        optional, array of shape (n_pix,) that gives the patch id of each pixel,
+        for the adaptive component separation.
+    nreal: int
+        number of realizations of the statitical and noise residuals to be drawn.
+    precomputed_compsep_result: dict or None
+        if not None, it should be a dict containing the fgbuster-like result of 
+        the component separation step, with keys 'x' and 's' at least.
+    minimize_kwargs: dict
+        Keyword arguments to be passed to `scipy.optimize.minimize` during
+        the fitting of the spectral parameters.
+        A good choice for most cases is
+        `minimize_kwargs = {'tol': 1, options: {'disp': True}}`. `tol` depends
+        on both the solver and your signal to noise: it should ensure that the
+        difference between the best fit -logL and and the minimum is well less
+        then 1, without exagereting (a difference of 1e-4 is useless).
+        `disp` also triggers a verbose callback that monitors the convergence.
+    
+    Returns
+    -------
+    res: dict
+        xForecast result. It includes
+
+        - the fitted spectral parameters
+        - noise-averaged post-component separation CMB power spectrum
+
+          - noise spectrum
+          - statistical residuals spectrum
+          - systematic residuals spectrum
+
+        - bias on r: computed as the value with max log prob
+        - delta(r): computed as the 68% quantile of the log prob from zero
+    """
+    # Preliminaries
+    instrument = standardize_instrument(instrument)
+    nside = hp.npix2nside(d_fgs.shape[-1])
+    n_stokes = d_fgs.shape[1]
+    n_freqs = d_fgs.shape[0]
+    invN = np.diag(hp.nside2resol(nside, arcmin=True) / (instrument.depth_p))**2
+    mask = d_fgs[0, 0, :] != 0.
+    fsky = mask.astype(float).sum() / mask.size
+    print('fsky = ', fsky)
+
+    ############################################################################
+    # 1. Component separation using the noise-free foreground templates
+    # grab the max-L spectra parameters + compute the associated Fisher error bars (Sigma)
+    print('======= ESTIMATION OF SPECTRAL PARAMETERS =======')
+    if n_stokes == 3:  # if T and P were provided, extract P
+        d_comp_sep = d_fgs[:, 1:, :]
+    else:
+        d_comp_sep = d_fgs
+    
+    # comp sep
+    begin = time.time()
+    if precomputed_compsep_result:
+        res = precomputed_compsep_result
+        print('>>>>>>> using precomputed comp sep result')
+    else:
+        print('running comp sep')
+        if compsep_type == 'basic':
+            print('>>> basic comp sep')
+            res = basic_comp_sep(components, instrument, d_comp_sep, basic_compsep_nside, **minimize_kwargs)
+        elif compsep_type == 'multires':
+            print('>>> multires comp sep')
+            res = multi_res_comp_sep(components, instrument, d_comp_sep, multires_compsep_nsides, **minimize_kwargs)
+        elif compsep_type == 'adaptive':
+            print('>>> adaptive comp sep')
+            res = adaptive_comp_sep(components, instrument, d_comp_sep, patch_ids, **minimize_kwargs)
+        print('comp sep time = ', time.time() - begin)
+
+    # Put values in the hp.UNSEEN pixels, masked again later, 
+    # if masked here they give issues in the Fisher matrix
+    res.x[0][res.x[0] == hp.UNSEEN] = 1.54
+    res.x[1][res.x[1] == hp.UNSEEN] = 20.
+    res.x[2][res.x[2] == hp.UNSEEN] = -3.
+
+    # build invSigma with A_dBdB_maxL, A_maxL, A_dB_maxL from the derivative of average sp lik
+    A_obj = MixingMatrix(*components)
+    A_ev, A_dB_ev, A_dB_dB_ev, comp_of_dB = get_mixing_matrix_evaluator_all_pix(A_obj, instrument.frequency, patch_ids)
+    A_maxL = A_ev(np.concatenate(res.x).ravel())
+    A_dB_maxL = A_dB_ev(np.concatenate(res.x).ravel())
+    A_dB_dB_maxL = A_dB_dB_ev(np.concatenate(res.x).ravel())
+    
+    # get the pixel dependent 2nd derivative of the average spectral likelihood
+    L_dB_dB = av_sp_lik_2nd_derivative(d_fgs, A_maxL, A_dB_maxL, A_dB_dB_maxL, comp_of_dB, invN)
+    print("computed average spectral lik 2nd derivative, time: ", time.time() - begin)
+
+    Fisher_sparse = -list_to_matrix_sparse(L_dB_dB, comp_of_dB, mask)
+    print("computed Fisher, time: ", time.time() - begin)
+    
+    ############################################################################
+    # 2. Get the pixel dependent weight operators
+    i_cmb = A_obj.components.index('CMB')
+    W, W_dB = weight_derivatives(A_maxL, A_dB_maxL, comp_of_dB, invN, i_cmb)
+    W_dB = np.swapaxes(W_dB, axis1=0, axis2=2)
+    print("computed W and W_dB, time: ", time.time() - begin)
+
+    ############################################################################
+    # 3. Compute spectra for the different types of residuals
+    print ('======= COMPUTATION OF CL =======')
+    # Get realizations of dBeta
+    dbeta_pix = dbeta(nreal, Fisher_sparse, comp_of_dB, mask)
+    print("computed dbeta, time: ", time.time() - begin)
+
+    # Statistical residuals
+    stat_res_all = np.zeros((nreal, 2, hp.nside2npix(nside)))
+    for i in np.arange(nreal):
+        stat_res_all[i] = np.einsum('...ij, ...i, j... -> ...', W_dB, dbeta_pix[i,:,:], d_fgs)
+
+    # Systematic residuals
+    syst_res = res.s[0]
+
+    # Estimate noise after component separation
+    Na = get_Na(get_At_N(A_maxL, invN), A_maxL)
+    np.random.seed(1234)
+    noise_res = np.random.normal(scale=np.sqrt(Na[:,i_cmb,i_cmb]), size=(nreal, n_stokes, hp.nside2npix(nside)))
+
+    return res, syst_res, stat_res_all, noise_res
+
+
+
+### Tools
+def convert_numpy_scalars(obj):
+    if isinstance(obj, dict):
+        return {k: convert_numpy_scalars(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_scalars(v) for v in obj]
+    elif isinstance(obj, tuple):
+        return tuple(convert_numpy_scalars(v) for v in obj)
+    elif isinstance(obj, np.generic):
+        return obj.item()
+    else:
+        return obj
+    
 
 def _get_Cl_cmb(Alens=1., r=0.):
     power_spectrum = hp.read_cl(CMB_CL_FILE%'lensed_scalar')[:,:4000]
