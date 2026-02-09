@@ -21,7 +21,6 @@ import os
 import os.path as op
 import numpy as np
 import pylab as pl
-import matplotlib.pyplot as plt
 import healpy as hp
 import scipy as sp
 from tqdm import tqdm
